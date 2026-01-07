@@ -213,6 +213,40 @@ export default function StoreManagerDashboard() {
             </Table>
             </CardContent>
         </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><History /> Recent Store Activity</CardTitle>
+                <CardDescription>An overview of recent material movements and requests from the store.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Details</TableHead>
+                            <TableHead>Site</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Date</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {recentStoreActivity.map(activity => (
+                            <TableRow key={activity.id}>
+                                <TableCell className="font-medium">{activity.type}</TableCell>
+                                <TableCell>{activity.details}</TableCell>
+                                <TableCell>{activity.site}</TableCell>
+                                <TableCell>
+                                    <Badge variant={activity.status === 'Completed' || activity.status === 'Accepted' || activity.status === 'Processed' ? 'default' : 'secondary'} className={cn((activity.status === 'Completed' || activity.status === 'Accepted') && 'bg-green-600/80')}>
+                                        {activity.status}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell>{activity.date}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
       </div>
     </>
   );

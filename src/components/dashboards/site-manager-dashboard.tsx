@@ -224,6 +224,41 @@ export default function SiteManagerDashboard() {
               </Table>
             </CardContent>
           </Card>
+
+          <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><History /> Recent Site Activity</CardTitle>
+            <CardDescription>A log of recent material movements involving your site.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Details</TableHead>
+                  <TableHead>From/To</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentSiteActivity.map(activity => (
+                  <TableRow key={activity.id}>
+                    <TableCell className="font-medium">{activity.type}</TableCell>
+                    <TableCell>{activity.details}</TableCell>
+                    <TableCell>{activity.to || activity.from}</TableCell>
+                    <TableCell>
+                      <Badge variant={activity.status === 'Completed' ? 'default' : activity.status === 'In Transit' ? 'destructive' : 'secondary'} className={cn(activity.status === 'Completed' && 'bg-green-600/80')}>
+                        {activity.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{activity.date}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </>
   );
