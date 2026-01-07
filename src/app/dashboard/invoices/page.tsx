@@ -30,6 +30,7 @@ const materialItemSchema = z.object({
 
 const invoiceSchema = z.object({
   invoiceNumber: z.string().min(1, 'Invoice number is required.'),
+  vendorName: z.string().min(1, 'Vendor name is required.'),
   receivedDate: z.date({ required_error: 'The date the material was received is required.' }),
   materials: z.array(materialItemSchema).min(1, 'Please add at least one material.'),
   remarks: z.string().optional(),
@@ -43,6 +44,7 @@ export default function InvoicesPage() {
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
       invoiceNumber: '',
+      vendorName: '',
       materials: [{ materialId: '', quantity: 0, rate: 0 }],
       remarks: '',
     },
@@ -72,7 +74,7 @@ export default function InvoicesPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                 <FormField
                   control={form.control}
                   name="invoiceNumber"
@@ -81,6 +83,19 @@ export default function InvoicesPage() {
                       <FormLabel>Invoice Number</FormLabel>
                       <FormControl>
                         <Input placeholder="e.g., INV-2024-001" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="vendorName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Vendor Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Acme Suppliers" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
