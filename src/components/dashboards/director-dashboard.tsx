@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import StatCard from "@/components/dashboard/stat-card";
-import { DollarSign, Package, AlertTriangle, PackageSearch, Eye, ChevronDown, FileText, Download } from "lucide-react";
+import { DollarSign, Package, AlertTriangle, PackageSearch, Eye, ChevronDown, FileText, Download, BarChart as BarChartIcon } from "lucide-react";
 import { monthlyConsumption, materialStock, recentActivities, lowStockMaterials, pendingRequests as initialPendingRequests, materialReturnReminders as initialRequests } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import * as React from 'react';
@@ -119,8 +119,12 @@ export default function DirectorDashboard() {
                 <StatCard title="Total Material Value" value={`$${(totalValue / 1000000).toFixed(1)}M`} icon={DollarSign} description="+20.1% from last month" onClick={() => {}} />
             </DialogTrigger>
             <StatCard title="Total Materials" value="5,842 units" icon={PackageSearch} description="Across 12 sites" />
-            <StatCard title="Pending Requests" value={pendingRequests.length.toString()} icon={Package} description={`From ${new Set(pendingRequests.map(p => p.site)).size} sites`} />
-            <StatCard title="Low Stock Alerts" value={`${lowStockMaterials.length} materials`} icon={AlertTriangle} description={`At ${new Set(lowStockMaterials.map(m => m.site)).size} sites`} className="text-destructive border-destructive/50" />
+            <DialogTrigger asChild>
+              <StatCard title="Pending Requests" value={pendingRequests.length.toString()} icon={Package} description={`From ${new Set(pendingRequests.map(p => p.site)).size} sites`} onClick={() => {}}/>
+            </DialogTrigger>
+            <DialogTrigger asChild>
+              <StatCard title="Low Stock Alerts" value={`${lowStockMaterials.length} materials`} icon={AlertTriangle} description={`At ${new Set(lowStockMaterials.map(m => m.site)).size} sites`} className="text-destructive border-destructive/50" onClick={() => {}}/>
+            </DialogTrigger>
         </div>
         <DialogContent className="max-w-4xl">
             <DialogHeader>
@@ -162,22 +166,59 @@ export default function DirectorDashboard() {
       </Dialog>
       <div className="grid gap-6 lg:grid-cols-5">
         <div className="lg:col-span-3 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Monthly Consumption</CardTitle>
-                <CardDescription>Total material consumption over the last 6 months.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                  <BarChart data={monthlyConsumption} accessibilityLayer>
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="consumption" fill="var(--color-consumption)" radius={4} />
-                  </BarChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Monthly Consumption</CardTitle>
+                    <CardDescription>Total material consumption over the last 6 months.</CardDescription>
+                  </div>
+                  <BarChartIcon className="h-5 w-5 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                    <BarChart data={monthlyConsumption} accessibilityLayer>
+                      <CartesianGrid vertical={false} />
+                      <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="consumption" fill="var(--color-consumption)" radius={4} />
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Monthly Consumption Details</DialogTitle>
+                <DialogDescription>Detailed material consumption data for the last 6 months.</DialogDescription>
+              </DialogHeader>
+              <div className="max-h-[60vh] overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Month</TableHead>
+                      <TableHead className="text-right">Consumption (units)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {monthlyConsumption.map(item => (
+                      <TableRow key={item.month}>
+                        <TableCell className="font-medium">{item.month}</TableCell>
+                        <TableCell className="text-right">{item.consumption.toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="flex justify-end mt-4">
+                <Button onClick={handleDownloadExcel}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Excel
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
             <Card>
               <CardHeader>
                 <CardTitle>Material Stock Distribution</CardTitle>
@@ -314,12 +355,63 @@ export default function DirectorDashboard() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-            <CardTitle>Material Return Reminders</CardTitle>
-            <CardDescription>Materials due for return or with extended dates.</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Dialog>
+        <DialogTrigger asChild>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+            <CardHeader>
+                <CardTitle>Material Return Reminders</CardTitle>
+                <CardDescription>Materials due for return or with extended dates.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Material</TableHead>
+                            <TableHead>Quantity</TableHead>
+                            <TableHead>Site</TableHead>
+                            <TableHead>Return Date</TableHead>
+                            <TableHead>Status</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {requests.slice(0, 3).map(req => (
+                            <TableRow key={req.id}>
+                                <TableCell className="font-medium">{req.material}</TableCell>
+                                <TableCell>{req.quantity}</TableCell>
+                                <TableCell>{req.site}</TableCell>
+                                <TableCell>{req.returnDate}</TableCell>
+                                <TableCell>
+                                    <Badge 
+                                        variant={
+                                            req.status === 'Pending' ? 'secondary' : 
+                                            req.status === 'Approved' ? 'default' :
+                                            req.status === 'Issued' ? 'default' :
+                                            req.status === 'Completed' ? 'outline' :
+                                            'destructive'
+                                        }
+                                        className={cn(
+                                            req.status === 'Approved' && 'bg-blue-500/80 text-white',
+                                            req.status === 'Issued' && 'bg-green-600/80 text-white',
+                                            req.status === 'Extended' && 'border-amber-500/50 text-amber-500',
+                                            req.status === 'Mismatch' && 'bg-orange-500/80 text-white'
+                                        )}
+                                    >
+                                        {req.status}
+                                    </Badge>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+          </Card>
+        </DialogTrigger>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>All Material Return Reminders</DialogTitle>
+            <DialogDescription>Materials due for return or with extended dates.</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -381,8 +473,15 @@ export default function DirectorDashboard() {
                     ))}
                 </TableBody>
             </Table>
-        </CardContent>
-      </Card>
+          </div>
+          <div className="flex justify-end mt-4">
+            <Button onClick={handleDownloadExcel}>
+              <Download className="mr-2 h-4 w-4" />
+              Download Excel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
        <Card>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>

@@ -136,25 +136,31 @@ export default function StoreManagerDashboard() {
                     onClick={() => {}}
                 />
             </DialogTrigger>
-            <StatCard
-              title="Pending Requests"
-              value={pendingRequests.length.toString()}
-              icon={Package}
-              description={`From ${new Set(pendingRequests.map(p => p.site)).size} different sites`}
-            />
+            <DialogTrigger asChild>
+              <StatCard
+                title="Pending Requests"
+                value={pendingRequests.length.toString()}
+                icon={Package}
+                description={`From ${new Set(pendingRequests.map(p => p.site)).size} different sites`}
+                onClick={() => {}}
+              />
+            </DialogTrigger>
             <StatCard
               title="Materials Issued"
               value="42 items"
               icon={Truck}
               description="In the last 24 hours"
             />
-            <StatCard
-              title="Low Stock Alerts"
-              value={`${lowStockMaterials.length} materials`}
-              icon={AlertTriangle}
-              className="text-destructive border-destructive/50"
-              description="Across store & sites"
-            />
+            <DialogTrigger asChild>
+              <StatCard
+                title="Low Stock Alerts"
+                value={`${lowStockMaterials.length} materials`}
+                icon={AlertTriangle}
+                className="text-destructive border-destructive/50"
+                description="Across store & sites"
+                onClick={() => {}}
+              />
+            </DialogTrigger>
           </div>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
@@ -300,12 +306,61 @@ export default function StoreManagerDashboard() {
               )}
           </div>
           
-          <Card>
-            <CardHeader>
-                <CardTitle>Material Return Reminders</CardTitle>
-                <CardDescription>All materials due for return or with extended dates.</CardDescription>
-            </CardHeader>
-            <CardContent>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                <CardHeader>
+                    <CardTitle>Material Return Reminders</CardTitle>
+                    <CardDescription>All materials due for return or with extended dates.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Material</TableHead>
+                                <TableHead>Site</TableHead>
+                                <TableHead>Return Date</TableHead>
+                                <TableHead>Status</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {requests.slice(0, 3).map(req => (
+                                <TableRow key={req.id}>
+                                    <TableCell className="font-medium">{req.material}</TableCell>
+                                    <TableCell>{req.site}</TableCell>
+                                    <TableCell>{req.returnDate}</TableCell>
+                                    <TableCell>
+                                        <Badge 
+                                            variant={
+                                                req.status === 'Pending' ? 'secondary' : 
+                                                req.status === 'Approved' ? 'default' :
+                                                req.status === 'Issued' ? 'default' :
+                                                req.status === 'Completed' ? 'outline' :
+                                                'destructive'
+                                            }
+                                            className={cn(
+                                                req.status === 'Approved' && 'bg-blue-500/80 text-white',
+                                                req.status === 'Issued' && 'bg-green-600/80 text-white',
+                                                req.status === 'Extended' && 'border-amber-500/50 text-amber-500',
+                                                req.status === 'Mismatch' && 'bg-orange-500/80 text-white'
+                                            )}
+                                        >
+                                            {req.status}
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+              </Card>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                <DialogTitle>All Material Return Reminders</DialogTitle>
+                <DialogDescription>All materials due for return or with extended dates.</DialogDescription>
+              </DialogHeader>
+              <div className="max-h-[60vh] overflow-y-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -367,8 +422,15 @@ export default function StoreManagerDashboard() {
                         ))}
                     </TableBody>
                 </Table>
-            </CardContent>
-          </Card>
+              </div>
+              <div className="flex justify-end mt-4">
+                <Button onClick={handleDownloadExcel}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Excel
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <Card>
               <CardHeader>

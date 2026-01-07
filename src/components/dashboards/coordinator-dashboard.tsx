@@ -19,12 +19,16 @@ const boqUsage = [
   { item: 'Concrete Works', consumed: '120 m³', budget: '150 m³', status: 'On Track' },
   { item: 'Reinforcement', consumed: '25 tons', budget: '22 tons', status: 'Over Budget' },
   { item: 'Brickwork', consumed: '8000 pcs', budget: '10000 pcs', status: 'On Track' },
+  { item: 'Formwork', consumed: '450 m²', budget: '500 m²', status: 'On Track' },
+  { item: 'Plastering', consumed: '900 m²', budget: '1000 m²', status: 'On Track' },
 ];
 
 const engineerUsage = [
     { name: 'R. Sharma', materials: 'Cement, Steel', site: 'North Site' },
     { name: 'S. Gupta', materials: 'Bricks, Sand', site: 'West Site' },
     { name: 'P. Verma', materials: 'Gravel, Paint', site: 'South Site' },
+    { name: 'A. Khan', materials: 'Steel, Formwork', site: 'North Site' },
+    { name: 'M. Reddy', materials: 'Concrete, Bricks', site: 'South Site' },
 ];
 
 
@@ -112,24 +116,30 @@ export default function CoordinatorDashboard() {
                     onClick={() => {}}
                 />
             </DialogTrigger>
-            <StatCard
-              title="Engineers Monitored"
-              value="12"
-              icon={Users}
-              description="Active on 3 sites"
-            />
+            <DialogTrigger asChild>
+              <StatCard
+                title="Engineers Monitored"
+                value="12"
+                icon={Users}
+                description="Active on 3 sites"
+                onClick={() => {}}
+              />
+            </DialogTrigger>
             <StatCard
               title="Sites Overview"
               value="3 Sites"
               icon={Building}
               description="North, South, West"
             />
-            <StatCard
-              title="Pending Requests"
-              value={pendingRequests.length.toString()}
-              icon={FileText}
-              description="Awaiting action"
-            />
+             <DialogTrigger asChild>
+              <StatCard
+                title="Pending Requests"
+                value={pendingRequests.length.toString()}
+                icon={FileText}
+                description="Awaiting action"
+                onClick={() => {}}
+              />
+            </DialogTrigger>
           </div>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
@@ -167,7 +177,7 @@ export default function CoordinatorDashboard() {
           </DialogContent>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <div className="lg:col-span-1 space-y-6">
-                  <Card className="h-fit">
+                  <Card>
                       <CardHeader>
                           <CardTitle>BOQ Item-Wise Material Usage</CardTitle>
                           <CardDescription>Comparison of actual vs. budgeted material consumption.</CardDescription>
@@ -183,7 +193,7 @@ export default function CoordinatorDashboard() {
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
-                                  {boqUsage.map(item => (
+                                  {boqUsage.slice(0, 4).map(item => (
                                       <TableRow key={item.item}>
                                           <TableCell className="font-medium">{item.item}</TableCell>
                                           <TableCell>{item.consumed}</TableCell>
@@ -283,12 +293,61 @@ export default function CoordinatorDashboard() {
                 </div>
               )}
           </div>
-          <Card>
-            <CardHeader>
-                <CardTitle>Material Return Reminders</CardTitle>
-                <CardDescription>All materials due for return or with extended dates.</CardDescription>
-            </CardHeader>
-            <CardContent>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                <CardHeader>
+                    <CardTitle>Material Return Reminders</CardTitle>
+                    <CardDescription>All materials due for return or with extended dates.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Material</TableHead>
+                                <TableHead>Site</TableHead>
+                                <TableHead>Return Date</TableHead>
+                                <TableHead>Status</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {requests.slice(0, 3).map(req => (
+                                <TableRow key={req.id}>
+                                    <TableCell className="font-medium">{req.material}</TableCell>
+                                    <TableCell>{req.site}</TableCell>
+                                    <TableCell>{req.returnDate}</TableCell>
+                                    <TableCell>
+                                        <Badge 
+                                            variant={
+                                                req.status === 'Pending' ? 'secondary' : 
+                                                req.status === 'Approved' ? 'default' :
+                                                req.status === 'Issued' ? 'default' :
+                                                req.status === 'Completed' ? 'outline' :
+                                                'destructive'
+                                            }
+                                            className={cn(
+                                                req.status === 'Approved' && 'bg-blue-500/80 text-white',
+                                                req.status === 'Issued' && 'bg-green-600/80 text-white',
+                                                req.status === 'Extended' && 'border-amber-500/50 text-amber-500',
+                                                req.status === 'Mismatch' && 'bg-orange-500/80 text-white'
+                                            )}
+                                        >
+                                            {req.status}
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+              </Card>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                <DialogTitle>All Material Return Reminders</DialogTitle>
+                <DialogDescription>All materials due for return or with extended dates.</DialogDescription>
+              </DialogHeader>
+              <div className="max-h-[60vh] overflow-y-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -350,34 +409,77 @@ export default function CoordinatorDashboard() {
                         ))}
                     </TableBody>
                 </Table>
-            </CardContent>
-          </Card>
-          <Card>
-              <CardHeader>
-                  <CardTitle>Engineer-Wise Material Usage</CardTitle>
-                  <CardDescription>Material consumption handled by each engineer.</CardDescription>
-              </CardHeader>
-              <CardContent>
-              <Table>
-                      <TableHeader>
-                          <TableRow>
-                              <TableHead>Engineer Name</TableHead>
-                              <TableHead>Materials</TableHead>
-                              <TableHead>Site</TableHead>
-                          </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                          {engineerUsage.map(eng => (
-                              <TableRow key={eng.name}>
-                                  <TableCell className="font-medium">{eng.name}</TableCell>
-                                  <TableCell>{eng.materials}</TableCell>
-                                  <TableCell>{eng.site}</TableCell>
+              </div>
+              <div className="flex justify-end mt-4">
+                <Button onClick={handleDownloadExcel}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Excel
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                      <CardTitle>Engineer-Wise Material Usage</CardTitle>
+                      <CardDescription>Material consumption handled by each engineer.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                  <Table>
+                          <TableHeader>
+                              <TableRow>
+                                  <TableHead>Engineer Name</TableHead>
+                                  <TableHead>Materials</TableHead>
+                                  <TableHead>Site</TableHead>
                               </TableRow>
-                          ))}
-                      </TableBody>
-                  </Table>
-              </CardContent>
-          </Card>
+                          </TableHeader>
+                          <TableBody>
+                              {engineerUsage.slice(0, 4).map(eng => (
+                                  <TableRow key={eng.name}>
+                                      <TableCell className="font-medium">{eng.name}</TableCell>
+                                      <TableCell>{eng.materials}</TableCell>
+                                      <TableCell>{eng.site}</TableCell>
+                                  </TableRow>
+                              ))}
+                          </TableBody>
+                      </Table>
+                  </CardContent>
+              </Card>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Engineer-Wise Material Usage</DialogTitle>
+                <DialogDescription>Material consumption handled by each engineer.</DialogDescription>
+              </DialogHeader>
+              <div className="max-h-[60vh] overflow-y-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Engineer Name</TableHead>
+                            <TableHead>Materials</TableHead>
+                            <TableHead>Site</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {engineerUsage.map(eng => (
+                            <TableRow key={eng.name}>
+                                <TableCell className="font-medium">{eng.name}</TableCell>
+                                <TableCell>{eng.materials}</TableCell>
+                                <TableCell>{eng.site}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+              </div>
+              <div className="flex justify-end mt-4">
+                <Button onClick={handleDownloadExcel}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Excel
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </Dialog>
     </>
