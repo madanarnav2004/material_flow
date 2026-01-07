@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CalendarIcon, PlusCircle, Trash, Send, FileText, Eye, Download, Check, X } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Trash, Send, FileText, Eye, Download, Check, X, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { materialReturnReminders as initialRequests } from '@/lib/mock-data';
 import { useUser } from '@/hooks/use-user';
 import { Separator } from '@/components/ui/separator';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const materialItemSchema = z.object({
   materialName: z.string().min(1, 'Material name is required.'),
@@ -50,6 +51,7 @@ type MaterialRequestBill = RequestFormValues & {
   requester: { name: string; email: string; } | null;
   totalValue: number;
 }
+type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended';
 
 
 // Mock data for sites
@@ -143,7 +145,7 @@ export default function RequestsPage() {
     }
   };
   
-  const handleStatusChange = (reqId: string, newStatus: 'Approved' | 'Rejected') => {
+  const handleStatusChange = (reqId: string, newStatus: RequestStatus) => {
     setRequests(requests.map(req => req.id === reqId ? { ...req, status: newStatus } : req));
     toast({
       title: `Request ${newStatus}`,
@@ -485,7 +487,8 @@ export default function RequestsPage() {
                                     className={cn(
                                         req.status === 'Approved' && 'bg-blue-500/80 text-white',
                                         req.status === 'Issued' && 'bg-green-600/80 text-white',
-                                        req.status === 'Extended' && 'border-amber-500/50 text-amber-500'
+                                        req.status === 'Extended' && 'border-amber-500/50 text-amber-500',
+                                        req.status === 'Mismatch' && 'bg-orange-500/80 text-white'
                                     )}
                                 >
                                     {req.status}
@@ -496,18 +499,20 @@ export default function RequestsPage() {
                                     <Eye className="mr-2 h-4 w-4" />
                                     View Bill
                                 </Button>
-                                {req.status === 'Pending' && (
-                                  <>
-                                    <Button variant="outline" size="sm" className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700" onClick={() => handleStatusChange(req.id, 'Approved')}>
-                                      <Check className="mr-2 h-4 w-4" />
-                                      Approve
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                      Update Status <ChevronDown className="ml-2 h-4 w-4" />
                                     </Button>
-                                    <Button variant="outline" size="sm" className="text-red-600 border-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => handleStatusChange(req.id, 'Rejected')}>
-                                      <X className="mr-2 h-4 w-4" />
-                                      Reject
-                                    </Button>
-                                  </>
-                                )}
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Approved')}>Approved</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Rejected')}>Rejected</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Issued')}>Issued</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Completed')}>Completed</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Mismatch')}>Mismatch</DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                             </TableCell>
                         </TableRow>
                     ))}

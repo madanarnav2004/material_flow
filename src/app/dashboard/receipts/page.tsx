@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { PackageCheck, FileText, Download, Eye, AlertTriangle, CheckCircle, HelpCircle } from 'lucide-react';
+import { PackageCheck, FileText, Download, Eye, AlertTriangle, CheckCircle, HelpCircle, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUser } from '@/hooks/use-user';
 import { issuedMaterialsForReceipt } from '@/lib/mock-data';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const materialReceiptSchema = z.object({
   requestId: z.string().min(1, 'Request ID is required.'),
@@ -36,15 +37,17 @@ const materialReceiptSchema = z.object({
 
 type ReceiptFormValues = z.infer<typeof materialReceiptSchema>;
 
+type ReceiptStatus = 'Accepted' | 'Mismatch' | 'Completed';
+
 type MaterialReceivedBill = ReceiptFormValues & {
   receivedBillId: string;
   receiver: { name: string; email: string; } | null;
-  status: 'Accepted' | 'Mismatch';
+  status: ReceiptStatus;
 };
 
 
 // Mock data
-const initialPastReceipts: (MaterialReceivedBill & {status: 'Accepted' | 'Mismatch'})[] = [
+const initialPastReceipts: MaterialReceivedBill[] = [
     { 
         receivedBillId: 'REC-20240804-001', 
         requestId: 'REQ-002', 
@@ -97,7 +100,7 @@ const sites = ['North Site', 'South Site', 'West Site', 'MAPI Store'];
 export default function ReceiptsPage() {
   const { toast } = useToast();
   const { user } = useUser();
-  const [pastReceipts, setPastReceipts] = React.useState(initialPastReceipts);
+  const [pastReceipts, setPastReceipts] = React.useState<MaterialReceivedBill[]>(initialPastReceipts);
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialReceivedBill | null>(null);
 
   const form = useForm<ReceiptFormValues>({
@@ -147,7 +150,7 @@ export default function ReceiptsPage() {
     const countPart = (pastReceipts.length + 1).toString().padStart(3, '0');
     const newBillId = `REC-${datePart}-${countPart}`;
     
-    const status = values.issuedQuantity === values.receivedQuantity ? 'Accepted' : 'Mismatch';
+    const status: ReceiptStatus = values.issuedQuantity === values.receivedQuantity ? 'Accepted' : 'Mismatch';
 
     const bill: MaterialReceivedBill = {
       ...values,
@@ -175,6 +178,14 @@ export default function ReceiptsPage() {
     if (bill) {
       setLastGeneratedBill(bill);
     }
+  };
+
+  const handleStatusChange = (receiptId: string, newStatus: ReceiptStatus) => {
+    setPastReceipts(receipts => receipts.map(r => r.receivedBillId === receiptId ? { ...r, status: newStatus } : r));
+    toast({
+      title: 'Status Updated',
+      description: `Receipt ${receiptId} has been marked as ${newStatus}.`,
+    });
   };
 
   const isDamaged = form.watch('isDamaged');
@@ -515,18 +526,30 @@ export default function ReceiptsPage() {
                             <TableCell>{format(rec.receivedDate, 'yyyy-MM-dd')}</TableCell>
                             <TableCell>
                                 <Badge 
-                                    variant={rec.status === 'Accepted' ? 'default' : 'destructive'}
+                                    variant={rec.status === 'Accepted' ? 'default' : rec.status === 'Completed' ? 'outline' : 'destructive'}
                                     className={rec.status === 'Accepted' ? 'bg-green-600/80' : ''}
                                 >
-                                    {rec.status === 'Accepted' ? <CheckCircle className="mr-1 h-3 w-3" /> : <AlertTriangle className="mr-1 h-3 w-3" />}
+                                    {rec.status === 'Accepted' ? <CheckCircle className="mr-1 h-3 w-3" /> : rec.status === 'Mismatch' ? <AlertTriangle className="mr-1 h-3 w-3" /> : null}
                                     {rec.status}
                                 </Badge>
                             </TableCell>
-                             <TableCell className="text-right">
+                             <TableCell className="text-right space-x-2">
                                 <Button variant="outline" size="sm" onClick={() => handleViewBill(rec.receivedBillId)}>
                                     <Eye className="mr-2 h-4 w-4" />
                                     View Bill
                                 </Button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                      Update Status <ChevronDown className="ml-2 h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Accepted')}>Accepted</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Mismatch')}>Mismatch</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Completed')}>Completed</DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                             </TableCell>
                         </TableRow>
                     ))}
