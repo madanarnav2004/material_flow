@@ -79,12 +79,18 @@ export default function RequestsPage() {
     console.log(values);
     
     const totalValue = values.materials.reduce((acc, item) => acc + item.quantity * item.rate, 0);
+    const today = new Date();
+    const datePart = format(today, 'yyyyMMdd');
+    const countPart = Date.now().toString().slice(-3); // Mock count for demo
+
+    const newRequestId = `REQ-${datePart}-${countPart}`;
+    const newIssuedId = `ISS-${datePart}-${countPart}`;
 
     const bill: MaterialRequestBill = {
       ...values,
-      requestId: `REQ-${Date.now().toString().slice(-5)}`,
+      requestId: newRequestId,
       requestDate: new Date(),
-      issuedId: `ISS-${Date.now().toString().slice(-5)}`,
+      issuedId: newIssuedId,
       shiftingDate: new Date(), // Assuming shifting happens immediately on approval
       requester: user,
       totalValue,
@@ -104,9 +110,13 @@ export default function RequestsPage() {
     // For this demo, we'll find the request in mock data and create a bill from it.
     const request = materialReturnReminders.find(r => r.id === reqId);
     if (request) {
+      const requestDate = new Date(new Date(request.returnDate).getTime() - 10 * 24 * 60 * 60 * 1000);
+      const datePart = format(requestDate, 'yyyyMMdd');
+      const countPart = request.id.slice(-3);
+
       const bill: MaterialRequestBill = {
-        requestId: request.id,
-        requestDate: new Date(new Date(request.returnDate).getTime() - 10 * 24 * 60 * 60 * 1000), // Mock request date
+        requestId: `REQ-${datePart}-${countPart}`,
+        requestDate: requestDate, // Mock request date
         requestingSite: request.site,
         issuingSite: 'MAPI Store', // Mock issuing site
         materials: [{ materialName: request.material, quantity: request.quantity, rate: 10 }], // Mock rate
@@ -115,7 +125,7 @@ export default function RequestsPage() {
           to: new Date(request.returnDate),
         },
         remarks: `This is a sample bill for request ${request.id}`,
-        issuedId: `ISS-${request.id.slice(-5)}`,
+        issuedId: `ISS-${datePart}-${countPart}`,
         shiftingDate: new Date(new Date(request.returnDate).getTime() - 9 * 24 * 60 * 60 * 1000),
         requester: user,
         totalValue: request.quantity * 10, // Mock total value

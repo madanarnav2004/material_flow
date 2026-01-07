@@ -46,7 +46,7 @@ type MaterialReceivedBill = ReceiptFormValues & {
 // Mock data
 const pastReceipts: (MaterialReceivedBill & {status: string})[] = [
     { 
-        receivedBillId: 'REC-001', 
+        receivedBillId: 'REC-20240804-001', 
         requestId: 'REQ-002', 
         issuedId: 'ISS-002',
         materialName: 'Bricks', 
@@ -60,7 +60,7 @@ const pastReceipts: (MaterialReceivedBill & {status: string})[] = [
         isDamaged: false,
     },
     { 
-        receivedBillId: 'REC-002', 
+        receivedBillId: 'REC-20240802-001', 
         requestId: 'REQ-001',
         issuedId: 'ISS-001',
         materialName: 'Cement', 
@@ -76,7 +76,7 @@ const pastReceipts: (MaterialReceivedBill & {status: string})[] = [
         damageDescription: '2 bags were torn and cement spilled during transit.',
     },
     { 
-        receivedBillId: 'REC-003', 
+        receivedBillId: 'REC-20240811-001', 
         requestId: 'REQ-004',
         issuedId: 'ISS-004',
         materialName: 'Steel Rebar', 
@@ -116,10 +116,15 @@ export default function ReceiptsPage() {
 
   function onSubmit(values: ReceiptFormValues) {
     console.log(values);
+    
+    const today = new Date();
+    const datePart = format(today, 'yyyyMMdd');
+    const countPart = Date.now().toString().slice(-3); // Mock count for demo
+    const newBillId = `REC-${datePart}-${countPart}`;
 
     const bill: MaterialReceivedBill = {
       ...values,
-      receivedBillId: `REC-${Date.now().toString().slice(-5)}`,
+      receivedBillId: newBillId,
       receiver: user,
     };
     setLastGeneratedBill(bill);
