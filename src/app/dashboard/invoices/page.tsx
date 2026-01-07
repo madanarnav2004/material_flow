@@ -11,19 +11,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { allMaterials } from '@/lib/mock-data';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 
 const materialItemSchema = z.object({
-  materialId: z.string().min(1, 'Please select a material.'),
+  materialName: z.string().min(1, 'Material name is required.'),
   quantity: z.coerce.number().min(0.1, 'Quantity must be > 0.'),
   rate: z.coerce.number().min(0.01, 'Rate must be > 0.'),
   remark: z.string().optional(),
@@ -45,7 +42,7 @@ export default function InvoicesPage() {
     defaultValues: {
       invoiceNumber: '',
       vendorName: '',
-      materials: [{ materialId: '', quantity: 0, rate: 0, remark: '' }],
+      materials: [{ materialName: '', quantity: 0, rate: 0, remark: '' }],
     },
   });
 
@@ -147,23 +144,12 @@ export default function InvoicesPage() {
                           <TableCell>
                             <FormField
                               control={form.control}
-                              name={`materials.${index}.materialId`}
+                              name={`materials.${index}.materialName`}
                               render={({ field }) => (
                                 <FormItem>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select a material" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {allMaterials.map(material => (
-                                        <SelectItem key={material.id} value={material.id}>
-                                          {material.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                  <FormControl>
+                                    <Input placeholder="e.g., Cement" {...field} />
+                                  </FormControl>
                                   <FormMessage />
                                 </FormItem>
                               )}
@@ -226,7 +212,7 @@ export default function InvoicesPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => append({ materialId: '', quantity: 0, rate: 0, remark: '' })}
+                    onClick={() => append({ materialName: '', quantity: 0, rate: 0, remark: '' })}
                   >
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Add Material
