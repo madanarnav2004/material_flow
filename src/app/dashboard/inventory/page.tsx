@@ -17,7 +17,6 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { allMaterials } from '@/lib/mock-data';
 
@@ -35,12 +34,6 @@ const invoiceSchema = z.object({
   vendorName: z.string().min(1, 'Vendor name is required.'),
   receivedDate: z.date({ required_error: 'The date the material was received is required.' }),
   materials: z.array(materialItemSchema).min(1, 'Please add at least one material.'),
-});
-
-const newMaterialSchema = z.object({
-  name: z.string().min(2, 'Material name must be at least 2 characters.'),
-  unit: z.string().min(1, 'Unit is required (e.g., kg, m, pcs).'),
-  description: z.string().optional(),
 });
 
 type InvoiceFormValues = z.infer<typeof invoiceSchema>;
@@ -289,7 +282,7 @@ export default function InventoryPage() {
 
                         <Button type="submit" size="lg" disabled={invoiceForm.formState.isSubmitting}>
                             <Upload className="mr-2 h-4 w-4" />
-                            {invoiceForm.formState.isSubmitting ? 'Uploading...' : 'Upload Invoice'}
+                            {invoiceForm.formState.isSubmitting ? 'Uploading...' : 'Upload and Clear for Next'}
                         </Button>
                         </form>
                     </Form>
