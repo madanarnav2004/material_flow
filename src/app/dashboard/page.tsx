@@ -1,0 +1,28 @@
+"use client";
+
+import { useUser } from "@/hooks/use-user";
+import DirectorDashboard from "@/components/dashboards/director-dashboard";
+import SiteManagerDashboard from "@/components/dashboards/site-manager-dashboard";
+import CoordinatorDashboard from "@/components/dashboards/coordinator-dashboard";
+import StoreManagerDashboard from "@/components/dashboards/store-manager-dashboard";
+
+export default function DashboardPage() {
+  const { role } = useUser();
+
+  const renderDashboard = () => {
+    switch (role) {
+      case 'director':
+        return <DirectorDashboard />;
+      case 'site-manager':
+        return <SiteManagerDashboard />;
+      case 'coordinator':
+        return <CoordinatorDashboard />;
+      case 'store-manager':
+        return <StoreManagerDashboard />;
+      default:
+        return <div>Loading dashboard...</div>;
+    }
+  };
+
+  return <div className="space-y-6">{renderDashboard()}</div>;
+}
