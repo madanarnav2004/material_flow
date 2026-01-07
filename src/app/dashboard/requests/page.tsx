@@ -99,6 +99,32 @@ export default function RequestsPage() {
     // form.reset(); // We don't reset so user can see the bill they generated
   }
 
+  const handleViewBill = (reqId: string) => {
+    // In a real app, you'd fetch the bill details by ID.
+    // For this demo, we'll find the request in mock data and create a bill from it.
+    const request = materialReturnReminders.find(r => r.id === reqId);
+    if (request) {
+      const bill: MaterialRequestBill = {
+        requestId: request.id,
+        requestDate: new Date(new Date(request.returnDate).getTime() - 10 * 24 * 60 * 60 * 1000), // Mock request date
+        requestingSite: request.site,
+        issuingSite: 'MAPI Store', // Mock issuing site
+        materials: [{ materialName: request.material, quantity: request.quantity, rate: 10 }], // Mock rate
+        requiredPeriod: {
+          from: new Date(new Date(request.returnDate).getTime() - 10 * 24 * 60 * 60 * 1000),
+          to: new Date(request.returnDate),
+        },
+        remarks: `This is a sample bill for request ${request.id}`,
+        issuedId: `ISS-${request.id.slice(-5)}`,
+        shiftingDate: new Date(new Date(request.returnDate).getTime() - 9 * 24 * 60 * 60 * 1000),
+        requester: user,
+        totalValue: request.quantity * 10, // Mock total value
+      };
+      setLastGeneratedBill(bill);
+    }
+  };
+
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
@@ -433,7 +459,7 @@ export default function RequestsPage() {
                                 </Badge>
                             </TableCell>
                             <TableCell>
-                                <Button variant="outline" size="sm">
+                                <Button variant="outline" size="sm" onClick={() => handleViewBill(req.id)}>
                                     <Eye className="mr-2 h-4 w-4" />
                                     View Bill
                                 </Button>
