@@ -40,9 +40,6 @@ const invoiceSchema = z.object({
 const newMaterialSchema = z.object({
   name: z.string().min(2, 'Material name must be at least 2 characters.'),
   unit: z.string().min(1, 'Unit is required (e.g., kg, m, pcs).'),
-  quantity: z.coerce.number().min(0, 'Quantity must be a positive number.'),
-  rate: z.coerce.number().min(0.01, 'Rate must be > 0.'),
-  remark: z.string().optional(),
   description: z.string().optional(),
 });
 
@@ -66,13 +63,8 @@ const initialInvoices = [
 
 export default function InventoryPage() {
   const { toast } = useToast();
-  const [materials, setMaterials] = React.useState(allMaterials.map(m => ({...m, quantity: Math.floor(Math.random() * 200) + 50, rate: Math.floor(Math.random() * 100) + 10, remark: ''})));
+  const [materials, setMaterials] = React.useState(allMaterials.map(m => ({...m, quantity: Math.floor(Math.random() * 200) + 50, rate: Math.floor(Math.random() * 100) + 10})));
   const [uploadedInvoices, setUploadedInvoices] = React.useState(initialInvoices);
-
-  const uniqueUnits = React.useMemo(() => {
-    const units = new Set(materials.map(m => m.unit));
-    return Array.from(units);
-  }, [materials]);
 
   // Invoice Form
   const invoiceForm = useForm<InvoiceFormValues>({
@@ -98,32 +90,6 @@ export default function InventoryPage() {
       description: `Invoice ${values.invoiceNumber} has been successfully uploaded.`,
     });
     invoiceForm.reset();
-  }
-  
-  // New Material Form
-  const newMaterialForm = useForm<z.infer<typeof newMaterialSchema>>({
-    resolver: zodResolver(newMaterialSchema),
-    defaultValues: {
-      name: '',
-      unit: '',
-      quantity: 0,
-      rate: 0,
-      remark: '',
-      description: '',
-    },
-  });
-
-  function onNewMaterialSubmit(values: z.infer<typeof newMaterialSchema>) {
-    const newMaterial = {
-      id: `mat-${Date.now()}`,
-      ...values,
-    };
-    setMaterials((prev) => [newMaterial, ...prev]);
-    toast({
-      title: 'Material Added!',
-      description: `${values.name} has been successfully added to the materials list.`,
-    });
-    newMaterialForm.reset();
   }
   
   const handleMaterialChange = (materialName: string, index: number) => {
@@ -331,104 +297,6 @@ export default function InventoryPage() {
                 </Card>
             </div>
             <div className="lg:col-span-2 space-y-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Add New Material</CardTitle>
-                        <CardDescription>Create a new material type to be used in invoices.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Form {...newMaterialForm}>
-                        <form onSubmit={newMaterialForm.handleSubmit(onNewMaterialSubmit)} className="space-y-6">
-                            <FormField
-                            control={newMaterialForm.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Material Name</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="e.g., Portland Cement" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                control={newMaterialForm.control}
-                                name="unit"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Unit</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="e.g., kg, pcs" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
-                                <FormField
-                                control={newMaterialForm.control}
-                                name="quantity"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Quantity</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" placeholder="e.g., 100" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                control={newMaterialForm.control}
-                                name="rate"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Rate</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" placeholder="e.g., 12.50" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
-                                <FormField
-                                control={newMaterialForm.control}
-                                name="remark"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Remark</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Optional" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
-                            </div>
-                             <FormField
-                            control={newMaterialForm.control}
-                            name="description"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Description (Optional)</FormLabel>
-                                <FormControl>
-                                    <Textarea placeholder="A brief description of the material..." {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                            <Button type="submit" disabled={newMaterialForm.formState.isSubmitting}>
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                {newMaterialForm.formState.isSubmitting ? 'Adding...' : 'Add Material'}
-                            </Button>
-                        </form>
-                        </Form>
-                    </CardContent>
-                </Card>
                  <Card>
                     <CardHeader>
                         <CardTitle>Uploaded Invoices</CardTitle>
@@ -470,11 +338,7 @@ export default function InventoryPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Unit</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>Rate</TableHead>
-                  <TableHead>Remark</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Total Value</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -482,11 +346,7 @@ export default function InventoryPage() {
                   <TableRow key={material.id}>
                     <TableCell className="font-medium">{material.name}</TableCell>
                     <TableCell>{material.unit}</TableCell>
-                    <TableCell>{material.quantity}</TableCell>
-                    <TableCell>${material.rate.toFixed(2)}</TableCell>
-                    <TableCell>{material.remark || '-'}</TableCell>
-                    <TableCell>{material.description || '-'}</TableCell>
-                    <TableCell className="text-right font-medium">${(material.quantity * material.rate).toFixed(2)}</TableCell>
+                    <TableCell>{material.description}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
