@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { PlusCircle, Trash, PackageCheck, AlertTriangle, CheckCircle, HelpCircle, FileText, Download, Eye } from 'lucide-react';
+import { PackageCheck, FileText, Download, Eye, AlertTriangle, CheckCircle, HelpCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,17 +13,16 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUser } from '@/hooks/use-user';
-import { Separator } from '@/components/ui/separator';
+import { issuedMaterialsForReceipt } from '@/lib/mock-data';
 
 const materialReceiptSchema = z.object({
-  issuedId: z.string().min(1, 'Issued ID is required.'),
   requestId: z.string().min(1, 'Request ID is required.'),
+  issuedId: z.string().min(1, 'Issued ID is required.'),
   issuingSite: z.string().min(1, 'Issuing site is required.'),
   receivingSite: z.string().min(1, 'Receiving site is required.'),
   materialName: z.string().min(1, 'Material name is required.'),
@@ -115,6 +114,31 @@ export default function ReceiptsPage() {
     },
   });
 
+  const handleRequestIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const reqId = e.target.value;
+    form.setValue('requestId', reqId);
+    const issuedItem = issuedMaterialsForReceipt.find(item => item.requestId === reqId);
+    
+    if (issuedItem) {
+        form.setValue('issuedId', issuedItem.issuedId);
+        form.setValue('materialName', issuedItem.materialName);
+        form.setValue('issuedQuantity', issuedItem.issuedQuantity);
+        form.setValue('issuingSite', issuedItem.issuingSite);
+        form.setValue('receivingSite', issuedItem.receivingSite);
+        toast({
+            title: 'Auto-filled!',
+            description: 'Material details have been auto-filled from the Request ID.',
+        });
+    } else {
+        // Optionally clear fields if no match is found
+        form.setValue('issuedId', '');
+        form.setValue('materialName', '');
+        form.setValue('issuedQuantity', 0);
+        form.setValue('issuingSite', '');
+        form.setValue('receivingSite', '');
+    }
+  };
+
   function onSubmit(values: ReceiptFormValues) {
     console.log(values);
     
@@ -157,7 +181,7 @@ export default function ReceiptsPage() {
             <Card>
             <CardHeader>
                 <CardTitle>Log Material Receipt</CardTitle>
-                <CardDescription>Accept material deliveries and verify quantities against the issue ID.</CardDescription>
+                <CardDescription>Accept material deliveries and verify quantities. Enter a Request ID to autofill details.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Form {...form}>
@@ -171,7 +195,12 @@ export default function ReceiptsPage() {
                                 <FormItem>
                                 <FormLabel>Request ID</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="e.g., REQ-20240812-987" {...field} />
+                                    <Input 
+                                      placeholder="e.g., REQ-20240810-004" 
+                                      {...field}
+                                      onChange={handleRequestIdChange} 
+                                      value={field.value}
+                                    />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -184,7 +213,7 @@ export default function ReceiptsPage() {
                                 <FormItem>
                                 <FormLabel>Issued ID</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="e.g., ISS-20240812-987" {...field} />
+                                    <Input placeholder="e.g., ISS-20240810-004" {...field} readOnly />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -199,7 +228,7 @@ export default function ReceiptsPage() {
                                 <FormItem>
                                 <FormLabel>Material Name</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="e.g., Cement" {...field} />
+                                    <Input placeholder="e.g., Cement" {...field} readOnly />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -212,7 +241,7 @@ export default function ReceiptsPage() {
                                 <FormItem>
                                 <FormLabel>Issued Quantity</FormLabel>
                                 <FormControl>
-                                    <Input type="number" placeholder="e.g., 50" {...field} />
+                                    <Input type="number" placeholder="e.g., 50" {...field} readOnly />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -226,7 +255,7 @@ export default function ReceiptsPage() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Issuing Site</FormLabel>
-                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                 <Select onValueChange={field.onChange} value={field.value} disabled>
                                     <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select issuing site" />
@@ -246,7 +275,7 @@ export default function ReceiptsPage() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Receiving Site</FormLabel>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <Select onValueChange={field.onChange} value={field.value} disabled>
                                     <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select receiving site" />

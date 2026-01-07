@@ -52,3 +52,30 @@ export const materialReturnReminders = [
     { id: 'REQ-002', material: 'Sand', quantity: '15 m³', site: 'North Site', status: 'Completed', returnDate: '2024-07-25' },
     { id: 'REQ-001', material: 'Gravel', quantity: '5 m³', site: 'South Site', status: 'Extended', returnDate: '2024-07-20 (Ext. 07-27)' },
 ];
+
+export const issuedMaterialsForReceipt = [
+    { 
+        requestId: 'REQ-20240810-004',
+        issuedId: 'ISS-20240810-004',
+        materialName: 'Steel Rebar', 
+        issuedQuantity: 10, 
+        issuingSite: 'South Site',
+        receivingSite: 'North Site',
+    },
+    {
+        requestId: 'REQ-20240801-001',
+        issuedId: 'ISS-20240801-001',
+        materialName: 'Cement', 
+        issuedQuantity: 50, 
+        issuingSite: 'MAPI Store',
+        receivingSite: 'North Site',
+    },
+    {
+        requestId: 'REQ-20240803-002',
+        issuedId: 'ISS-20240803-002',
+        materialName: 'Bricks', 
+        issuedQuantity: 2000, 
+        issuingSite: 'MAPI Store',
+        receivingSite: 'West Site',
+    }
+];
