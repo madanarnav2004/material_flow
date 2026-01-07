@@ -209,10 +209,21 @@ export default function InventoryPage() {
                                         name={`materials.${index}.materialName`}
                                         render={({ field }) => (
                                             <FormItem>
-                                            <FormControl>
-                                                <Input placeholder="e.g., Cement" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select a material" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {materials.map(material => (
+                                                            <SelectItem key={material.id} value={material.name}>
+                                                                {material.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
                                             </FormItem>
                                         )}
                                         />
