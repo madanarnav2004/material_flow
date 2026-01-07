@@ -147,7 +147,7 @@ export default function ReceiptsPage() {
   function onSubmit(values: ReceiptFormValues) {
     const today = new Date();
     const datePart = format(today, 'yyyyMMdd');
-    const countPart = (pastReceipts.length + 1).toString().padStart(3, '0');
+    const countPart = (Date.now() % 1000).toString().padStart(3, '0');
     const newBillId = `REC-${datePart}-${countPart}`;
     
     const status: ReceiptStatus = values.issuedQuantity === values.receivedQuantity ? 'Accepted' : 'Mismatch';
