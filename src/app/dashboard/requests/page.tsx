@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CalendarIcon, PlusCircle, Trash, Send } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Trash, Send, FileText, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,10 +21,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { materialReturnReminders } from '@/lib/mock-data';
+import { useUser } from '@/hooks/use-user';
+import { Separator } from '@/components/ui/separator';
 
 const materialItemSchema = z.object({
   materialName: z.string().min(1, 'Material name is required.'),
   quantity: z.coerce.number().min(0.1, 'Quantity must be > 0.'),
+  rate: z.coerce.number().min(0.01, 'Rate is required.'),
 });
 
 const requestSchema = z.object({
@@ -39,18 +42,30 @@ const requestSchema = z.object({
 });
 
 type RequestFormValues = z.infer<typeof requestSchema>;
+type MaterialRequestBill = RequestFormValues & {
+  requestId: string;
+  requestDate: Date;
+  issuedId: string;
+  shiftingDate: Date;
+  requester: { name: string; email: string; } | null;
+  totalValue: number;
+}
+
 
 // Mock data for sites
 const sites = ['North Site', 'South Site', 'West Site', 'MAPI Store'];
 
 export default function RequestsPage() {
   const { toast } = useToast();
+  const { user } = useUser();
+  const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialRequestBill | null>(null);
+
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(requestSchema),
     defaultValues: {
       requestingSite: '',
       issuingSite: '',
-      materials: [{ materialName: '', quantity: 1 }],
+      materials: [{ materialName: '', quantity: 1, rate: 10 }],
       remarks: '',
     },
   });
@@ -62,209 +77,317 @@ export default function RequestsPage() {
 
   function onSubmit(values: RequestFormValues) {
     console.log(values);
+    
+    const totalValue = values.materials.reduce((acc, item) => acc + item.quantity * item.rate, 0);
+
+    const bill: MaterialRequestBill = {
+      ...values,
+      requestId: `REQ-${Date.now().toString().slice(-5)}`,
+      requestDate: new Date(),
+      issuedId: `ISS-${Date.now().toString().slice(-5)}`,
+      shiftingDate: new Date(), // Assuming shifting happens immediately on approval
+      requester: user,
+      totalValue,
+    };
+    
+    setLastGeneratedBill(bill);
+
     toast({
       title: 'Request Submitted!',
       description: `Your material request has been sent to ${values.issuingSite}. A Material Request Bill will be generated upon approval.`,
     });
-    form.reset();
+    // form.reset(); // We don't reset so user can see the bill they generated
   }
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create Material Request</CardTitle>
-          <CardDescription>Fill in the details to request materials. A Material Request Bill will be generated automatically upon approval and issue.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="requestingSite"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Your Site (Requesting From)</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select your site" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="issuingSite"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Request To (Issuing Site)</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select issuing site/store" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <div>
-                <Label>Materials</Label>
-                <div className="mt-2 rounded-md border">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <div className="lg:col-span-3">
+          <Card>
+            <CardHeader>
+              <CardTitle>Create Material Request</CardTitle>
+              <CardDescription>Fill in the details to request materials. A Material Request Bill will be generated automatically upon approval and issue.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="requestingSite"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Your Site (Requesting From)</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select your site" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="issuingSite"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Request To (Issuing Site)</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select issuing site/store" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label>Materials</Label>
+                    <div className="mt-2 rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-2/5">Material Name</TableHead>
+                            <TableHead>Quantity</TableHead>
+                            <TableHead>Rate</TableHead>
+                            <TableHead className="w-12"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {fields.map((field, index) => (
+                            <TableRow key={field.id}>
+                              <TableCell>
+                                <FormField
+                                  control={form.control}
+                                  name={`materials.${index}.materialName`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormControl>
+                                        <Input placeholder="e.g., Cement" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <FormField
+                                  control={form.control}
+                                  name={`materials.${index}.quantity`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormControl>
+                                        <Input type="number" placeholder="e.g., 100" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <FormField
+                                  control={form.control}
+                                  name={`materials.${index}.rate`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormControl>
+                                        <Input type="number" placeholder="e.g., 10" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Button variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => append({ materialName: '', quantity: 1, rate: 10 })}
+                        className="mt-2"
+                      >
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Another Material
+                      </Button>
+                    <FormMessage>{form.formState.errors.materials?.message}</FormMessage>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <FormField
+                        control={form.control}
+                        name="requiredPeriod.from"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                            <FormLabel>Required From (Start Date)</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                <FormControl>
+                                    <Button
+                                    variant={'outline'}
+                                    className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
+                                    >
+                                    {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    <FormField
+                        control={form.control}
+                        name="requiredPeriod.to"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                            <FormLabel>Required Until (Return Date)</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                <FormControl>
+                                    <Button
+                                    variant={'outline'}
+                                    className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
+                                    >
+                                    {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                  </div>
+
+                  <FormField
+                      control={form.control}
+                      name="remarks"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Remarks (Optional)</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Add any additional instructions or justifications..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                  <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
+                    <Send className="mr-2 h-4 w-4" />
+                    {form.formState.isSubmitting ? 'Submitting...' : 'Submit Request & Generate Bill'}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </div>
+        
+        {lastGeneratedBill && (
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText /> Material Request Bill
+                </CardTitle>
+                <CardDescription>
+                  This is the generated bill for your request. It's created automatically upon approval and issue.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2 rounded-lg border p-4">
+                  <h3 className="font-semibold">Request Information</h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <p><strong>Request ID:</strong> {lastGeneratedBill.requestId}</p>
+                    <p><strong>Request Date:</strong> {format(lastGeneratedBill.requestDate, 'PPP')}</p>
+                    <p><strong>Requesting Site:</strong> {lastGeneratedBill.requestingSite}</p>
+                    <p><strong>Requester:</strong> {lastGeneratedBill.requester?.name}</p>
+                  </div>
+                </div>
+                <div className="space-y-2 rounded-lg border p-4">
+                  <h3 className="font-semibold">Issue Information</h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <p><strong>Issuing Site:</strong> {lastGeneratedBill.issuingSite}</p>
+                    <p><strong>Issued ID:</strong> {lastGeneratedBill.issuedId}</p>
+                    <p><strong>Shifting Date:</strong> {format(lastGeneratedBill.shiftingDate, 'PPP')}</p>
+                  </div>
+                </div>
+                <div className="space-y-2 rounded-lg border p-4">
+                  <h3 className="font-semibold">Usage Period</h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <p><strong>Start Date:</strong> {format(lastGeneratedBill.requiredPeriod.from, 'PPP')}</p>
+                    <p><strong>End Date:</strong> {format(lastGeneratedBill.requiredPeriod.to, 'PPP')}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-semibold">Material Details</h3>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-4/6">Material Name</TableHead>
-                        <TableHead>Quantity</TableHead>
-                        <TableHead className="w-12"></TableHead>
+                        <TableHead>Material</TableHead>
+                        <TableHead>Qty</TableHead>
+                        <TableHead>Rate</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {fields.map((field, index) => (
-                        <TableRow key={field.id}>
-                          <TableCell>
-                            <FormField
-                              control={form.control}
-                              name={`materials.${index}.materialName`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input placeholder="e.g., Cement, Steel Rebar" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <FormField
-                              control={form.control}
-                              name={`materials.${index}.quantity`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input type="number" placeholder="e.g., 100" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
+                      {lastGeneratedBill.materials.map((m, i) => (
+                        <TableRow key={i}>
+                          <TableCell>{m.materialName}</TableCell>
+                          <TableCell>{m.quantity}</TableCell>
+                          <TableCell>${m.rate.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">${(m.quantity * m.rate).toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                  <Separator />
+                  <div className="flex justify-end font-bold text-lg">
+                      Total Value: ${lastGeneratedBill.totalValue.toFixed(2)}
+                  </div>
                 </div>
-                 <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => append({ materialName: '', quantity: 1 })}
-                    className="mt-2"
-                  >
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Another Material
-                  </Button>
-                <FormMessage>{form.formState.errors.materials?.message}</FormMessage>
-              </div>
+                 {lastGeneratedBill.remarks && (
+                    <div className="space-y-2">
+                        <h3 className="font-semibold">Remarks</h3>
+                        <p className="text-sm text-muted-foreground">{lastGeneratedBill.remarks}</p>
+                    </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
 
-               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                 <FormField
-                    control={form.control}
-                    name="requiredPeriod.from"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                        <FormLabel>Required From (Start Date)</FormLabel>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                            <FormControl>
-                                <Button
-                                variant={'outline'}
-                                className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                                >
-                                {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                            </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                            </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                <FormField
-                    control={form.control}
-                    name="requiredPeriod.to"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                        <FormLabel>Required Until (Return Date)</FormLabel>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                            <FormControl>
-                                <Button
-                                variant={'outline'}
-                                className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                                >
-                                {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                            </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                            </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                 />
-              </div>
-
-               <FormField
-                  control={form.control}
-                  name="remarks"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Remarks (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Add any additional instructions or justifications..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-              <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
-                <Send className="mr-2 h-4 w-4" />
-                {form.formState.isSubmitting ? 'Submitting...' : 'Submit Request'}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-      
       <Card>
         <CardHeader>
             <CardTitle>Recent Material Requests</CardTitle>
@@ -280,6 +403,7 @@ export default function RequestsPage() {
                         <TableHead>Site</TableHead>
                         <TableHead>Return Date</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Bill</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -307,6 +431,12 @@ export default function RequestsPage() {
                                 >
                                     {req.status}
                                 </Badge>
+                            </TableCell>
+                            <TableCell>
+                                <Button variant="outline" size="sm">
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Bill
+                                </Button>
                             </TableCell>
                         </TableRow>
                     ))}
