@@ -106,9 +106,9 @@ export default function MaterialsPage() {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormLabel>Description / Remarks (Optional)</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="A brief description of the material..." {...field} />
+                        <Textarea placeholder="A brief description or remark about the material..." {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
