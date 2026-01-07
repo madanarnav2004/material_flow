@@ -126,7 +126,7 @@ export default function RequestsPage() {
       const fromDate = new Date(returnDate.getTime() - 10 * 24 * 60 * 60 * 1000);
       const requestDate = new Date(returnDate.getTime() - 11 * 24 * 60 * 60 * 1000);
       const datePart = format(requestDate, 'yyyyMMdd');
-      const countPart = request.id.slice(-8);
+      const countPart = request.id.slice(-3);
 
       const bill: MaterialRequestBill = {
         requestId: `REQ-${datePart}-${countPart}`,
