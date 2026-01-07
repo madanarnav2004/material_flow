@@ -36,10 +36,10 @@ const storeInventory = [
 ];
 
 const recentStoreActivity = [
-    { id: 'ISS-012', type: 'Issue', details: '100 bags of Cement to North Site', status: 'Completed', date: '1 day ago' },
-    { id: 'REC-008', type: 'Receipt', details: 'Returned 10 bags of cement from West Site', status: 'Accepted', date: '2 days ago' },
-    { id: 'REQ-025', type: 'Request', details: 'From South Site for 5 tons Steel', status: 'Pending', date: '2 days ago' },
-    { id: 'INV-015', type: 'Invoice', details: 'Uploaded for 10000 bricks', status: 'Processed', date: '3 days ago' },
+    { id: 'ISS-012', type: 'Issue', details: '100 bags of Cement', site: 'North Site', status: 'Completed', date: '1 day ago' },
+    { id: 'REC-008', type: 'Receipt', details: '10 bags of cement', site: 'West Site (Return)', status: 'Accepted', date: '2 days ago' },
+    { id: 'REQ-025', type: 'Request', details: '5 tons Steel', site: 'South Site', status: 'Pending', date: '2 days ago' },
+    { id: 'INV-015', type: 'Invoice', details: 'Uploaded for 10000 bricks', site: 'N/A', status: 'Processed', date: '3 days ago' },
 ];
 
 export default function StoreManagerDashboard() {
@@ -119,21 +119,30 @@ export default function StoreManagerDashboard() {
                 </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
-                        {recentStoreActivity.map(activity => (
-                            <div key={activity.id} className="flex items-start gap-4">
-                                <div className="flex-1 space-y-1">
-                                    <p className="font-medium">{activity.type}: <span className="font-normal text-muted-foreground">{activity.details}</span></p>
-                                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                                        <p>{activity.date}</p>
+                   <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Type</TableHead>
+                                <TableHead>Details</TableHead>
+                                <TableHead>Site</TableHead>
+                                <TableHead>Status</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {recentStoreActivity.map(activity => (
+                                <TableRow key={activity.id}>
+                                    <TableCell className="font-medium">{activity.type}</TableCell>
+                                    <TableCell>{activity.details}</TableCell>
+                                    <TableCell>{activity.site}</TableCell>
+                                    <TableCell>
                                         <Badge variant={activity.status === 'Completed' || activity.status === 'Accepted' || activity.status === 'Processed' ? 'default' : 'secondary'}
                                             className={activity.status === 'Pending' ? 'bg-accent text-accent-foreground hover:bg-accent/80' : ''}
                                         >{activity.status}</Badge>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                   </Table>
                 </CardContent>
             </Card>
         </div>

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import StatCard from "@/components/dashboard/stat-card";
-import { DollarSign, Package, AlertTriangle, Warehouse, Truck, PackageSearch, AlertCircle } from "lucide-react";
+import { DollarSign, Package, AlertTriangle, PackageSearch } from "lucide-react";
 import { monthlyConsumption, materialStock, recentActivities, lowStockMaterials } from "@/lib/mock-data";
 
 const chartConfig: ChartConfig = {

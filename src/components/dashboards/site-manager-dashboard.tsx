@@ -33,9 +33,9 @@ const siteStock = [
 ];
 
 const recentSiteActivity = [
-    { id: 'REQ-003', type: 'Request Sent', details: '100 bags of Cement to MAPI Store', status: 'Pending', date: '1 day ago' },
-    { id: 'REC-002', type: 'Receipt', details: '20 tons of Steel from West Site', status: 'Completed', date: '2 days ago' },
-    { id: 'SHIFT-002', type: 'Shift Out', details: '500 bricks to South Site', status: 'In Transit', date: '3 days ago' },
+    { id: 'REQ-003', type: 'Request Sent', details: '100 bags of Cement', to: 'MAPI Store', status: 'Pending', date: '1 day ago' },
+    { id: 'REC-002', type: 'Receipt', details: '20 tons of Steel', from: 'West Site', status: 'Completed', date: '2 days ago' },
+    { id: 'SHIFT-002', type: 'Shift Out', details: '500 bricks', to: 'South Site', status: 'In Transit', date: '3 days ago' },
 ];
 
 export default function SiteManagerDashboard() {
@@ -125,21 +125,31 @@ export default function SiteManagerDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="space-y-4">
-                    {recentSiteActivity.map(activity => (
-                        <div key={activity.id} className="flex items-start gap-4">
-                            <div className="flex-1 space-y-1">
-                                <p className="font-medium">{activity.type}: <span className="font-normal text-muted-foreground">{activity.details}</span></p>
-                                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                                    <p>{activity.date}</p>
-                                    <Badge variant={activity.status === 'Completed' ? 'default' : activity.status === 'Pending' ? 'secondary' : 'outline'}
-                                        className={activity.status === 'Pending' ? 'bg-accent text-accent-foreground hover:bg-accent/80' : ''}
-                                    >{activity.status}</Badge>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+            <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Details</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentSiteActivity.map(activity => (
+                    <TableRow key={activity.id}>
+                      <TableCell className="font-medium">{activity.type}</TableCell>
+                      <TableCell>{activity.details} <span className="text-muted-foreground text-xs">{activity.to ? `to ${activity.to}` : `from ${activity.from}`}</span></TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={activity.status === 'Completed' ? 'default' : activity.status === 'Pending' ? 'secondary' : 'outline'}
+                          className={activity.status === 'Pending' ? 'bg-accent text-accent-foreground hover:bg-accent/80' : activity.status === 'In Transit' ? 'text-destructive' : ''}
+                        >
+                          {activity.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </div>
