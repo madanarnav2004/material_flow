@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CalendarIcon, PlusCircle, Trash, Send, FileText, Eye } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Trash, Send, FileText, Eye, Download } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -342,13 +342,19 @@ export default function RequestsPage() {
         {lastGeneratedBill && (
           <div className="lg:col-span-2">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText /> Material Request Bill
-                </CardTitle>
-                <CardDescription>
-                  This is the generated bill for your request. It's created automatically upon approval and issue.
-                </CardDescription>
+              <CardHeader className="flex flex-row items-start justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText /> Material Request Bill
+                  </CardTitle>
+                  <CardDescription>
+                    This is the generated bill for your request. It's created automatically upon approval and issue.
+                  </CardDescription>
+                </div>
+                <Button variant="outline" size="sm">
+                  <Download className="mr-2 h-4 w-4" />
+                  Download
+                </Button>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2 rounded-lg border p-4">
