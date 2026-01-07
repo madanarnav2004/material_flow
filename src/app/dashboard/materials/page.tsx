@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { allMaterials } from '@/lib/mock-data';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const materialSchema = z.object({
   name: z.string().min(2, 'Material name must be at least 2 characters.'),
@@ -24,6 +25,11 @@ const materialSchema = z.object({
 export default function MaterialsPage() {
   const { toast } = useToast();
   const [materials, setMaterials] = React.useState(allMaterials);
+
+  const uniqueUnits = React.useMemo(() => {
+    const units = new Set(materials.map(m => m.unit));
+    return Array.from(units);
+  }, [materials]);
 
   const form = useForm<z.infer<typeof materialSchema>>({
     resolver: zodResolver(materialSchema),
@@ -77,9 +83,20 @@ export default function MaterialsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Unit of Measurement</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., bag, kg, m, pcs" {...field} />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a unit" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {uniqueUnits.map(unit => (
+                            <SelectItem key={unit} value={unit}>
+                              {unit}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
