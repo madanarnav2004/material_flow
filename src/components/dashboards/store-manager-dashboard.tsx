@@ -26,6 +26,8 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { pendingRequests, lowStockMaterials } from '@/lib/mock-data';
+
 
 const storeInventory = [
   { id: 'mat-1', name: 'Cement', quantity: '5000 bags', siteDistribution: 5 },
@@ -56,7 +58,7 @@ export default function StoreManagerDashboard() {
           />
           <StatCard
             title="Pending Requests"
-            value="8"
+            value="3"
             icon={Package}
             description="From 3 different sites"
           />
@@ -68,7 +70,7 @@ export default function StoreManagerDashboard() {
           />
           <StatCard
             title="Low Stock Alerts"
-            value="5 materials"
+            value="3 materials"
             icon={AlertTriangle}
             className="text-destructive border-destructive/50"
             description="Across store & sites"
@@ -78,29 +80,24 @@ export default function StoreManagerDashboard() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card>
                 <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <Building className="h-6 w-6" />
-                        <CardTitle>Overall Store Inventory</CardTitle>
-                    </div>
-                    <CardDescription>
-                        Live summary of materials available at the central MAPI store.
-                    </CardDescription>
+                    <CardTitle>Pending Requests</CardTitle>
+                    <CardDescription>Material requests awaiting issue from the store.</CardDescription>
                 </CardHeader>
                 <CardContent>
                 <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead>Material</TableHead>
-                            <TableHead>Available Quantity</TableHead>
-                            <TableHead>Sites Supplied</TableHead>
+                            <TableHead>Quantity</TableHead>
+                            <TableHead>Requesting Site</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                    {storeInventory.map((material) => (
-                        <TableRow key={material.id}>
-                            <TableCell className="font-medium">{material.name}</TableCell>
-                            <TableCell>{material.quantity}</TableCell>
-                            <TableCell>{material.siteDistribution}</TableCell>
+                    {pendingRequests.map((req) => (
+                        <TableRow key={req.id}>
+                            <TableCell className="font-medium">{req.material}</TableCell>
+                            <TableCell>{req.quantity}</TableCell>
+                            <TableCell>{req.site}</TableCell>
                         </TableRow>
                     ))}
                     </TableBody>
@@ -110,35 +107,24 @@ export default function StoreManagerDashboard() {
 
             <Card>
                 <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <History className="h-6 w-6" />
-                        <CardTitle>Recent Store Activity</CardTitle>
-                    </div>
-                <CardDescription>
-                    Latest material issues, receipts, and invoice uploads.
-                </CardDescription>
+                    <CardTitle>Low Stock Materials</CardTitle>
+                    <CardDescription>Materials running low in the store or across sites.</CardDescription>
                 </CardHeader>
                 <CardContent>
                    <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Details</TableHead>
-                                <TableHead>Site</TableHead>
-                                <TableHead>Status</TableHead>
+                                <TableHead>Material</TableHead>
+                                <TableHead>Quantity</TableHead>
+                                <TableHead>Location</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {recentStoreActivity.map(activity => (
-                                <TableRow key={activity.id}>
-                                    <TableCell className="font-medium">{activity.type}</TableCell>
-                                    <TableCell>{activity.details}</TableCell>
-                                    <TableCell>{activity.site}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={activity.status === 'Completed' || activity.status === 'Accepted' || activity.status === 'Processed' ? 'default' : 'secondary'}
-                                            className={activity.status === 'Pending' ? 'bg-accent text-accent-foreground hover:bg-accent/80' : ''}
-                                        >{activity.status}</Badge>
-                                    </TableCell>
+                            {lowStockMaterials.map(item => (
+                                <TableRow key={item.id} className="text-destructive">
+                                    <TableCell className="font-medium">{item.material}</TableCell>
+                                    <TableCell className="font-bold">{item.quantity}</TableCell>
+                                    <TableCell>{item.site}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -149,38 +135,33 @@ export default function StoreManagerDashboard() {
 
         <Card>
             <CardHeader>
-                <CardTitle>Site-Wise Stock Distribution</CardTitle>
-                <CardDescription>Material quantities currently allocated to each site.</CardDescription>
+                <div className="flex items-center gap-2">
+                    <Building className="h-6 w-6" />
+                    <CardTitle>Overall Store Inventory</CardTitle>
+                </div>
+                <CardDescription>
+                    Live summary of materials available at the central MAPI store.
+                </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="space-y-2">
-                    <div className="flex justify-between">
-                        <span className="font-medium">North Site</span>
-                        <span className="text-muted-foreground">1,250 / 5,000 Units</span>
-                    </div>
-                    <Progress value={25} />
-                </div>
-                <div className="space-y-2">
-                    <div className="flex justify-between">
-                        <span className="font-medium">South Site</span>
-                        <span className="text-muted-foreground">3,500 / 5,000 Units</span>
-                    </div>
-                    <Progress value={70} />
-                </div>
-                <div className="space-y-2">
-                    <div className="flex justify-between">
-                        <span className="font-medium">West Site</span>
-                        <span className="text-muted-foreground">2,100 / 5,000 Units</span>
-                    </div>
-                    <Progress value={42} />
-                </div>
-                 <div className="space-y-2">
-                    <div className="flex justify-between">
-                        <span className="font-medium">East Site</span>
-                        <span className="text-muted-foreground">4,800 / 5,000 Units</span>
-                    </div>
-                    <Progress value={96} />
-                </div>
+            <CardContent>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Material</TableHead>
+                        <TableHead>Available Quantity</TableHead>
+                        <TableHead>Sites Supplied</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                {storeInventory.map((material) => (
+                    <TableRow key={material.id}>
+                        <TableCell className="font-medium">{material.name}</TableCell>
+                        <TableCell>{material.quantity}</TableCell>
+                        <TableCell>{material.siteDistribution}</TableCell>
+                    </TableRow>
+                ))}
+                </TableBody>
+            </Table>
             </CardContent>
         </Card>
       </div>

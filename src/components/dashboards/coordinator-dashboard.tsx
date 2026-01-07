@@ -4,6 +4,7 @@ import { BarChart, Users, Building, FileText, BarChart2 } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { pendingRequests } from '@/lib/mock-data';
 
 const boqUsage = [
   { item: 'Concrete Works', consumed: '120 m³', budget: '150 m³', status: 'On Track' },
@@ -43,13 +44,13 @@ export default function CoordinatorDashboard() {
           />
            <StatCard
             title="Pending Requests"
-            value="2"
+            value="3"
             icon={FileText}
             description="Awaiting action"
           />
         </div>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <Card>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <Card className="lg:col-span-2">
                 <CardHeader>
                     <CardTitle>BOQ Item-Wise Material Usage</CardTitle>
                     <CardDescription>Comparison of actual vs. budgeted material consumption.</CardDescription>
@@ -78,42 +79,56 @@ export default function CoordinatorDashboard() {
                 </CardContent>
             </Card>
             <Card>
-                <CardHeader>
-                    <CardTitle>Engineer-Wise Material Usage</CardTitle>
-                    <CardDescription>Material consumption handled by each engineer.</CardDescription>
-                </CardHeader>
-                <CardContent>
+              <CardHeader>
+                <CardTitle>Pending Requests</CardTitle>
+                <CardDescription>Material requests awaiting action across all sites.</CardDescription>
+              </CardHeader>
+              <CardContent>
                 <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Engineer Name</TableHead>
-                                <TableHead>Materials</TableHead>
-                                <TableHead>Site</TableHead>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Material</TableHead>
+                            <TableHead>Qty</TableHead>
+                            <TableHead>Site</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {pendingRequests.map((item) => (
+                            <TableRow key={item.id} className="text-sm">
+                                <TableCell className="font-medium">{item.material}</TableCell>
+                                <TableCell>{item.quantity}</TableCell>
+                                <TableCell>{item.site}</TableCell>
                             </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {engineerUsage.map(eng => (
-                                <TableRow key={eng.name}>
-                                    <TableCell className="font-medium">{eng.name}</TableCell>
-                                    <TableCell>{eng.materials}</TableCell>
-                                    <TableCell>{eng.site}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                   </Table>
-                </CardContent>
+                        ))}
+                    </TableBody>
+                </Table>
+              </CardContent>
             </Card>
         </div>
         <Card>
             <CardHeader>
-                <div className='flex items-center gap-2'>
-                    <BarChart2 className='h-6 w-6'/>
-                    <CardTitle>Site-Wise Material Usage Analysis</CardTitle>
-                </div>
-                <CardDescription>An overview of material consumption across different sites.</CardDescription>
+                <CardTitle>Engineer-Wise Material Usage</CardTitle>
+                <CardDescription>Material consumption handled by each engineer.</CardDescription>
             </CardHeader>
             <CardContent>
-                <p>Charts and detailed tables analyzing site-wise material efficiency will be displayed here.</p>
+            <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Engineer Name</TableHead>
+                            <TableHead>Materials</TableHead>
+                            <TableHead>Site</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {engineerUsage.map(eng => (
+                            <TableRow key={eng.name}>
+                                <TableCell className="font-medium">{eng.name}</TableCell>
+                                <TableCell>{eng.materials}</TableCell>
+                                <TableCell>{eng.site}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
             </CardContent>
         </Card>
       </div>

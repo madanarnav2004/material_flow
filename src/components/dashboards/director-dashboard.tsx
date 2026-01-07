@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import StatCard from "@/components/dashboard/stat-card";
 import { DollarSign, Package, AlertTriangle, PackageSearch } from "lucide-react";
-import { monthlyConsumption, materialStock, recentActivities, lowStockMaterials } from "@/lib/mock-data";
+import { monthlyConsumption, materialStock, recentActivities, lowStockMaterials, pendingRequests } from "@/lib/mock-data";
 
 const chartConfig: ChartConfig = {
   consumption: {
@@ -35,7 +35,7 @@ export default function DirectorDashboard() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Total Material Value" value="$1.2M" icon={DollarSign} description="+20.1% from last month" />
         <StatCard title="Total Materials" value="5,842 units" icon={PackageSearch} description="Across 12 sites" />
-        <StatCard title="Pending Requests" value="5" icon={Package} description="3 new today" />
+        <StatCard title="Pending Requests" value="3" icon={Package} description="From 3 sites" />
         <StatCard title="Low Stock Alerts" value="3 materials" icon={AlertTriangle} description="At 2 sites" className="text-destructive border-destructive/50" />
       </div>
       <div className="grid gap-6 lg:grid-cols-3">
@@ -57,24 +57,24 @@ export default function DirectorDashboard() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Low Stock Materials</CardTitle>
-            <CardDescription>Materials running below the minimum threshold.</CardDescription>
+            <CardTitle>Pending Requests</CardTitle>
+            <CardDescription>Material requests awaiting action.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
                 <TableHeader>
                     <TableRow>
                         <TableHead>Material</TableHead>
-                        <TableHead>Site</TableHead>
                         <TableHead>Qty</TableHead>
+                        <TableHead>Site</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {lowStockMaterials.map((item) => (
+                    {pendingRequests.map((item) => (
                         <TableRow key={item.id} className="text-sm">
                             <TableCell className="font-medium">{item.material}</TableCell>
+                            <TableCell>{item.quantity}</TableCell>
                             <TableCell>{item.site}</TableCell>
-                            <TableCell className="text-destructive font-bold">{item.quantity}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
@@ -104,6 +104,33 @@ export default function DirectorDashboard() {
         </Card>
         <Card>
           <CardHeader>
+            <CardTitle>Low Stock Materials</CardTitle>
+            <CardDescription>Materials running below the minimum threshold.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Material</TableHead>
+                        <TableHead>Site</TableHead>
+                        <TableHead>Qty</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {lowStockMaterials.map((item) => (
+                        <TableRow key={item.id} className="text-sm text-destructive">
+                            <TableCell className="font-medium">{item.material}</TableCell>
+                            <TableCell>{item.site}</TableCell>
+                            <TableCell className="font-bold">{item.quantity}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+       <Card>
+          <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>An overview of recent material movements and requests.</CardDescription>
           </CardHeader>
@@ -111,8 +138,8 @@ export default function DirectorDashboard() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
                   <TableHead>Type</TableHead>
+                  <TableHead>Details</TableHead>
                   <TableHead>Site/Store</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
@@ -121,8 +148,8 @@ export default function DirectorDashboard() {
               <TableBody>
                 {recentActivities.map(activity => (
                   <TableRow key={activity.id}>
-                    <TableCell className="font-medium">{activity.id}</TableCell>
-                    <TableCell>{activity.type}</TableCell>
+                    <TableCell className="font-medium">{activity.type}</TableCell>
+                    <TableCell>{activity.details}</TableCell>
                     <TableCell>{activity.site}</TableCell>
                     <TableCell>
                       <Badge variant={activity.status === 'Completed' || activity.status === 'Approved' || activity.status === 'Uploaded' ? 'default' : activity.status === 'In Transit' || activity.status === 'Delayed' ? 'destructive' : 'secondary'} className={activity.status === 'Pending' ? 'bg-accent text-accent-foreground hover:bg-accent/80' : ''}>
@@ -136,7 +163,6 @@ export default function DirectorDashboard() {
             </Table>
           </CardContent>
         </Card>
-      </div>
     </div>
     </>
   );

@@ -38,6 +38,15 @@ const recentSiteActivity = [
     { id: 'SHIFT-002', type: 'Shift Out', details: '500 bricks', to: 'South Site', status: 'In Transit', date: '3 days ago' },
 ];
 
+const pendingSiteRequests = [
+    { id: 'pr-1', material: 'Cement', quantity: '100 bags', requestedFrom: 'MAPI Store'},
+    { id: 'pr-2', material: 'Gravel', quantity: '10 m³', requestedFrom: 'West Site'},
+];
+
+const lowStockSite = [
+    { id: 'ls-1', name: 'Bricks', quantity: '5000 pcs' }
+]
+
 export default function SiteManagerDashboard() {
   return (
     <>
@@ -52,7 +61,7 @@ export default function SiteManagerDashboard() {
           />
           <StatCard
             title="Pending Requests"
-            value="3"
+            value="2"
             icon={Package}
             description="Awaiting approval or issue"
           />
@@ -71,8 +80,60 @@ export default function SiteManagerDashboard() {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-          <Card className="lg:col-span-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Pending Requests</CardTitle>
+                    <CardDescription>Material requests awaiting action.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                   <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Material</TableHead>
+                                <TableHead>Quantity</TableHead>
+                                <TableHead>From</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {pendingSiteRequests.map(req => (
+                                <TableRow key={req.id}>
+                                    <TableCell className="font-medium">{req.material}</TableCell>
+                                    <TableCell>{req.quantity}</TableCell>
+                                    <TableCell>{req.requestedFrom}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                   </Table>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Low Stock Materials</CardTitle>
+                    <CardDescription>Materials running low on this site.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Material</TableHead>
+                                <TableHead>Available Quantity</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {lowStockSite.map(item => (
+                                <TableRow key={item.id} className="text-destructive">
+                                    <TableCell className="font-medium">{item.name}</TableCell>
+                                    <TableCell className="font-bold">{item.quantity}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                   </Table>
+                </CardContent>
+            </Card>
+        </div>
+        
+        <Card>
             <CardHeader>
               <CardTitle>Current Site Stock</CardTitle>
               <CardDescription>
@@ -113,57 +174,6 @@ export default function SiteManagerDashboard() {
               </Table>
             </CardContent>
           </Card>
-
-          <Card className="lg:col-span-2">
-            <CardHeader>
-                <div className="flex items-center gap-2">
-                    <History className="h-6 w-6" />
-                    <CardTitle>Recent Site Activity</CardTitle>
-                </div>
-              <CardDescription>
-                Latest material movements and requests for this site.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-            <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Details</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentSiteActivity.map(activity => (
-                    <TableRow key={activity.id}>
-                      <TableCell className="font-medium">{activity.type}</TableCell>
-                      <TableCell>{activity.details} <span className="text-muted-foreground text-xs">{activity.to ? `to ${activity.to}` : `from ${activity.from}`}</span></TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={activity.status === 'Completed' ? 'default' : activity.status === 'Pending' ? 'secondary' : 'outline'}
-                          className={activity.status === 'Pending' ? 'bg-accent text-accent-foreground hover:bg-accent/80' : activity.status === 'In Transit' ? 'text-destructive' : ''}
-                        >
-                          {activity.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Placeholder for BOQ-based usage */}
-        <Card>
-            <CardHeader>
-                <CardTitle>BOQ-Based Material Usage</CardTitle>
-                <CardDescription>Consumption analysis based on Bill of Quantities.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <p>Charts and tables for BOQ item-wise, engineer-wise, and building-wise usage will be displayed here.</p>
-            </CardContent>
-        </Card>
       </div>
     </>
   );
