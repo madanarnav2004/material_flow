@@ -26,7 +26,8 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { pendingRequests, lowStockMaterials } from '@/lib/mock-data';
+import { pendingRequests, lowStockMaterials, materialReturnReminders } from '@/lib/mock-data';
+import { cn } from '@/lib/utils';
 
 
 const storeInventory = [
@@ -132,6 +133,54 @@ export default function StoreManagerDashboard() {
                 </CardContent>
             </Card>
         </div>
+        
+        <Card>
+          <CardHeader>
+              <CardTitle>Material Return Reminders</CardTitle>
+              <CardDescription>All materials due for return or with extended dates.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <Table>
+                  <TableHeader>
+                      <TableRow>
+                          <TableHead>Material</TableHead>
+                          <TableHead>Quantity</TableHead>
+                          <TableHead>Site</TableHead>
+                          <TableHead>Return Date</TableHead>
+                          <TableHead>Status</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      {materialReturnReminders.map(req => (
+                          <TableRow key={req.id}>
+                              <TableCell className="font-medium">{req.material}</TableCell>
+                              <TableCell>{req.quantity}</TableCell>
+                              <TableCell>{req.site}</TableCell>
+                              <TableCell>{req.returnDate}</TableCell>
+                              <TableCell>
+                                  <Badge 
+                                      variant={
+                                          req.status === 'Pending' ? 'secondary' : 
+                                          req.status === 'Approved' ? 'default' :
+                                          req.status === 'Issued' ? 'default' :
+                                          req.status === 'Completed' ? 'outline' :
+                                          'destructive'
+                                      }
+                                      className={cn(
+                                          req.status === 'Approved' && 'bg-blue-500/80 text-white',
+                                          req.status === 'Issued' && 'bg-green-600/80 text-white',
+                                          req.status === 'Extended' && 'border-amber-500/50 text-amber-500'
+                                      )}
+                                  >
+                                      {req.status}
+                                  </Badge>
+                              </TableCell>
+                          </TableRow>
+                      ))}
+                  </TableBody>
+              </Table>
+          </CardContent>
+        </Card>
 
         <Card>
             <CardHeader>

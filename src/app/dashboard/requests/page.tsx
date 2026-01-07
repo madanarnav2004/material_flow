@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { materialReturnReminders } from '@/lib/mock-data';
 
 const materialItemSchema = z.object({
   materialName: z.string().min(1, 'Material name is required.'),
@@ -39,16 +40,8 @@ const requestSchema = z.object({
 
 type RequestFormValues = z.infer<typeof requestSchema>;
 
-// Mock data for sites and past requests
+// Mock data for sites
 const sites = ['North Site', 'South Site', 'West Site', 'MAPI Store'];
-const recentRequests = [
-    { id: 'REQ-005', material: 'Cement', quantity: '50 bags', site: 'North Site', status: 'Pending', returnDate: '2024-08-15' },
-    { id: 'REQ-004', material: 'Steel Rebar', quantity: '10 tons', site: 'South Site', status: 'Approved', returnDate: '2024-08-10' },
-    { id: 'REQ-003', material: 'Bricks', quantity: '2000 pcs', site: 'West Site', status: 'Issued', returnDate: '2024-08-05' },
-    { id: 'REQ-002', material: 'Sand', quantity: '15 m³', site: 'North Site', status: 'Completed', returnDate: '2024-07-25' },
-    { id: 'REQ-001', material: 'Gravel', quantity: '5 m³', site: 'South Site', status: 'Extended', returnDate: '2024-07-20 (Ext. 07-27)' },
-];
-
 
 export default function RequestsPage() {
   const { toast } = useToast();
@@ -290,7 +283,7 @@ export default function RequestsPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {recentRequests.map(req => (
+                    {materialReturnReminders.map(req => (
                         <TableRow key={req.id}>
                             <TableCell className="font-medium">{req.id}</TableCell>
                             <TableCell>{req.material}</TableCell>

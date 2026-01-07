@@ -4,7 +4,9 @@ import { BarChart, Users, Building, FileText, BarChart2 } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { pendingRequests } from '@/lib/mock-data';
+import { pendingRequests, materialReturnReminders } from '@/lib/mock-data';
+import { Badge } from '../ui/badge';
+import { cn } from '@/lib/utils';
 
 const boqUsage = [
   { item: 'Concrete Works', consumed: '120 m³', budget: '150 m³', status: 'On Track' },
@@ -105,6 +107,53 @@ export default function CoordinatorDashboard() {
               </CardContent>
             </Card>
         </div>
+        <Card>
+          <CardHeader>
+              <CardTitle>Material Return Reminders</CardTitle>
+              <CardDescription>All materials due for return or with extended dates.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <Table>
+                  <TableHeader>
+                      <TableRow>
+                          <TableHead>Material</TableHead>
+                          <TableHead>Quantity</TableHead>
+                          <TableHead>Site</TableHead>
+                          <TableHead>Return Date</TableHead>
+                          <TableHead>Status</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      {materialReturnReminders.map(req => (
+                          <TableRow key={req.id}>
+                              <TableCell className="font-medium">{req.material}</TableCell>
+                              <TableCell>{req.quantity}</TableCell>
+                              <TableCell>{req.site}</TableCell>
+                              <TableCell>{req.returnDate}</TableCell>
+                              <TableCell>
+                                  <Badge 
+                                      variant={
+                                          req.status === 'Pending' ? 'secondary' : 
+                                          req.status === 'Approved' ? 'default' :
+                                          req.status === 'Issued' ? 'default' :
+                                          req.status === 'Completed' ? 'outline' :
+                                          'destructive'
+                                      }
+                                      className={cn(
+                                          req.status === 'Approved' && 'bg-blue-500/80 text-white',
+                                          req.status === 'Issued' && 'bg-green-600/80 text-white',
+                                          req.status === 'Extended' && 'border-amber-500/50 text-amber-500'
+                                      )}
+                                  >
+                                      {req.status}
+                                  </Badge>
+                              </TableCell>
+                          </TableRow>
+                      ))}
+                  </TableBody>
+              </Table>
+          </CardContent>
+        </Card>
         <Card>
             <CardHeader>
                 <CardTitle>Engineer-Wise Material Usage</CardTitle>
