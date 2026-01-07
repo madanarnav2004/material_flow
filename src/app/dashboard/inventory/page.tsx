@@ -40,6 +40,9 @@ const invoiceSchema = z.object({
 const newMaterialSchema = z.object({
   name: z.string().min(2, 'Material name must be at least 2 characters.'),
   unit: z.string().min(1, 'Unit is required (e.g., kg, m, pcs).'),
+  quantity: z.coerce.number().min(0, 'Quantity must be a positive number.'),
+  rate: z.coerce.number().min(0.01, 'Rate must be > 0.'),
+  remark: z.string().optional(),
   description: z.string().optional(),
 });
 
@@ -63,7 +66,7 @@ const initialInvoices = [
 
 export default function InventoryPage() {
   const { toast } = useToast();
-  const [materials, setMaterials] = React.useState(allMaterials);
+  const [materials, setMaterials] = React.useState(allMaterials.map(m => ({...m, quantity: Math.floor(Math.random() * 200) + 50, rate: Math.floor(Math.random() * 100) + 10, remark: ''})));
   const [uploadedInvoices, setUploadedInvoices] = React.useState(initialInvoices);
 
   const uniqueUnits = React.useMemo(() => {
@@ -103,6 +106,9 @@ export default function InventoryPage() {
     defaultValues: {
       name: '',
       unit: '',
+      quantity: 0,
+      rate: 0,
+      remark: '',
       description: '',
     },
   });
@@ -346,30 +352,62 @@ export default function InventoryPage() {
                                 </FormItem>
                             )}
                             />
-                            <FormField
-                            control={newMaterialForm.control}
-                            name="unit"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Unit of Measurement</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                control={newMaterialForm.control}
+                                name="unit"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Unit</FormLabel>
                                     <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a unit or type a new one" />
-                                    </SelectTrigger>
+                                        <Input placeholder="e.g., kg, pcs" {...field} />
                                     </FormControl>
-                                    <SelectContent>
-                                    {uniqueUnits.map(unit => (
-                                        <SelectItem key={unit} value={unit}>
-                                        {unit}
-                                        </SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                                <FormField
+                                control={newMaterialForm.control}
+                                name="quantity"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Quantity</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="e.g., 100" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                control={newMaterialForm.control}
+                                name="rate"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Rate</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="e.g., 12.50" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                                <FormField
+                                control={newMaterialForm.control}
+                                name="remark"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Remark</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Optional" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                            </div>
                              <FormField
                             control={newMaterialForm.control}
                             name="description"
@@ -432,7 +470,11 @@ export default function InventoryPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Unit</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Rate</TableHead>
+                  <TableHead>Remark</TableHead>
                   <TableHead>Description</TableHead>
+                  <TableHead className="text-right">Total Value</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -440,7 +482,11 @@ export default function InventoryPage() {
                   <TableRow key={material.id}>
                     <TableCell className="font-medium">{material.name}</TableCell>
                     <TableCell>{material.unit}</TableCell>
+                    <TableCell>{material.quantity}</TableCell>
+                    <TableCell>${material.rate.toFixed(2)}</TableCell>
+                    <TableCell>{material.remark || '-'}</TableCell>
                     <TableCell>{material.description || '-'}</TableCell>
+                    <TableCell className="text-right font-medium">${(material.quantity * material.rate).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
