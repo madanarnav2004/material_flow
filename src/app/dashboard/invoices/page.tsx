@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
@@ -21,11 +20,13 @@ import { allMaterials } from '@/lib/mock-data';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 const materialItemSchema = z.object({
   materialId: z.string().min(1, 'Please select a material.'),
   quantity: z.coerce.number().min(0.1, 'Quantity must be > 0.'),
   rate: z.coerce.number().min(0.01, 'Rate must be > 0.'),
+  remark: z.string().optional(),
 });
 
 const invoiceSchema = z.object({
@@ -33,7 +34,6 @@ const invoiceSchema = z.object({
   vendorName: z.string().min(1, 'Vendor name is required.'),
   receivedDate: z.date({ required_error: 'The date the material was received is required.' }),
   materials: z.array(materialItemSchema).min(1, 'Please add at least one material.'),
-  remarks: z.string().optional(),
 });
 
 type InvoiceFormValues = z.infer<typeof invoiceSchema>;
@@ -45,8 +45,7 @@ export default function InvoicesPage() {
     defaultValues: {
       invoiceNumber: '',
       vendorName: '',
-      materials: [{ materialId: '', quantity: 0, rate: 0 }],
-      remarks: '',
+      materials: [{ materialId: '', quantity: 0, rate: 0, remark: '' }],
     },
   });
 
@@ -135,9 +134,10 @@ export default function InvoicesPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-1/2">Material Name</TableHead>
+                        <TableHead className="w-2/6">Material Name</TableHead>
                         <TableHead>Quantity</TableHead>
                         <TableHead>Rate</TableHead>
+                        <TableHead className="w-2/6">Remark</TableHead>
                         <TableHead className="w-12"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -198,6 +198,20 @@ export default function InvoicesPage() {
                             />
                           </TableCell>
                           <TableCell>
+                            <FormField
+                              control={form.control}
+                              name={`materials.${index}.remark`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input placeholder="Optional remark" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </TableCell>
+                          <TableCell>
                             <Button variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
                               <Trash className="h-4 w-4" />
                             </Button>
@@ -212,7 +226,7 @@ export default function InvoicesPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => append({ materialId: '', quantity: 0, rate: 0 })}
+                    onClick={() => append({ materialId: '', quantity: 0, rate: 0, remark: '' })}
                   >
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Add Material
@@ -225,20 +239,6 @@ export default function InvoicesPage() {
                 </div>
                 <FormMessage>{form.formState.errors.materials?.message}</FormMessage>
               </div>
-
-              <FormField
-                control={form.control}
-                name="remarks"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Remarks</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Any additional comments..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
                 <Upload className="mr-2 h-4 w-4" />
