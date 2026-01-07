@@ -24,6 +24,7 @@ import { allMaterials } from '@/lib/mock-data';
 // Schemas
 const materialItemSchema = z.object({
   materialName: z.string().min(1, 'Material name is required.'),
+  unit: z.string().optional(),
   quantity: z.coerce.number().min(0.1, 'Quantity must be > 0.'),
   rate: z.coerce.number().min(0.01, 'Rate must be > 0.'),
   remark: z.string().optional(),
@@ -76,7 +77,7 @@ export default function InventoryPage() {
     defaultValues: {
       invoiceNumber: '',
       vendorName: '',
-      materials: [{ materialName: '', quantity: 0, rate: 0, remark: '' }],
+      materials: [{ materialName: '', unit: '', quantity: 0, rate: 0, remark: '' }],
     },
   });
 
@@ -88,7 +89,7 @@ export default function InventoryPage() {
   function onInvoiceSubmit(values: InvoiceFormValues) {
     console.log(values);
     const totalAmount = values.materials.reduce((acc, item) => acc + (item.quantity * item.rate), 0);
-    setUploadedInvoices(prev => [...prev, { ...values, totalAmount }]);
+    setUploadedInvoices(prev => [...prev, { ...values, receivedDate: values.receivedDate || new Date(), totalAmount }]);
     toast({
       title: 'Invoice Submitted!',
       description: `Invoice ${values.invoiceNumber} has been successfully uploaded.`,
@@ -118,6 +119,13 @@ export default function InventoryPage() {
     });
     newMaterialForm.reset();
   }
+  
+  const handleMaterialChange = (materialName: string, index: number) => {
+    const material = materials.find(m => m.name === materialName);
+    if (material) {
+      invoiceForm.setValue(`materials.${index}.unit`, material.unit);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -194,9 +202,10 @@ export default function InventoryPage() {
                                 <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-2/6">Material Name</TableHead>
+                                    <TableHead>Unit</TableHead>
                                     <TableHead>Quantity</TableHead>
                                     <TableHead>Rate</TableHead>
-                                    <TableHead className="w-2/6">Remark</TableHead>
+                                    <TableHead className="w-1/6">Remark</TableHead>
                                     <TableHead className="w-12"></TableHead>
                                 </TableRow>
                                 </TableHeader>
@@ -209,7 +218,7 @@ export default function InventoryPage() {
                                         name={`materials.${index}.materialName`}
                                         render={({ field }) => (
                                             <FormItem>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <Select onValueChange={(value) => { field.onChange(value); handleMaterialChange(value, index); }} defaultValue={field.value}>
                                                     <FormControl>
                                                         <SelectTrigger>
                                                             <SelectValue placeholder="Select a material" />
@@ -224,6 +233,19 @@ export default function InventoryPage() {
                                                     </SelectContent>
                                                 </Select>
                                                 <FormMessage />
+                                            </FormItem>
+                                        )}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                       <FormField
+                                        control={invoiceForm.control}
+                                        name={`materials.${index}.unit`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <FormControl>
+                                                <Input {...field} readOnly placeholder="Unit" />
+                                            </FormControl>
                                             </FormItem>
                                         )}
                                         />
@@ -263,7 +285,7 @@ export default function InventoryPage() {
                                         render={({ field }) => (
                                             <FormItem>
                                             <FormControl>
-                                                <Input placeholder="Optional remark" {...field} />
+                                                <Input placeholder="Optional" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                             </FormItem>
@@ -284,7 +306,7 @@ export default function InventoryPage() {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={() => append({ materialName: '', quantity: 0, rate: 0, remark: '' })}
+                                onClick={() => append({ materialName: '', unit: '', quantity: 0, rate: 0, remark: '' })}
                                 className="mt-2"
                             >
                                 <PlusCircle className="mr-2 h-4 w-4" />
