@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import StatCard from "@/components/dashboard/stat-card";
 import { DollarSign, Package, AlertTriangle, PackageSearch, Eye, ChevronDown, FileText, Download } from "lucide-react";
-import { monthlyConsumption, materialStock, recentActivities, lowStockMaterials, pendingRequests, materialReturnReminders as initialRequests } from "@/lib/mock-data";
+import { monthlyConsumption, materialStock, recentActivities, lowStockMaterials, pendingRequests as initialPendingRequests, materialReturnReminders as initialRequests } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import * as React from 'react';
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +15,8 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { allMaterials } from "@/lib/mock-data";
 
 const chartConfig: ChartConfig = {
   consumption: {
@@ -52,10 +54,18 @@ type MaterialRequestBill = RequestFormValues & {
   totalValue: number;
 }
 
+const detailedMaterialValue = allMaterials.map(m => ({
+  ...m,
+  quantity: Math.floor(Math.random() * 1000) + 100,
+  rate: Math.floor(Math.random() * 50) + 10,
+}));
+const totalValue = detailedMaterialValue.reduce((acc, item) => acc + (item.quantity * item.rate), 0);
+
 export default function DirectorDashboard() {
   const { toast } = useToast();
   const [requests, setRequests] = React.useState(initialRequests);
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialRequestBill | null>(null);
+  const [pendingRequests, setPendingRequests] = React.useState(initialPendingRequests);
 
   const handleStatusChange = (reqId: string, newStatus: RequestStatus) => {
     setRequests(requests.map(req => req.id === reqId ? { ...req, status: newStatus } : req));
@@ -92,17 +102,64 @@ export default function DirectorDashboard() {
     }
   };
 
+  const handleDownloadExcel = () => {
+    toast({
+      title: "Download Started",
+      description: "Your Excel file is being generated and will download shortly.",
+    });
+  };
 
   return (
     <>
     <h1 className="text-3xl font-bold font-headline">Director Dashboard</h1>
     <div className="grid gap-6">
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Total Material Value" value="$1.2M" icon={DollarSign} description="+20.1% from last month" />
-        <StatCard title="Total Materials" value="5,842 units" icon={PackageSearch} description="Across 12 sites" />
-        <StatCard title="Pending Requests" value="3" icon={Package} description="From 3 sites" />
-        <StatCard title="Low Stock Alerts" value="3 materials" icon={AlertTriangle} description="At 2 sites" className="text-destructive border-destructive/50" />
-      </div>
+      <Dialog>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <DialogTrigger asChild>
+                <StatCard title="Total Material Value" value={`$${(totalValue / 1000000).toFixed(1)}M`} icon={DollarSign} description="+20.1% from last month" onClick={() => {}} />
+            </DialogTrigger>
+            <StatCard title="Total Materials" value="5,842 units" icon={PackageSearch} description="Across 12 sites" />
+            <StatCard title="Pending Requests" value={pendingRequests.length.toString()} icon={Package} description={`From ${new Set(pendingRequests.map(p => p.site)).size} sites`} />
+            <StatCard title="Low Stock Alerts" value={`${lowStockMaterials.length} materials`} icon={AlertTriangle} description={`At ${new Set(lowStockMaterials.map(m => m.site)).size} sites`} className="text-destructive border-destructive/50" />
+        </div>
+        <DialogContent className="max-w-4xl">
+            <DialogHeader>
+                <DialogTitle>Total Material Value Breakdown</DialogTitle>
+                <DialogDescription>A detailed breakdown of all materials, their quantities, rates, and total values across the organization.</DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[60vh] overflow-y-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Material</TableHead>
+                            <TableHead>Unit</TableHead>
+                            <TableHead className="text-right">Quantity</TableHead>
+                            <TableHead className="text-right">Rate</TableHead>
+                            <TableHead className="text-right">Total Value</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {detailedMaterialValue.map(item => (
+                            <TableRow key={item.id}>
+                                <TableCell className="font-medium">{item.name}</TableCell>
+                                <TableCell>{item.unit}</TableCell>
+                                <TableCell className="text-right">{item.quantity}</TableCell>
+                                <TableCell className="text-right">${item.rate.toFixed(2)}</TableCell>
+                                <TableCell className="text-right font-medium">${(item.quantity * item.rate).toFixed(2)}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+            <div className="flex justify-end gap-4 mt-4">
+                <p className="font-bold text-lg">Grand Total: ${totalValue.toFixed(2)}</p>
+                <Button onClick={handleDownloadExcel}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Excel
+                </Button>
+            </div>
+        </DialogContent>
+      </Dialog>
       <div className="grid gap-6 lg:grid-cols-5">
         <div className="lg:col-span-3 space-y-6">
             <Card>
