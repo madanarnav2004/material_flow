@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CalendarIcon, PlusCircle, Trash, Send, FileText, Eye, Download } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Trash, Send, FileText, Eye, Download, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +20,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { materialReturnReminders } from '@/lib/mock-data';
+import { materialReturnReminders as initialRequests } from '@/lib/mock-data';
 import { useUser } from '@/hooks/use-user';
 import { Separator } from '@/components/ui/separator';
 
@@ -59,6 +59,8 @@ export default function RequestsPage() {
   const { toast } = useToast();
   const { user } = useUser();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialRequestBill | null>(null);
+  const [requests, setRequests] = React.useState(initialRequests);
+
 
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(requestSchema),
@@ -81,7 +83,7 @@ export default function RequestsPage() {
     const totalValue = values.materials.reduce((acc, item) => acc + item.quantity * item.rate, 0);
     const today = new Date();
     const datePart = format(today, 'yyyyMMdd');
-    const countPart = Date.now().toString().slice(-3); // Mock count for demo
+    const countPart = (requests.length + 1).toString().padStart(3, '0');
 
     const newRequestId = `REQ-${datePart}-${countPart}`;
     const newIssuedId = `ISS-${datePart}-${countPart}`;
@@ -98,40 +100,55 @@ export default function RequestsPage() {
     
     setLastGeneratedBill(bill);
 
+    // Add to mock requests list
+    const newRequestEntry = {
+      id: newRequestId,
+      material: values.materials.map(m => m.materialName).join(', '),
+      quantity: values.materials.reduce((acc, m) => acc + m.quantity, 0),
+      site: values.requestingSite,
+      status: 'Pending',
+      returnDate: format(values.requiredPeriod.to, 'yyyy-MM-dd'),
+    };
+    setRequests(prev => [newRequestEntry, ...prev]);
+
     toast({
       title: 'Request Submitted!',
       description: `Your material request has been sent to ${values.issuingSite}. A Material Request Bill will be generated upon approval.`,
     });
-    // form.reset(); // We don't reset so user can see the bill they generated
   }
 
   const handleViewBill = (reqId: string) => {
-    // In a real app, you'd fetch the bill details by ID.
-    // For this demo, we'll find the request in mock data and create a bill from it.
-    const request = materialReturnReminders.find(r => r.id === reqId);
+    const request = requests.find(r => r.id === reqId);
     if (request) {
-      const requestDate = new Date(new Date(request.returnDate).getTime() - 10 * 24 * 60 * 60 * 1000);
+      const returnDate = new Date(request.returnDate);
+      const fromDate = new Date(returnDate.getTime() - 10 * 24 * 60 * 60 * 1000);
+      const requestDate = new Date(returnDate.getTime() - 11 * 24 * 60 * 60 * 1000);
       const datePart = format(requestDate, 'yyyyMMdd');
-      const countPart = request.id.slice(-3);
+      const countPart = request.id.slice(-8);
 
       const bill: MaterialRequestBill = {
         requestId: `REQ-${datePart}-${countPart}`,
-        requestDate: requestDate, // Mock request date
+        requestDate: requestDate,
         requestingSite: request.site,
         issuingSite: 'MAPI Store', // Mock issuing site
         materials: [{ materialName: request.material, quantity: request.quantity, rate: 10 }], // Mock rate
-        requiredPeriod: {
-          from: new Date(new Date(request.returnDate).getTime() - 10 * 24 * 60 * 60 * 1000),
-          to: new Date(request.returnDate),
-        },
+        requiredPeriod: { from: fromDate, to: returnDate },
         remarks: `This is a sample bill for request ${request.id}`,
         issuedId: `ISS-${datePart}-${countPart}`,
-        shiftingDate: new Date(new Date(request.returnDate).getTime() - 9 * 24 * 60 * 60 * 1000),
+        shiftingDate: new Date(returnDate.getTime() - 9 * 24 * 60 * 60 * 1000),
         requester: user,
         totalValue: request.quantity * 10, // Mock total value
       };
       setLastGeneratedBill(bill);
     }
+  };
+  
+  const handleStatusChange = (reqId: string, newStatus: 'Approved' | 'Rejected') => {
+    setRequests(requests.map(req => req.id === reqId ? { ...req, status: newStatus } : req));
+    toast({
+      title: `Request ${newStatus}`,
+      description: `Request ID ${reqId} has been marked as ${newStatus}.`,
+    });
   };
 
 
@@ -445,11 +462,11 @@ export default function RequestsPage() {
                         <TableHead>Site</TableHead>
                         <TableHead>Return Date</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Bill</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {materialReturnReminders.map(req => (
+                    {requests.map(req => (
                         <TableRow key={req.id}>
                             <TableCell className="font-medium">{req.id}</TableCell>
                             <TableCell>{req.material}</TableCell>
@@ -474,11 +491,23 @@ export default function RequestsPage() {
                                     {req.status}
                                 </Badge>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-right space-x-2">
                                 <Button variant="outline" size="sm" onClick={() => handleViewBill(req.id)}>
                                     <Eye className="mr-2 h-4 w-4" />
                                     View Bill
                                 </Button>
+                                {req.status === 'Pending' && (
+                                  <>
+                                    <Button variant="outline" size="sm" className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700" onClick={() => handleStatusChange(req.id, 'Approved')}>
+                                      <Check className="mr-2 h-4 w-4" />
+                                      Approve
+                                    </Button>
+                                    <Button variant="outline" size="sm" className="text-red-600 border-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => handleStatusChange(req.id, 'Rejected')}>
+                                      <X className="mr-2 h-4 w-4" />
+                                      Reject
+                                    </Button>
+                                  </>
+                                )}
                             </TableCell>
                         </TableRow>
                     ))}

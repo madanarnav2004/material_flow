@@ -39,11 +39,12 @@ type ReceiptFormValues = z.infer<typeof materialReceiptSchema>;
 type MaterialReceivedBill = ReceiptFormValues & {
   receivedBillId: string;
   receiver: { name: string; email: string; } | null;
+  status: 'Accepted' | 'Mismatch';
 };
 
 
 // Mock data
-const pastReceipts: (MaterialReceivedBill & {status: string})[] = [
+const initialPastReceipts: (MaterialReceivedBill & {status: 'Accepted' | 'Mismatch'})[] = [
     { 
         receivedBillId: 'REC-20240804-001', 
         requestId: 'REQ-002', 
@@ -96,6 +97,7 @@ const sites = ['North Site', 'South Site', 'West Site', 'MAPI Store'];
 export default function ReceiptsPage() {
   const { toast } = useToast();
   const { user } = useUser();
+  const [pastReceipts, setPastReceipts] = React.useState(initialPastReceipts);
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialReceivedBill | null>(null);
 
   const form = useForm<ReceiptFormValues>({
@@ -140,27 +142,31 @@ export default function ReceiptsPage() {
   };
 
   function onSubmit(values: ReceiptFormValues) {
-    console.log(values);
-    
     const today = new Date();
     const datePart = format(today, 'yyyyMMdd');
-    const countPart = Date.now().toString().slice(-3); // Mock count for demo
+    const countPart = (pastReceipts.length + 1).toString().padStart(3, '0');
     const newBillId = `REC-${datePart}-${countPart}`;
+    
+    const status = values.issuedQuantity === values.receivedQuantity ? 'Accepted' : 'Mismatch';
 
     const bill: MaterialReceivedBill = {
       ...values,
       receivedBillId: newBillId,
       receiver: user,
+      status: status,
     };
+    
     setLastGeneratedBill(bill);
+    setPastReceipts(prev => [bill, ...prev]);
 
     let toastDescription = `Receipt for ${values.receivedQuantity} units of ${values.materialName} logged.`;
-    if (values.issuedQuantity !== values.receivedQuantity) {
+    if (status === 'Mismatch') {
       toastDescription += ' Quantity mismatch detected.';
     }
     toast({
       title: 'Material Receipt Logged!',
       description: toastDescription,
+      variant: status === 'Mismatch' ? 'destructive' : 'default',
     });
   }
 
@@ -451,8 +457,8 @@ export default function ReceiptsPage() {
                                         <TableCell>{lastGeneratedBill.issuedQuantity}</TableCell>
                                         <TableCell>{lastGeneratedBill.receivedQuantity}</TableCell>
                                         <TableCell>
-                                            <Badge variant={lastGeneratedBill.issuedQuantity === lastGeneratedBill.receivedQuantity ? 'default' : 'destructive'} className={lastGeneratedBill.issuedQuantity === lastGeneratedBill.receivedQuantity ? 'bg-green-600/80' : ''}>
-                                                {lastGeneratedBill.issuedQuantity === lastGeneratedBill.receivedQuantity ? 'Accepted' : 'Mismatch'}
+                                            <Badge variant={lastGeneratedBill.status === 'Accepted' ? 'default' : 'destructive'} className={lastGeneratedBill.status === 'Accepted' ? 'bg-green-600/80' : ''}>
+                                                {lastGeneratedBill.status}
                                             </Badge>
                                         </TableCell>
                                     </TableRow>
@@ -495,7 +501,7 @@ export default function ReceiptsPage() {
                         <TableHead>Received</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Action</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -516,7 +522,7 @@ export default function ReceiptsPage() {
                                     {rec.status}
                                 </Badge>
                             </TableCell>
-                             <TableCell>
+                             <TableCell className="text-right">
                                 <Button variant="outline" size="sm" onClick={() => handleViewBill(rec.receivedBillId)}>
                                     <Eye className="mr-2 h-4 w-4" />
                                     View Bill
