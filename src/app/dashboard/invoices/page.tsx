@@ -22,7 +22,7 @@ import Link from 'next/link';
 
 const invoiceSchema = z.object({
   invoiceNumber: z.string().min(1, 'Invoice number is required.'),
-  date: z.date({ required_error: 'Invoice date is required.' }),
+  receivedDate: z.date({ required_error: 'The date the material was received is required.' }),
   materialId: z.string().min(1, 'Please select a material.'),
   quantity: z.coerce.number().min(0.1, 'Quantity must be greater than 0.'),
   rate: z.coerce.number().min(0.01, 'Rate must be greater than 0.'),
@@ -76,10 +76,10 @@ export default function InvoicesPage() {
                 />
                 <FormField
                   control={form.control}
-                  name="date"
+                  name="receivedDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Invoice Date</FormLabel>
+                      <FormLabel>Date Material Received</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
