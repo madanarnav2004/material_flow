@@ -1,10 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { PlusCircle, Trash, PackageCheck, AlertTriangle, CheckCircle, HelpCircle } from 'lucide-react';
+import { PlusCircle, Trash, PackageCheck, AlertTriangle, CheckCircle, HelpCircle, FileText, Download, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,36 +18,93 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useUser } from '@/hooks/use-user';
+import { Separator } from '@/components/ui/separator';
 
 const materialReceiptSchema = z.object({
   requestId: z.string().min(1, 'Request ID is required.'),
+  issuedId: z.string().min(1, 'Issued ID is required.'),
   issuingSite: z.string().min(1, 'Issuing site is required.'),
+  receivingSite: z.string().min(1, 'Receiving site is required.'),
   materialName: z.string().min(1, 'Material name is required.'),
   issuedQuantity: z.coerce.number().min(0.1, 'Issued quantity must be > 0.'),
   receivedQuantity: z.coerce.number().min(0.1, 'Received quantity must be > 0.'),
   isDamaged: z.boolean().default(false),
   damageDescription: z.string().optional(),
   remarks: z.string().optional(),
+  receivedDate: z.date({ required_error: 'Received date is required.' }),
 });
 
 type ReceiptFormValues = z.infer<typeof materialReceiptSchema>;
 
+type MaterialReceivedBill = ReceiptFormValues & {
+  receivedBillId: string;
+  receiver: { name: string; email: string; } | null;
+};
+
+
 // Mock data
-const pastReceipts = [
-    { id: 'REC-001', requestId: 'REQ-002', material: 'Bricks', issued: 2000, received: 2000, status: 'Accepted', date: '2024-08-04' },
-    { id: 'REC-002', requestId: 'REQ-001', material: 'Cement', issued: 50, received: 48, status: 'Mismatch', date: '2024-08-02', remarks: '2 bags damaged in transit.' },
-    { id: 'REC-003', requestId: 'REQ-004', material: 'Steel Rebar', issued: 10, received: 10, status: 'Accepted', date: '2024-08-11' },
+const pastReceipts: (MaterialReceivedBill & {status: string})[] = [
+    { 
+        receivedBillId: 'REC-001', 
+        requestId: 'REQ-002', 
+        issuedId: 'ISS-002',
+        materialName: 'Bricks', 
+        issuedQuantity: 2000, 
+        receivedQuantity: 2000, 
+        status: 'Accepted', 
+        receivedDate: new Date('2024-08-04'),
+        issuingSite: 'MAPI Store',
+        receivingSite: 'North Site',
+        receiver: { name: 'Marcus Kane', email: 'm.kane@materialflow.com' },
+        isDamaged: false,
+    },
+    { 
+        receivedBillId: 'REC-002', 
+        requestId: 'REQ-001',
+        issuedId: 'ISS-001',
+        materialName: 'Cement', 
+        issuedQuantity: 50, 
+        receivedQuantity: 48, 
+        status: 'Mismatch', 
+        receivedDate: new Date('2024-08-02'), 
+        remarks: '2 bags damaged in transit.',
+        issuingSite: 'MAPI Store',
+        receivingSite: 'West Site',
+        receiver: { name: 'Leo Gomez', email: 'l.gomez@materialflow.com' },
+        isDamaged: true,
+        damageDescription: '2 bags were torn and cement spilled during transit.',
+    },
+    { 
+        receivedBillId: 'REC-003', 
+        requestId: 'REQ-004',
+        issuedId: 'ISS-004',
+        materialName: 'Steel Rebar', 
+        issuedQuantity: 10, 
+        receivedQuantity: 10, 
+        status: 'Accepted', 
+        receivedDate: new Date('2024-08-11'),
+        issuingSite: 'South Site',
+        receivingSite: 'North Site',
+        receiver: { name: 'Marcus Kane', email: 'm.kane@materialflow.com' },
+        isDamaged: false,
+    },
 ];
 
 const sites = ['North Site', 'South Site', 'West Site', 'MAPI Store'];
 
 export default function ReceiptsPage() {
   const { toast } = useToast();
+  const { user } = useUser();
+  const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialReceivedBill | null>(null);
+
   const form = useForm<ReceiptFormValues>({
     resolver: zodResolver(materialReceiptSchema),
     defaultValues: {
       requestId: 'REQ-005',
-      issuingSite: 'North Site',
+      issuedId: 'ISS-005',
+      issuingSite: 'MAPI Store',
+      receivingSite: 'North Site',
       materialName: 'Cement',
       issuedQuantity: 50,
       receivedQuantity: 50,
@@ -59,6 +116,14 @@ export default function ReceiptsPage() {
 
   function onSubmit(values: ReceiptFormValues) {
     console.log(values);
+
+    const bill: MaterialReceivedBill = {
+      ...values,
+      receivedBillId: `REC-${Date.now().toString().slice(-5)}`,
+      receiver: user,
+    };
+    setLastGeneratedBill(bill);
+
     let toastDescription = `Receipt for ${values.receivedQuantity} units of ${values.materialName} logged.`;
     if (values.issuedQuantity !== values.receivedQuantity) {
       toastDescription += ' Quantity mismatch detected.';
@@ -67,177 +132,299 @@ export default function ReceiptsPage() {
       title: 'Material Receipt Logged!',
       description: toastDescription,
     });
-    form.reset();
   }
+
+  const handleViewBill = (receiptId: string) => {
+    const bill = pastReceipts.find(r => r.receivedBillId === receiptId);
+    if (bill) {
+      setLastGeneratedBill(bill);
+    }
+  };
 
   const isDamaged = form.watch('isDamaged');
 
   return (
     <TooltipProvider>
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Log Material Receipt</CardTitle>
-          <CardDescription>Accept material deliveries and verify quantities against the issue ID.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                <FormField
-                  control={form.control}
-                  name="requestId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Request ID</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., REQ-005" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="issuingSite"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Issuing Site</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select the issuing site" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="materialName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Material Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Cement" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <div className="lg:col-span-3">
+            <Card>
+            <CardHeader>
+                <CardTitle>Log Material Receipt</CardTitle>
+                <CardDescription>Accept material deliveries and verify quantities against the issue ID.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                        <FormField
+                            control={form.control}
+                            name="requestId"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Request ID</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="e.g., REQ-005" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="issuedId"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Issued ID</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="e.g., ISS-005" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="materialName"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Material Name</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="e.g., Cement" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        <FormField
+                            control={form.control}
+                            name="issuingSite"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Issuing Site</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select the issuing site" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        <FormField
+                            control={form.control}
+                            name="receivingSite"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Receiving Site</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select your site" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                    </div>
 
-               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                 <FormField
-                    control={form.control}
-                    name="issuedQuantity"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Issued Quantity</FormLabel>
-                        <FormControl>
-                            <Input type="number" placeholder="e.g., 50" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                 />
-                 <FormField
-                    control={form.control}
-                    name="receivedQuantity"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Received Quantity</FormLabel>
-                        <FormControl>
-                            <Input type="number" placeholder="e.g., 50" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                 />
-              </div>
-                
-                <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        <FormField
+                            control={form.control}
+                            name="issuedQuantity"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Issued Quantity</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="e.g., 50" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="receivedQuantity"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Received Quantity</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="e.g., 50" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                    
+                    <div className="space-y-4">
+                        <FormField
+                            control={form.control}
+                            name="isDamaged"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                <FormControl>
+                                    <Select
+                                        onValueChange={(value) => field.onChange(value === 'true')}
+                                        defaultValue={String(field.value)}
+                                    >
+                                    <SelectTrigger className="w-[180px]">
+                                        <SelectValue placeholder="Damage Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="false">No Damage</SelectItem>
+                                        <SelectItem value="true">Damage Reported</SelectItem>
+                                    </SelectContent>
+                                    </Select>
+                                </FormControl>
+                                <FormLabel className="font-normal flex items-center gap-1">
+                                    Was the material damaged?
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Select 'Damage Reported' if any items were damaged in transit.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </FormLabel>
+                                </FormItem>
+                            )}
+                            />
+
+                        {isDamaged && (
+                            <FormField
+                            control={form.control}
+                            name="damageDescription"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Damage Description</FormLabel>
+                                <FormControl>
+                                    <Textarea
+                                    placeholder="Describe the damage, e.g., '2 bags torn, cement spilled'"
+                                    {...field}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        )}
+                    </div>
+
                     <FormField
                         control={form.control}
-                        name="isDamaged"
-                        render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                            <FormControl>
-                                <Select
-                                    onValueChange={(value) => field.onChange(value === 'true')}
-                                    defaultValue={String(field.value)}
-                                >
-                                <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Damage Status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="false">No Damage</SelectItem>
-                                    <SelectItem value="true">Damage Reported</SelectItem>
-                                </SelectContent>
-                                </Select>
-                            </FormControl>
-                            <FormLabel className="font-normal flex items-center gap-1">
-                                Was the material damaged?
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>Select 'Damage Reported' if any items were damaged in transit.</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </FormLabel>
-                            </FormItem>
-                        )}
-                        />
-
-                    {isDamaged && (
-                        <FormField
-                        control={form.control}
-                        name="damageDescription"
+                        name="remarks"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Damage Description</FormLabel>
+                            <FormLabel>Remarks (Optional)</FormLabel>
                             <FormControl>
-                                <Textarea
-                                placeholder="Describe the damage, e.g., '2 bags torn, cement spilled'"
-                                {...field}
-                                />
+                                <Textarea placeholder="Add any additional remarks about the receipt..." {...field} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
                         )}
                         />
-                    )}
-                </div>
 
-               <FormField
-                  control={form.control}
-                  name="remarks"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Remarks (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Add any additional remarks about the receipt..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
+                    <PackageCheck className="mr-2 h-4 w-4" />
+                    {form.formState.isSubmitting ? 'Logging...' : 'Log Receipt & Generate Bill'}
+                    </Button>
+                </form>
+                </Form>
+            </CardContent>
+            </Card>
+        </div>
+        {lastGeneratedBill && (
+            <div className="lg:col-span-2">
+                <Card>
+                    <CardHeader className="flex flex-row items-start justify-between">
+                        <div>
+                        <CardTitle className="flex items-center gap-2">
+                            <FileText /> Material Received Bill
+                        </CardTitle>
+                        <CardDescription>
+                            This is the generated bill for the received material.
+                        </CardDescription>
+                        </div>
+                        <Button variant="outline" size="sm">
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                        </Button>
+                    </CardHeader>
+                    <CardContent className="space-y-4 text-sm">
+                        <div className="space-y-2 rounded-lg border p-4">
+                            <h3 className="font-semibold">Basic Details</h3>
+                            <div className="grid grid-cols-2 gap-2">
+                                <p><strong>Receipt ID:</strong> {lastGeneratedBill.receivedBillId}</p>
+                                <p><strong>Received Date:</strong> {format(lastGeneratedBill.receivedDate, 'PPP')}</p>
+                                <p><strong>Receiving Site:</strong> {lastGeneratedBill.receivingSite}</p>
+                                <p><strong>Receiver:</strong> {lastGeneratedBill.receiver?.name}</p>
+                            </div>
+                        </div>
+                         <div className="space-y-2 rounded-lg border p-4">
+                            <h3 className="font-semibold">Reference Details</h3>
+                            <div className="grid grid-cols-2 gap-2">
+                                <p><strong>Linked Request ID:</strong> {lastGeneratedBill.requestId}</p>
+                                <p><strong>Linked Issued ID:</strong> {lastGeneratedBill.issuedId}</p>
+                            </div>
+                        </div>
+                        <div className="space-y-2 rounded-lg border p-4">
+                            <h3 className="font-semibold">Material Verification</h3>
+                             <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Material</TableHead>
+                                        <TableHead>Issued</TableHead>
+                                        <TableHead>Received</TableHead>
+                                        <TableHead>Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    <TableRow>
+                                        <TableCell>{lastGeneratedBill.materialName}</TableCell>
+                                        <TableCell>{lastGeneratedBill.issuedQuantity}</TableCell>
+                                        <TableCell>{lastGeneratedBill.receivedQuantity}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={lastGeneratedBill.issuedQuantity === lastGeneratedBill.receivedQuantity ? 'default' : 'destructive'} className={lastGeneratedBill.issuedQuantity === lastGeneratedBill.receivedQuantity ? 'bg-green-600/80' : ''}>
+                                                {lastGeneratedBill.issuedQuantity === lastGeneratedBill.receivedQuantity ? 'Accepted' : 'Mismatch'}
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                </TableBody>
+                            </Table>
+                        </div>
+                        
+                        {lastGeneratedBill.isDamaged && (
+                             <div className="space-y-2 rounded-lg border border-destructive/50 p-4">
+                                <h3 className="font-semibold text-destructive">Damage Report</h3>
+                                <p>{lastGeneratedBill.damageDescription}</p>
+                             </div>
+                        )}
 
-              <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
-                <PackageCheck className="mr-2 h-4 w-4" />
-                {form.formState.isSubmitting ? 'Logging...' : 'Log Receipt'}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                        {lastGeneratedBill.remarks && (
+                            <div className="space-y-2">
+                                <h3 className="font-semibold">Remarks</h3>
+                                <p className="text-muted-foreground">{lastGeneratedBill.remarks}</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+        )}
+      </div>
       
       <Card>
         <CardHeader>
@@ -255,17 +442,18 @@ export default function ReceiptsPage() {
                         <TableHead>Received</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Action</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {pastReceipts.map(rec => (
-                        <TableRow key={rec.id}>
-                            <TableCell className="font-medium">{rec.id}</TableCell>
+                        <TableRow key={rec.receivedBillId}>
+                            <TableCell className="font-medium">{rec.receivedBillId}</TableCell>
                             <TableCell>{rec.requestId}</TableCell>
-                            <TableCell>{rec.material}</TableCell>
-                            <TableCell>{rec.issued}</TableCell>
-                            <TableCell>{rec.received}</TableCell>
-                            <TableCell>{rec.date}</TableCell>
+                            <TableCell>{rec.materialName}</TableCell>
+                            <TableCell>{rec.issuedQuantity}</TableCell>
+                            <TableCell>{rec.receivedQuantity}</TableCell>
+                            <TableCell>{format(rec.receivedDate, 'yyyy-MM-dd')}</TableCell>
                             <TableCell>
                                 <Badge 
                                     variant={rec.status === 'Accepted' ? 'default' : 'destructive'}
@@ -274,6 +462,12 @@ export default function ReceiptsPage() {
                                     {rec.status === 'Accepted' ? <CheckCircle className="mr-1 h-3 w-3" /> : <AlertTriangle className="mr-1 h-3 w-3" />}
                                     {rec.status}
                                 </Badge>
+                            </TableCell>
+                             <TableCell>
+                                <Button variant="outline" size="sm" onClick={() => handleViewBill(rec.receivedBillId)}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Bill
+                                </Button>
                             </TableCell>
                         </TableRow>
                     ))}
