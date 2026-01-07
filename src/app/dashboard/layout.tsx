@@ -5,6 +5,7 @@ import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar'
 import DashboardNav from '@/components/dashboard/nav';
 import DashboardHeader from '@/components/dashboard/header';
 import { useUser } from '@/hooks/use-user';
+import { MaterialProvider } from '@/context/material-context';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, role, isLoading } = useUser();
