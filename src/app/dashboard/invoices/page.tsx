@@ -202,9 +202,9 @@ export default function InvoicesPage() {
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Add Material
                   </Button>
-                  <Button asChild variant="link" size="sm" className="p-0">
+                  <Button asChild variant="secondary" size="sm">
                     <Link href="/dashboard/materials">
-                      Need to add a new material type?
+                      Add New Material Type
                     </Link>
                   </Button>
                 </div>
