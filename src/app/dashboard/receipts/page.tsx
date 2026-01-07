@@ -91,33 +91,6 @@ const pastReceipts: (MaterialReceivedBill & {status: string})[] = [
     },
 ];
 
-const pendingIssues = [
-  {
-    issuedId: 'ISS-20240812-987',
-    requestId: 'REQ-20240812-987',
-    materialName: 'Cement',
-    issuedQuantity: 50,
-    issuingSite: 'MAPI Store',
-    receivingSite: 'North Site',
-  },
-  {
-    issuedId: 'ISS-20240811-345',
-    requestId: 'REQ-20240811-345',
-    materialName: 'Bricks',
-    issuedQuantity: 5000,
-    issuingSite: 'MAPI Store',
-    receivingSite: 'South Site',
-  },
-  {
-    issuedId: 'ISS-20240810-123',
-    requestId: 'REQ-20240810-123',
-    materialName: 'Steel Rebar',
-    issuedQuantity: 2,
-    issuingSite: 'West Site',
-    receivingSite: 'North Site',
-  },
-];
-
 
 const sites = ['North Site', 'South Site', 'West Site', 'MAPI Store'];
 
@@ -141,20 +114,6 @@ export default function ReceiptsPage() {
       remarks: '',
     },
   });
-
-  const handleIssueSelection = (issuedId: string) => {
-    const selectedIssue = pendingIssues.find(issue => issue.issuedId === issuedId);
-    if (selectedIssue) {
-      form.setValue('requestId', selectedIssue.requestId);
-      form.setValue('issuedId', selectedIssue.issuedId);
-      form.setValue('issuingSite', selectedIssue.issuingSite);
-      form.setValue('receivingSite', selectedIssue.receivingSite);
-      form.setValue('materialName', selectedIssue.materialName);
-      form.setValue('issuedQuantity', selectedIssue.issuedQuantity);
-      form.setValue('receivedQuantity', selectedIssue.issuedQuantity); // pre-fill received with issued
-    }
-  };
-
 
   function onSubmit(values: ReceiptFormValues) {
     console.log(values);
@@ -204,25 +163,6 @@ export default function ReceiptsPage() {
                 <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                     
-                    <FormItem>
-                      <FormLabel>Select Issued ID to Receive</FormLabel>
-                      <Select onValueChange={handleIssueSelection}>
-                          <FormControl>
-                          <SelectTrigger>
-                              <SelectValue placeholder="Select an Issued ID..." />
-                          </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {pendingIssues.map(issue => (
-                                <SelectItem key={issue.issuedId} value={issue.issuedId}>
-                                    {issue.issuedId} - {issue.materialName} from {issue.issuingSite}
-                                </SelectItem>
-                            ))}
-                          </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <FormField
                             control={form.control}
@@ -231,7 +171,7 @@ export default function ReceiptsPage() {
                                 <FormItem>
                                 <FormLabel>Request ID</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="e.g., REQ-005" {...field} disabled />
+                                    <Input placeholder="e.g., REQ-20240812-987" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -244,7 +184,7 @@ export default function ReceiptsPage() {
                                 <FormItem>
                                 <FormLabel>Issued ID</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="e.g., ISS-005" {...field} disabled />
+                                    <Input placeholder="e.g., ISS-20240812-987" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -259,7 +199,7 @@ export default function ReceiptsPage() {
                                 <FormItem>
                                 <FormLabel>Material Name</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="e.g., Cement" {...field} disabled />
+                                    <Input placeholder="e.g., Cement" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -272,7 +212,7 @@ export default function ReceiptsPage() {
                                 <FormItem>
                                 <FormLabel>Issued Quantity</FormLabel>
                                 <FormControl>
-                                    <Input type="number" placeholder="e.g., 50" {...field} disabled />
+                                    <Input type="number" placeholder="e.g., 50" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -286,9 +226,16 @@ export default function ReceiptsPage() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Issuing Site</FormLabel>
-                                <FormControl>
-                                    <Input {...field} disabled />
-                                </FormControl>
+                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select issuing site" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                                 </FormItem>
                             )}
@@ -299,9 +246,16 @@ export default function ReceiptsPage() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Receiving Site</FormLabel>
-                                 <FormControl>
-                                    <Input {...field} disabled />
-                                </FormControl>
+                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select receiving site" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                                 </FormItem>
                             )}
