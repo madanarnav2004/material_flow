@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CalendarIcon, PlusCircle, Trash, Send, FileText, Eye, Download, Check, X, ChevronDown } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Trash, Send, FileText, Eye, Download, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,11 +17,9 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { materialReturnReminders as initialRequests } from '@/lib/mock-data';
-import { useUser } from '@/hooks/use-user';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -32,6 +30,7 @@ const materialItemSchema = z.object({
 });
 
 const requestSchema = z.object({
+  requesterName: z.string().min(2, 'Requester name is required.'),
   requestingSite: z.string().min(1, 'Requesting site is required.'),
   issuingSite: z.string().min(1, 'Issuing site is required.'),
   materials: z.array(materialItemSchema).min(1, 'Please add at least one material.'),
@@ -48,18 +47,13 @@ type MaterialRequestBill = RequestFormValues & {
   requestDate: Date;
   issuedId: string;
   shiftingDate: Date;
-  requester: { name: string; email: string; } | null;
+  requester: { name: string; } | null;
   totalValue: number;
 }
 type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended';
 
-
-// Mock data for sites
-const sites = ['North Site', 'South Site', 'West Site', 'MAPI Store'];
-
 export default function RequestsPage() {
   const { toast } = useToast();
-  const { user } = useUser();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialRequestBill | null>(null);
   const [requests, setRequests] = React.useState(initialRequests);
 
@@ -67,6 +61,7 @@ export default function RequestsPage() {
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(requestSchema),
     defaultValues: {
+      requesterName: '',
       requestingSite: '',
       issuingSite: '',
       materials: [{ materialName: '', quantity: 1, rate: 10 }],
@@ -96,7 +91,7 @@ export default function RequestsPage() {
       requestDate: new Date(),
       issuedId: newIssuedId,
       shiftingDate: new Date(), // Assuming shifting happens immediately on approval
-      requester: user,
+      requester: { name: values.requesterName },
       totalValue,
     };
     
@@ -131,6 +126,7 @@ export default function RequestsPage() {
       const bill: MaterialRequestBill = {
         requestId: `REQ-${datePart}-${countPart}`,
         requestDate: requestDate,
+        requesterName: 'Sample Requester',
         requestingSite: request.site,
         issuingSite: 'MAPI Store', // Mock issuing site
         materials: [{ materialName: request.material, quantity: request.quantity, rate: 10 }], // Mock rate
@@ -138,7 +134,7 @@ export default function RequestsPage() {
         remarks: `This is a sample bill for request ${request.id}`,
         issuedId: `ISS-${datePart}-${countPart}`,
         shiftingDate: new Date(returnDate.getTime() - 9 * 24 * 60 * 60 * 1000),
-        requester: user,
+        requester: { name: 'Sample Requester' },
         totalValue: request.quantity * 10, // Mock total value
       };
       setLastGeneratedBill(bill);
@@ -169,40 +165,39 @@ export default function RequestsPage() {
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <FormField
                       control={form.control}
-                      name="requestingSite"
+                      name="requesterName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Your Site (Requesting From)</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select your site" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>Requester Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., John Doe" {...field} />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                     <FormField
                       control={form.control}
+                      name="requestingSite"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Requesting Site</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., North Site" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormField
+                      control={form.control}
                       name="issuingSite"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Request To (Issuing Site)</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select issuing site/store" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>Issuing Site</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., MAPI Store" {...field} />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}

@@ -17,12 +17,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useUser } from '@/hooks/use-user';
 import { issuedMaterialsForReceipt } from '@/lib/mock-data';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const materialReceiptSchema = z.object({
   requestId: z.string().min(1, 'Request ID is required.'),
+  receiverName: z.string().min(2, "Receiver name is required."),
   issuedId: z.string().min(1, 'Issued ID is required.'),
   issuingSite: z.string().min(1, 'Issuing site is required.'),
   receivingSite: z.string().min(1, 'Receiving site is required.'),
@@ -41,7 +41,7 @@ type ReceiptStatus = 'Accepted' | 'Mismatch' | 'Completed';
 
 type MaterialReceivedBill = ReceiptFormValues & {
   receivedBillId: string;
-  receiver: { name: string; email: string; } | null;
+  receiver: { name: string; } | null;
   status: ReceiptStatus;
 };
 
@@ -59,8 +59,9 @@ const initialPastReceipts: MaterialReceivedBill[] = [
         receivedDate: new Date('2024-08-04'),
         issuingSite: 'MAPI Store',
         receivingSite: 'West Site',
-        receiver: { name: 'Leo Gomez', email: 'l.gomez@materialflow.com' },
+        receiver: { name: 'Leo Gomez' },
         isDamaged: false,
+        receiverName: 'Leo Gomez',
     },
     { 
         receivedBillId: 'REC-20240802-001', 
@@ -74,9 +75,10 @@ const initialPastReceipts: MaterialReceivedBill[] = [
         remarks: '2 bags damaged in transit.',
         issuingSite: 'MAPI Store',
         receivingSite: 'North Site',
-        receiver: { name: 'Marcus Kane', email: 'm.kane@materialflow.com' },
+        receiver: { name: 'Marcus Kane' },
         isDamaged: true,
         damageDescription: '2 bags were torn and cement spilled during transit.',
+        receiverName: 'Marcus Kane',
     },
     { 
         receivedBillId: 'REC-20240811-001', 
@@ -89,17 +91,14 @@ const initialPastReceipts: MaterialReceivedBill[] = [
         receivedDate: new Date('2024-08-11'),
         issuingSite: 'South Site',
         receivingSite: 'North Site',
-        receiver: { name: 'Marcus Kane', email: 'm.kane@materialflow.com' },
+        receiver: { name: 'Marcus Kane' },
         isDamaged: false,
+        receiverName: 'Marcus Kane',
     },
 ];
 
-
-const sites = ['North Site', 'South Site', 'West Site', 'MAPI Store'];
-
 export default function ReceiptsPage() {
   const { toast } = useToast();
-  const { user } = useUser();
   const [pastReceipts, setPastReceipts] = React.useState<MaterialReceivedBill[]>(initialPastReceipts);
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialReceivedBill | null>(null);
 
@@ -107,6 +106,7 @@ export default function ReceiptsPage() {
     resolver: zodResolver(materialReceiptSchema),
     defaultValues: {
       requestId: '',
+      receiverName: '',
       issuedId: '',
       issuingSite: '',
       receivingSite: '',
@@ -155,7 +155,7 @@ export default function ReceiptsPage() {
     const bill: MaterialReceivedBill = {
       ...values,
       receivedBillId: newBillId,
-      receiver: user,
+      receiver: { name: values.receiverName },
       status: status,
     };
     
@@ -272,16 +272,9 @@ export default function ReceiptsPage() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Issuing Site</FormLabel>
-                                 <Select onValueChange={field.onChange} value={field.value} disabled>
-                                    <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select issuing site" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                 <FormControl>
+                                     <Input placeholder="e.g., MAPI Store" {...field} />
+                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
                             )}
@@ -292,21 +285,27 @@ export default function ReceiptsPage() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Receiving Site</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value} disabled>
-                                    <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select receiving site" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                  <FormControl>
+                                      <Input placeholder="e.g., North Site" {...field} />
+                                  </FormControl>
                                 <FormMessage />
                                 </FormItem>
                             )}
                             />
                     </div>
+                     <FormField
+                        control={form.control}
+                        name="receiverName"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Receiver Name</FormLabel>
+                            <FormControl>
+                                <Input placeholder="e.g., Jane Doe" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
 
                     <div className="rounded-md border p-4 bg-secondary/20">
                         <FormField
