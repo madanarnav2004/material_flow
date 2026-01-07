@@ -32,3 +32,9 @@ export const allMaterials = [
     { id: 'mat-5', name: 'Gravel', unit: 'cubic meter', description: 'Coarse aggregate for concrete' },
     { id: 'mat-6', name: 'Paint', unit: 'liter', description: 'White emulsion paint' },
 ];
+
+export const lowStockMaterials = [
+    { id: 'ls-1', material: 'Steel Rebar', site: 'North Site', quantity: '5 tons' },
+    { id: 'ls-2', material: 'Paint', site: 'West Site', quantity: '20 liters' },
+    { id: 'ls-3', material: 'Cement', site: 'North Site', quantity: '50 bags' },
+];
