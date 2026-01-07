@@ -64,7 +64,7 @@ export default function RequestsPage() {
     console.log(values);
     toast({
       title: 'Request Submitted!',
-      description: `Your material request has been sent to ${values.issuingSite}.`,
+      description: `Your material request has been sent to ${values.issuingSite}. A Material Request Bill will be generated upon approval.`,
     });
     form.reset();
   }
@@ -74,7 +74,7 @@ export default function RequestsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Create Material Request</CardTitle>
-          <CardDescription>Fill in the details to request materials from another site or the MAPI store.</CardDescription>
+          <CardDescription>Fill in the details to request materials. A Material Request Bill will be generated automatically upon approval and issue.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -268,7 +268,7 @@ export default function RequestsPage() {
       <Card>
         <CardHeader>
             <CardTitle>Recent Material Requests</CardTitle>
-            <CardDescription>A log of the most recent requests across all sites.</CardDescription>
+            <CardDescription>A log of the most recent requests and their statuses, which become Material Request Bills upon approval.</CardDescription>
         </CardHeader>
         <CardContent>
             <Table>
