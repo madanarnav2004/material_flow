@@ -22,8 +22,8 @@ import { useUser } from '@/hooks/use-user';
 import { Separator } from '@/components/ui/separator';
 
 const materialReceiptSchema = z.object({
-  requestId: z.string().min(1, 'Request ID is required.'),
   issuedId: z.string().min(1, 'Issued ID is required.'),
+  requestId: z.string().min(1, 'Request ID is required.'),
   issuingSite: z.string().min(1, 'Issuing site is required.'),
   receivingSite: z.string().min(1, 'Receiving site is required.'),
   materialName: z.string().min(1, 'Material name is required.'),
@@ -55,8 +55,8 @@ const pastReceipts: (MaterialReceivedBill & {status: string})[] = [
         status: 'Accepted', 
         receivedDate: new Date('2024-08-04'),
         issuingSite: 'MAPI Store',
-        receivingSite: 'North Site',
-        receiver: { name: 'Marcus Kane', email: 'm.kane@materialflow.com' },
+        receivingSite: 'West Site',
+        receiver: { name: 'Leo Gomez', email: 'l.gomez@materialflow.com' },
         isDamaged: false,
     },
     { 
@@ -70,8 +70,8 @@ const pastReceipts: (MaterialReceivedBill & {status: string})[] = [
         receivedDate: new Date('2024-08-02'), 
         remarks: '2 bags damaged in transit.',
         issuingSite: 'MAPI Store',
-        receivingSite: 'West Site',
-        receiver: { name: 'Leo Gomez', email: 'l.gomez@materialflow.com' },
+        receivingSite: 'North Site',
+        receiver: { name: 'Marcus Kane', email: 'm.kane@materialflow.com' },
         isDamaged: true,
         damageDescription: '2 bags were torn and cement spilled during transit.',
     },
@@ -91,6 +91,34 @@ const pastReceipts: (MaterialReceivedBill & {status: string})[] = [
     },
 ];
 
+const pendingIssues = [
+  {
+    issuedId: 'ISS-20240812-987',
+    requestId: 'REQ-20240812-987',
+    materialName: 'Cement',
+    issuedQuantity: 50,
+    issuingSite: 'MAPI Store',
+    receivingSite: 'North Site',
+  },
+  {
+    issuedId: 'ISS-20240811-345',
+    requestId: 'REQ-20240811-345',
+    materialName: 'Bricks',
+    issuedQuantity: 5000,
+    issuingSite: 'MAPI Store',
+    receivingSite: 'South Site',
+  },
+  {
+    issuedId: 'ISS-20240810-123',
+    requestId: 'REQ-20240810-123',
+    materialName: 'Steel Rebar',
+    issuedQuantity: 2,
+    issuingSite: 'West Site',
+    receivingSite: 'North Site',
+  },
+];
+
+
 const sites = ['North Site', 'South Site', 'West Site', 'MAPI Store'];
 
 export default function ReceiptsPage() {
@@ -101,18 +129,32 @@ export default function ReceiptsPage() {
   const form = useForm<ReceiptFormValues>({
     resolver: zodResolver(materialReceiptSchema),
     defaultValues: {
-      requestId: 'REQ-005',
-      issuedId: 'ISS-005',
-      issuingSite: 'MAPI Store',
-      receivingSite: 'North Site',
-      materialName: 'Cement',
-      issuedQuantity: 50,
-      receivedQuantity: 50,
+      requestId: '',
+      issuedId: '',
+      issuingSite: '',
+      receivingSite: '',
+      materialName: '',
+      issuedQuantity: 0,
+      receivedQuantity: 0,
       isDamaged: false,
       damageDescription: '',
       remarks: '',
     },
   });
+
+  const handleIssueSelection = (issuedId: string) => {
+    const selectedIssue = pendingIssues.find(issue => issue.issuedId === issuedId);
+    if (selectedIssue) {
+      form.setValue('requestId', selectedIssue.requestId);
+      form.setValue('issuedId', selectedIssue.issuedId);
+      form.setValue('issuingSite', selectedIssue.issuingSite);
+      form.setValue('receivingSite', selectedIssue.receivingSite);
+      form.setValue('materialName', selectedIssue.materialName);
+      form.setValue('issuedQuantity', selectedIssue.issuedQuantity);
+      form.setValue('receivedQuantity', selectedIssue.issuedQuantity); // pre-fill received with issued
+    }
+  };
+
 
   function onSubmit(values: ReceiptFormValues) {
     console.log(values);
@@ -161,7 +203,27 @@ export default function ReceiptsPage() {
             <CardContent>
                 <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                    
+                    <FormItem>
+                      <FormLabel>Select Issued ID to Receive</FormLabel>
+                      <Select onValueChange={handleIssueSelection}>
+                          <FormControl>
+                          <SelectTrigger>
+                              <SelectValue placeholder="Select an Issued ID..." />
+                          </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {pendingIssues.map(issue => (
+                                <SelectItem key={issue.issuedId} value={issue.issuedId}>
+                                    {issue.issuedId} - {issue.materialName} from {issue.issuingSite}
+                                </SelectItem>
+                            ))}
+                          </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <FormField
                             control={form.control}
                             name="requestId"
@@ -169,7 +231,7 @@ export default function ReceiptsPage() {
                                 <FormItem>
                                 <FormLabel>Request ID</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="e.g., REQ-005" {...field} />
+                                    <Input placeholder="e.g., REQ-005" {...field} disabled />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -182,12 +244,14 @@ export default function ReceiptsPage() {
                                 <FormItem>
                                 <FormLabel>Issued ID</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="e.g., ISS-005" {...field} />
+                                    <Input placeholder="e.g., ISS-005" {...field} disabled />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
                             )}
                         />
+                    </div>
+                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                          <FormField
                             control={form.control}
                             name="materialName"
@@ -195,7 +259,20 @@ export default function ReceiptsPage() {
                                 <FormItem>
                                 <FormLabel>Material Name</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="e.g., Cement" {...field} />
+                                    <Input placeholder="e.g., Cement" {...field} disabled />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="issuedQuantity"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Issued Quantity</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="e.g., 50" {...field} disabled />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -209,16 +286,9 @@ export default function ReceiptsPage() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Issuing Site</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select the issuing site" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                    {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                <FormControl>
+                                    <Input {...field} disabled />
+                                </FormControl>
                                 <FormMessage />
                                 </FormItem>
                             )}
@@ -229,44 +299,24 @@ export default function ReceiptsPage() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Receiving Site</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select your site" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                    {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                 <FormControl>
+                                    <Input {...field} disabled />
+                                </FormControl>
                                 <FormMessage />
                                 </FormItem>
                             )}
                             />
                     </div>
 
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <FormField
-                            control={form.control}
-                            name="issuedQuantity"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Issued Quantity</FormLabel>
-                                <FormControl>
-                                    <Input type="number" placeholder="e.g., 50" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                    <div className="rounded-md border p-4 bg-secondary/20">
                         <FormField
                             control={form.control}
                             name="receivedQuantity"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Received Quantity</FormLabel>
+                                <FormLabel className="text-base">Enter Received Quantity</FormLabel>
                                 <FormControl>
-                                    <Input type="number" placeholder="e.g., 50" {...field} />
+                                    <Input type="number" placeholder="e.g., 50" {...field} className="bg-background text-lg"/>
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -342,6 +392,21 @@ export default function ReceiptsPage() {
                             </FormItem>
                         )}
                         />
+                    
+                    <FormField
+                        control={form.control}
+                        name="receivedDate"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                            <FormLabel>Received Date</FormLabel>
+                             <FormControl>
+                                    <Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(new Date(e.target.value))} />
+                                </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
 
                     <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
                     <PackageCheck className="mr-2 h-4 w-4" />
@@ -374,7 +439,7 @@ export default function ReceiptsPage() {
                             <h3 className="font-semibold">Basic Details</h3>
                             <div className="grid grid-cols-2 gap-2">
                                 <p><strong>Receipt ID:</strong> {lastGeneratedBill.receivedBillId}</p>
-                                <p><strong>Received Date:</strong> {format(lastGeneratedBill.receivedDate, 'PPP')}</p>
+                                <p><strong>Received Date:</strong> {lastGeneratedBill.receivedDate ? format(lastGeneratedBill.receivedDate, 'PPP') : 'N/A'}</p>
                                 <p><strong>Receiving Site:</strong> {lastGeneratedBill.receivingSite}</p>
                                 <p><strong>Receiver:</strong> {lastGeneratedBill.receiver?.name}</p>
                             </div>
