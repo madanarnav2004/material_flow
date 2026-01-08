@@ -30,6 +30,7 @@ const materialItemSchema = z.object({
 });
 
 const requestSchema = z.object({
+  requestId: z.string(),
   requesterName: z.string().min(2, 'Requester name is required.'),
   requestingSite: z.string().min(1, 'Requesting site is required.'),
   issuingSite: z.string().min(1, 'Issuing site is required.'),
@@ -43,7 +44,6 @@ const requestSchema = z.object({
 
 type RequestFormValues = z.infer<typeof requestSchema>;
 type MaterialRequestBill = RequestFormValues & {
-  requestId: string;
   requestDate: Date;
   issuedId: string;
   shiftingDate: Date;
@@ -51,6 +51,13 @@ type MaterialRequestBill = RequestFormValues & {
   totalValue: number;
 }
 type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended';
+
+const generateRequestId = (count: number) => {
+    const today = new Date();
+    const datePart = format(today, 'yyyyMMdd');
+    const countPart = (count + 1).toString().padStart(3, '0');
+    return `REQ-${datePart}-${countPart}`;
+}
 
 export default function RequestsPage() {
   const { toast } = useToast();
@@ -61,6 +68,7 @@ export default function RequestsPage() {
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(requestSchema),
     defaultValues: {
+      requestId: '',
       requesterName: '',
       requestingSite: '',
       issuingSite: '',
@@ -68,6 +76,11 @@ export default function RequestsPage() {
       remarks: '',
     },
   });
+
+  React.useEffect(() => {
+    form.setValue('requestId', generateRequestId(requests.length));
+  }, [requests.length, form]);
+
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -78,16 +91,13 @@ export default function RequestsPage() {
     console.log(values);
     
     const totalValue = values.materials.reduce((acc, item) => acc + item.quantity * item.rate, 0);
-    const today = new Date();
-    const datePart = format(today, 'yyyyMMdd');
-    const countPart = (requests.length + 1).toString().padStart(3, '0');
+    const datePart = values.requestId.split('-')[1];
+    const countPart = values.requestId.split('-')[2];
 
-    const newRequestId = `REQ-${datePart}-${countPart}`;
     const newIssuedId = `ISS-${datePart}-${countPart}`;
 
     const bill: MaterialRequestBill = {
       ...values,
-      requestId: newRequestId,
       requestDate: new Date(),
       issuedId: newIssuedId,
       shiftingDate: new Date(), // Assuming shifting happens immediately on approval
@@ -99,7 +109,7 @@ export default function RequestsPage() {
 
     // Add to mock requests list
     const newRequestEntry = {
-      id: newRequestId,
+      id: values.requestId,
       material: values.materials.map(m => m.materialName).join(', '),
       quantity: values.materials.reduce((acc, m) => acc + m.quantity, 0),
       site: values.requestingSite,
@@ -112,6 +122,8 @@ export default function RequestsPage() {
       title: 'Request Submitted!',
       description: `Your material request has been sent to ${values.issuingSite}. A Material Request Bill will be generated upon approval.`,
     });
+    
+    form.reset();
   }
 
   const handleViewBill = (reqId: string) => {
@@ -162,6 +174,19 @@ export default function RequestsPage() {
             <CardContent>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                  <FormField
+                    control={form.control}
+                    name="requestId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Request ID</FormLabel>
+                        <FormControl>
+                          <Input {...field} readOnly disabled />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <FormField
                       control={form.control}
