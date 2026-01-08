@@ -104,6 +104,7 @@ export default function ReceiptsPage() {
   const { toast } = useToast();
   const [pastReceipts, setPastReceipts] = React.useState<MaterialReceivedBill[]>(initialPastReceipts);
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialReceivedBill | null>(null);
+  const billContentRef = React.useRef<HTMLDivElement>(null);
 
   const form = useForm<ReceiptFormValues>({
     resolver: zodResolver(materialReceiptSchema),
@@ -189,6 +190,25 @@ export default function ReceiptsPage() {
       title: 'Status Updated',
       description: `Receipt ${receiptId} has been marked as ${newStatus}.`,
     });
+  };
+  
+  const handleDownload = (billId: string) => {
+    if (billContentRef.current) {
+      const billHtml = billContentRef.current.innerHTML;
+      const blob = new Blob([`<html><head><title>${billId}</title></head><body>${billHtml}</body></html>`], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${billId}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({
+        title: "Download Started",
+        description: `Bill ${billId} is downloading.`,
+      });
+    }
   };
 
   const isDamaged = form.watch('isDamaged');
@@ -450,12 +470,12 @@ export default function ReceiptsPage() {
                             This is the generated bill for the received material.
                         </CardDescription>
                         </div>
-                        <Button variant="outline" size="sm">
-                        <Download className="mr-2 h-4 w-4" />
-                        Download
+                        <Button variant="outline" size="sm" onClick={() => handleDownload(lastGeneratedBill.receivedBillId)}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download
                         </Button>
                     </CardHeader>
-                    <CardContent className="space-y-4 text-sm">
+                    <CardContent ref={billContentRef} className="space-y-4 text-sm">
                         <div className="space-y-2 rounded-lg border p-4">
                             <h3 className="font-semibold">Basic Details</h3>
                             <div className="grid grid-cols-2 gap-2">

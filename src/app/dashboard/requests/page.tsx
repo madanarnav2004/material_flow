@@ -65,6 +65,7 @@ export default function RequestsPage() {
   const { toast } = useToast();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialRequestBill | null>(null);
   const [requests, setRequests] = React.useState(initialRequests);
+  const billContentRef = React.useRef<HTMLDivElement>(null);
 
 
   const form = useForm<RequestFormValues>({
@@ -172,6 +173,25 @@ export default function RequestsPage() {
       title: `Request ${newStatus}`,
       description: `Request ID ${reqId} has been marked as ${newStatus}.`,
     });
+  };
+  
+  const handleDownload = (billId: string) => {
+    if (billContentRef.current) {
+      const billHtml = billContentRef.current.innerHTML;
+      const blob = new Blob([`<html><head><title>${billId}</title></head><body>${billHtml}</body></html>`], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${billId}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({
+        title: "Download Started",
+        description: `Bill ${billId} is downloading.`,
+      });
+    }
   };
 
 
@@ -436,12 +456,12 @@ export default function RequestsPage() {
                     This is the generated bill for your request. It's created automatically upon approval and issue.
                   </CardDescription>
                 </div>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => handleDownload(lastGeneratedBill.requestId)}>
                   <Download className="mr-2 h-4 w-4" />
                   Download
                 </Button>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent ref={billContentRef} className="space-y-4">
                 <div className="space-y-2 rounded-lg border p-4">
                   <h3 className="font-semibold">Request Information</h3>
                   <div className="grid grid-cols-2 gap-2 text-sm">
