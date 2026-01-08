@@ -17,8 +17,6 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { allMaterials } from '@/lib/mock-data';
 
 // Schemas
 const materialIssueItemSchema = z.object({
@@ -83,13 +81,6 @@ export default function MaterialsIssuedPage() {
     form.reset();
   }
   
-  const handleMaterialChange = (materialName: string, index: number) => {
-    const material = allMaterials.find(m => m.name === materialName);
-    if (material) {
-      form.setValue(`materials.${index}.materialUnit`, material.unit);
-    }
-  };
-
   const handleDownload = (billId: string) => {
     if (billContentRef.current) {
       const billHtml = billContentRef.current.innerHTML;
@@ -188,23 +179,7 @@ export default function MaterialsIssuedPage() {
                                   control={form.control}
                                   name={`materials.${index}.materialName`}
                                   render={({ field }) => (
-                                    <FormItem>
-                                      <Select onValueChange={(value) => { field.onChange(value); handleMaterialChange(value, index); }} defaultValue={field.value}>
-                                        <FormControl>
-                                          <SelectTrigger>
-                                            <SelectValue placeholder="Select" />
-                                          </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                          {allMaterials.map(material => (
-                                            <SelectItem key={material.id} value={material.name}>
-                                              {material.name}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                      <FormMessage />
-                                    </FormItem>
+                                    <FormItem><FormControl><Input placeholder="e.g., Cement" {...field} /></FormControl><FormMessage /></FormItem>
                                   )}
                                 />
                               </TableCell>
@@ -213,7 +188,7 @@ export default function MaterialsIssuedPage() {
                                   control={form.control}
                                   name={`materials.${index}.materialUnit`}
                                   render={({ field }) => (
-                                    <FormItem><FormControl><Input {...field} readOnly placeholder="Unit" /></FormControl></FormItem>
+                                    <FormItem><FormControl><Input placeholder="e.g., bag" {...field} /></FormControl><FormMessage /></FormItem>
                                   )}
                                 />
                               </TableCell>
