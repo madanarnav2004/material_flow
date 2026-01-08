@@ -498,7 +498,7 @@ export default function SiteManagerDashboard() {
                   {recentSiteActivity.map(activity => (
                     <TableRow key={activity.id}>
                       <TableCell className="font-medium">{activity.type}</TableCell>
-                      <TableCell>{activity.details}</TableCell>                      <TableCell>{activity.to || activity.from}</TableCell>
+                      <TableCell>{activity.details}</TableCell><TableCell>{activity.to || activity.from}</TableCell>
                       <TableCell>
                         <Badge variant={activity.status === 'Completed' ? 'default' : activity.status === 'In Transit' ? 'destructive' : 'secondary'} className={cn(activity.status === 'Completed' && 'bg-green-600/80')}>
                           {activity.status}
