@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { materialReturnReminders as initialRequests } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const materialItemSchema = z.object({
   materialName: z.string().min(1, 'Material name is required.'),
@@ -52,11 +53,12 @@ type MaterialRequestBill = RequestFormValues & {
 }
 type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended';
 
-const generateRequestId = (count: number) => {
+const generateRequestId = (siteName: string, count: number) => {
     const today = new Date();
     const datePart = format(today, 'yyyyMMdd');
     const countPart = (count + 1).toString().padStart(3, '0');
-    return `REQ-${datePart}-${countPart}`;
+    const siteCode = siteName.replace(/\s+/g, '').substring(0, 4).toUpperCase();
+    return `REQ-${siteCode}-${datePart}-${countPart}`;
 }
 
 export default function RequestsPage() {
@@ -77,9 +79,15 @@ export default function RequestsPage() {
     },
   });
 
+  const requestingSite = form.watch('requestingSite');
+
   React.useEffect(() => {
-    form.setValue('requestId', generateRequestId(requests.length));
-  }, [requests.length, form]);
+    if (requestingSite) {
+        form.setValue('requestId', generateRequestId(requestingSite, requests.length));
+    } else {
+        form.setValue('requestId', '');
+    }
+  }, [requestingSite, requests.length, form]);
 
 
   const { fields, append, remove } = useFieldArray({
@@ -91,10 +99,11 @@ export default function RequestsPage() {
     console.log(values);
     
     const totalValue = values.materials.reduce((acc, item) => acc + item.quantity * item.rate, 0);
-    const datePart = values.requestId.split('-')[1];
-    const countPart = values.requestId.split('-')[2];
+    const idParts = values.requestId.split('-');
+    const datePart = idParts[2];
+    const countPart = idParts[3];
 
-    const newIssuedId = `ISS-${datePart}-${countPart}`;
+    const newIssuedId = `ISS-${idParts[1]}-${datePart}-${countPart}`;
 
     const bill: MaterialRequestBill = {
       ...values,
@@ -132,11 +141,15 @@ export default function RequestsPage() {
       const returnDate = new Date(request.returnDate);
       const fromDate = new Date(returnDate.getTime() - 10 * 24 * 60 * 60 * 1000);
       const requestDate = new Date(returnDate.getTime() - 11 * 24 * 60 * 60 * 1000);
-      const datePart = format(requestDate, 'yyyyMMdd');
-      const countPart = request.id.slice(-3);
+      
+      const idParts = request.id.split('-');
+      const datePart = idParts.length > 2 ? idParts[2] : format(requestDate, 'yyyyMMdd');
+      const countPart = idParts.length > 3 ? idParts[3] : request.id.slice(-3);
+      const siteCode = idParts.length > 1 ? idParts[1] : 'SITE';
+
 
       const bill: MaterialRequestBill = {
-        requestId: `REQ-${datePart}-${countPart}`,
+        requestId: `REQ-${siteCode}-${datePart}-${countPart}`,
         requestDate: requestDate,
         requesterName: 'Sample Requester',
         requestingSite: request.site,
@@ -144,7 +157,7 @@ export default function RequestsPage() {
         materials: [{ materialName: request.material, quantity: request.quantity, rate: 10 }], // Mock rate
         requiredPeriod: { from: fromDate, to: returnDate },
         remarks: `This is a sample bill for request ${request.id}`,
-        issuedId: `ISS-${datePart}-${countPart}`,
+        issuedId: `ISS-${siteCode}-${datePart}-${countPart}`,
         shiftingDate: new Date(returnDate.getTime() - 9 * 24 * 60 * 60 * 1000),
         requester: { name: 'Sample Requester' },
         totalValue: request.quantity * 10, // Mock total value
@@ -174,19 +187,44 @@ export default function RequestsPage() {
             <CardContent>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                  <FormField
-                    control={form.control}
-                    name="requestId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Request ID</FormLabel>
-                        <FormControl>
-                          <Input {...field} readOnly disabled />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="requestingSite"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Requesting Site</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a site" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="North Site">North Site</SelectItem>
+                              <SelectItem value="South Site">South Site</SelectItem>
+                              <SelectItem value="West Site">West Site</SelectItem>
+                              <SelectItem value="East Site">East Site</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="requestId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Request ID</FormLabel>
+                          <FormControl>
+                            <Input {...field} readOnly disabled />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <FormField
                       control={form.control}
@@ -201,28 +239,26 @@ export default function RequestsPage() {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="requestingSite"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Requesting Site</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., North Site" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                      <FormField
                       control={form.control}
                       name="issuingSite"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Issuing Site</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., MAPI Store" {...field} />
-                          </FormControl>
+                           <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select an issuing site" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="MAPI Store">MAPI Store</SelectItem>
+                              <SelectItem value="North Site">North Site</SelectItem>
+                              <SelectItem value="South Site">South Site</SelectItem>
+                              <SelectItem value="West Site">West Site</SelectItem>
+                              <SelectItem value="East Site">East Site</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}

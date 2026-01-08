@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { PackageCheck, FileText, Download, Eye, AlertTriangle, CheckCircle, HelpCircle, ChevronDown } from 'lucide-react';
+import { PackageCheck, FileText, Download, Eye, AlertTriangle, CheckCircle, HelpCircle, ChevronDown, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +19,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { issuedMaterialsForReceipt } from '@/lib/mock-data';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 const materialReceiptSchema = z.object({
   requestId: z.string().min(1, 'Request ID is required.'),
@@ -120,8 +123,7 @@ export default function ReceiptsPage() {
     },
   });
 
-  const handleRequestIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const reqId = e.target.value;
+  const handleRequestIdChange = (reqId: string) => {
     form.setValue('requestId', reqId);
     const issuedItem = issuedMaterialsForReceipt.find(item => item.requestId === reqId);
     
@@ -212,14 +214,20 @@ export default function ReceiptsPage() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Request ID</FormLabel>
-                                <FormControl>
-                                    <Input 
-                                      placeholder="e.g., REQ-20240810-004" 
-                                      {...field}
-                                      onChange={handleRequestIdChange} 
-                                      value={field.value}
-                                    />
-                                </FormControl>
+                                 <Select onValueChange={(value) => handleRequestIdChange(value)} defaultValue={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select a Request ID" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {issuedMaterialsForReceipt.map(item => (
+                                        <SelectItem key={item.requestId} value={item.requestId}>
+                                          {item.requestId}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
                                 <FormMessage />
                                 </FormItem>
                             )}
@@ -274,7 +282,7 @@ export default function ReceiptsPage() {
                                 <FormItem>
                                 <FormLabel>Issuing Site</FormLabel>
                                  <FormControl>
-                                     <Input placeholder="e.g., MAPI Store" {...field} />
+                                     <Input placeholder="e.g., MAPI Store" {...field} readOnly />
                                  </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -287,7 +295,7 @@ export default function ReceiptsPage() {
                                 <FormItem>
                                 <FormLabel>Receiving Site</FormLabel>
                                   <FormControl>
-                                      <Input placeholder="e.g., North Site" {...field} />
+                                      <Input placeholder="e.g., North Site" {...field} readOnly />
                                   </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -399,9 +407,22 @@ export default function ReceiptsPage() {
                         render={({ field }) => (
                             <FormItem className="flex flex-col">
                             <FormLabel>Received Date</FormLabel>
-                             <FormControl>
-                                    <Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(new Date(e.target.value))} />
-                                </FormControl>
+                             <Popover>
+                                    <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button
+                                        variant={'outline'}
+                                        className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
+                                        >
+                                        {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                        </Button>
+                                    </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                    </PopoverContent>
+                                </Popover>
                             <FormMessage />
                             </FormItem>
                         )}
