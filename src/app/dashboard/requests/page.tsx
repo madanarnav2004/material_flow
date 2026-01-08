@@ -19,10 +19,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { materialReturnReminders as initialRequests } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useMaterialContext } from '@/context/material-context';
 
 const materialItemSchema = z.object({
   materialName: z.string().min(1, 'Material name is required.'),
@@ -51,7 +51,7 @@ type MaterialRequestBill = RequestFormValues & {
   requester: { name: string; } | null;
   totalValue: number;
 }
-type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended';
+type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended' | 'Partially Issued';
 
 const generateRequestId = (siteName: string, count: number) => {
     const today = new Date();
@@ -64,7 +64,7 @@ const generateRequestId = (siteName: string, count: number) => {
 export default function RequestsPage() {
   const { toast } = useToast();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialRequestBill | null>(null);
-  const [requests, setRequests] = React.useState(initialRequests);
+  const { requests, setRequests } = useMaterialContext();
   const billContentRef = React.useRef<HTMLDivElement>(null);
 
 
@@ -123,7 +123,7 @@ export default function RequestsPage() {
       material: values.materials.map(m => m.materialName).join(', '),
       quantity: values.materials.reduce((acc, m) => acc + m.quantity, 0),
       site: values.requestingSite,
-      status: 'Pending',
+      status: 'Pending' as RequestStatus,
       returnDate: format(values.requiredPeriod.to, 'yyyy-MM-dd'),
     };
     setRequests(prev => [newRequestEntry, ...prev]);
@@ -558,13 +558,15 @@ export default function RequestsPage() {
                                         req.status === 'Approved' ? 'default' :
                                         req.status === 'Issued' ? 'default' :
                                         req.status === 'Completed' ? 'outline' :
+                                        req.status === 'Partially Issued' ? 'destructive' :
                                         'destructive'
                                     }
                                     className={cn(
                                         req.status === 'Approved' && 'bg-blue-500/80 text-white',
                                         req.status === 'Issued' && 'bg-green-600/80 text-white',
                                         req.status === 'Extended' && 'border-amber-500/50 text-amber-500',
-                                        req.status === 'Mismatch' && 'bg-orange-500/80 text-white'
+                                        req.status === 'Mismatch' && 'bg-orange-500/80 text-white',
+                                        req.status === 'Partially Issued' && 'bg-orange-500/80 text-white'
                                     )}
                                 >
                                     {req.status}
@@ -585,6 +587,7 @@ export default function RequestsPage() {
                                     <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Approved')}>Approved</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Rejected')}>Rejected</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Issued')}>Issued</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Partially Issued')}>Partially Issued</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Completed')}>Completed</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Mismatch')}>Mismatch</DropdownMenuItem>
                                   </DropdownMenuContent>

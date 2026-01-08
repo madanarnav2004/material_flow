@@ -19,16 +19,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <SidebarProvider>
-      <Sidebar>
-        <DashboardNav role={role} />
-      </Sidebar>
-      <SidebarInset>
-        <DashboardHeader user={user} />
-        <main className="flex-1 p-4 md:p-6 lg:p-8">
-            {children}
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+    <MaterialProvider>
+      <SidebarProvider>
+        <Sidebar>
+          <DashboardNav role={role} />
+        </Sidebar>
+        <SidebarInset>
+          <DashboardHeader user={user} />
+          <main className="flex-1 p-4 md:p-6 lg:p-8">
+              {children}
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </MaterialProvider>
   );
 }

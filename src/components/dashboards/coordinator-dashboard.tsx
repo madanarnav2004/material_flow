@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { useMaterialContext } from '@/context/material-context';
 
 const boqUsage = [
   { item: 'Concrete Works', consumed: '120 m³', budget: '150 m³', status: 'On Track' },
@@ -32,7 +33,7 @@ const engineerUsage = [
 ];
 
 
-type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended';
+type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended' | 'Partially Issued';
 type RequestFormValues = {
   requesterName: string;
   requestingSite: string;
@@ -53,9 +54,8 @@ type MaterialRequestBill = RequestFormValues & {
 
 export default function CoordinatorDashboard() {
   const { toast } = useToast();
-  const [requests, setRequests] = React.useState(initialRequests);
+  const { requests, setRequests, pendingRequests } = useMaterialContext();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialRequestBill | null>(null);
-  const [pendingRequests, setPendingRequests] = React.useState(initialPendingRequests);
 
 
   const handleStatusChange = (reqId: string, newStatus: RequestStatus) => {
@@ -72,11 +72,13 @@ export default function CoordinatorDashboard() {
       const returnDate = new Date(request.returnDate);
       const fromDate = new Date(returnDate.getTime() - 10 * 24 * 60 * 60 * 1000);
       const requestDate = new Date(returnDate.getTime() - 11 * 24 * 60 * 60 * 1000);
-      const datePart = format(requestDate, 'yyyyMMdd');
-      const countPart = request.id.slice(-3);
+      const idParts = request.id.split('-');
+      const datePart = idParts.length > 2 ? idParts[2] : format(requestDate, 'yyyyMMdd');
+      const countPart = idParts.length > 3 ? idParts[3] : request.id.slice(-3);
+      const siteCode = idParts.length > 1 ? idParts[1] : 'SITE';
 
       const bill: MaterialRequestBill = {
-        requestId: `REQ-${datePart}-${countPart}`,
+        requestId: `REQ-${siteCode}-${datePart}-${countPart}`,
         requestDate: requestDate,
         requesterName: 'Sample Requester',
         requestingSite: request.site,
@@ -84,7 +86,7 @@ export default function CoordinatorDashboard() {
         materials: [{ materialName: request.material, quantity: request.quantity, rate: 10 }], // Mock rate
         requiredPeriod: { from: fromDate, to: returnDate },
         remarks: `This is a sample bill for request ${request.id}`,
-        issuedId: `ISS-${datePart}-${countPart}`,
+        issuedId: `ISS-${siteCode}-${datePart}-${countPart}`,
         shiftingDate: new Date(returnDate.getTime() - 9 * 24 * 60 * 60 * 1000),
         requester: { name: 'Sample Requester' },
         totalValue: request.quantity * 10, // Mock total value
@@ -217,6 +219,7 @@ export default function CoordinatorDashboard() {
                                   <TableHead>Material</TableHead>
                                   <TableHead>Qty</TableHead>
                                   <TableHead>Site</TableHead>
+                                  <TableHead>Status</TableHead>
                               </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -225,6 +228,14 @@ export default function CoordinatorDashboard() {
                                       <TableCell className="font-medium">{item.material}</TableCell>
                                       <TableCell>{item.quantity}</TableCell>
                                       <TableCell>{item.site}</TableCell>
+                                      <TableCell>
+                                        <Badge 
+                                          variant={item.status === 'Partially Issued' ? 'destructive' : 'secondary'}
+                                          className={cn(item.status === 'Partially Issued' && 'bg-orange-500/80 text-white')}
+                                        >
+                                          {item.status}
+                                        </Badge>
+                                      </TableCell>
                                   </TableRow>
                               ))}
                           </TableBody>
@@ -323,13 +334,15 @@ export default function CoordinatorDashboard() {
                                                 req.status === 'Approved' ? 'default' :
                                                 req.status === 'Issued' ? 'default' :
                                                 req.status === 'Completed' ? 'outline' :
+                                                req.status === 'Partially Issued' ? 'destructive' :
                                                 'destructive'
                                             }
                                             className={cn(
                                                 req.status === 'Approved' && 'bg-blue-500/80 text-white',
                                                 req.status === 'Issued' && 'bg-green-600/80 text-white',
                                                 req.status === 'Extended' && 'border-amber-500/50 text-amber-500',
-                                                req.status === 'Mismatch' && 'bg-orange-500/80 text-white'
+                                                req.status === 'Mismatch' && 'bg-orange-500/80 text-white',
+                                                req.status === 'Partially Issued' && 'bg-orange-500/80 text-white'
                                             )}
                                         >
                                             {req.status}
@@ -373,13 +386,15 @@ export default function CoordinatorDashboard() {
                                             req.status === 'Approved' ? 'default' :
                                             req.status === 'Issued' ? 'default' :
                                             req.status === 'Completed' ? 'outline' :
+                                            req.status === 'Partially Issued' ? 'destructive' :
                                             'destructive'
                                         }
                                         className={cn(
                                             req.status === 'Approved' && 'bg-blue-500/80 text-white',
                                             req.status === 'Issued' && 'bg-green-600/80 text-white',
                                             req.status === 'Extended' && 'border-amber-500/50 text-amber-500',
-                                            req.status === 'Mismatch' && 'bg-orange-500/80 text-white'
+                                            req.status === 'Mismatch' && 'bg-orange-500/80 text-white',
+                                            req.status === 'Partially Issued' && 'bg-orange-500/80 text-white'
                                         )}
                                     >
                                         {req.status}
@@ -400,6 +415,7 @@ export default function CoordinatorDashboard() {
                                       <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Approved')}>Approved</DropdownMenuItem>
                                       <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Rejected')}>Rejected</DropdownMenuItem>
                                       <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Issued')}>Issued</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Partially Issued')}>Partially Issued</DropdownMenuItem>
                                       <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Completed')}>Completed</DropdownMenuItem>
                                       <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Mismatch')}>Mismatch</DropdownMenuItem>
                                     </DropdownMenuContent>

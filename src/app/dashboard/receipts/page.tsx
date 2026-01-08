@@ -17,11 +17,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { issuedMaterialsForReceipt } from '@/lib/mock-data';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { useMaterialContext } from '@/context/material-context';
 
 const materialReceiptSchema = z.object({
   requestId: z.string().min(1, 'Request ID is required.'),
@@ -102,6 +102,7 @@ const initialPastReceipts: MaterialReceivedBill[] = [
 
 export default function ReceiptsPage() {
   const { toast } = useToast();
+  const { issuedMaterials } = useMaterialContext();
   const [pastReceipts, setPastReceipts] = React.useState<MaterialReceivedBill[]>(initialPastReceipts);
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialReceivedBill | null>(null);
   const billContentRef = React.useRef<HTMLDivElement>(null);
@@ -126,7 +127,7 @@ export default function ReceiptsPage() {
 
   const handleRequestIdChange = (reqId: string) => {
     form.setValue('requestId', reqId);
-    const issuedItem = issuedMaterialsForReceipt.find(item => item.requestId === reqId);
+    const issuedItem = issuedMaterials.find(item => item.requestId === reqId);
     
     if (issuedItem) {
         form.setValue('issuedId', issuedItem.issuedId);
@@ -241,7 +242,7 @@ export default function ReceiptsPage() {
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                      {issuedMaterialsForReceipt.map(item => (
+                                      {issuedMaterials.map(item => (
                                         <SelectItem key={item.requestId} value={item.requestId}>
                                           {item.requestId}
                                         </SelectItem>
