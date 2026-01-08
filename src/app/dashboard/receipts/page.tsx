@@ -116,6 +116,7 @@ export default function ReceiptsPage() {
       isDamaged: false,
       damageDescription: '',
       remarks: '',
+      receivedDate: new Date(),
     },
   });
 

@@ -8,12 +8,22 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { format } from 'date-fns';
 
 export default function DashboardHeader({ user }: { user: { name: string; email: string } | null }) {
   const router = useRouter();
+  const [lastLogin, setLastLogin] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const storedLogin = localStorage.getItem('lastLogin');
+    if (storedLogin) {
+      setLastLogin(format(new Date(storedLogin), 'PPP p'));
+    }
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('userRole');
+    localStorage.removeItem('lastLogin');
     router.push('/');
   };
 
@@ -56,6 +66,7 @@ export default function DashboardHeader({ user }: { user: { name: string; email:
             <DropdownMenuItem className="flex flex-col items-start cursor-default">
               <p className="font-medium">{user?.name}</p>
               <p className="text-xs text-muted-foreground">{user?.email}</p>
+              {lastLogin && <p className="text-xs text-muted-foreground mt-1">Last login: {lastLogin}</p>}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>Profile</DropdownMenuItem>

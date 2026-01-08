@@ -19,6 +19,7 @@ export default function LoginPage() {
     // For this demo, we'll store the role in localStorage to simulate a session.
     if (typeof window !== "undefined") {
       localStorage.setItem("userRole", role);
+      localStorage.setItem("lastLogin", new Date().toISOString());
     }
     router.push("/dashboard");
   };
