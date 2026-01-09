@@ -25,6 +25,7 @@ const vehicleEntrySchema = z.object({
   vehicleType: z.enum(['Owned', 'Rented'], { required_error: 'Vehicle type is required.' }),
   vendorName: z.string().optional(),
   dailyWorkingHours: z.coerce.number().min(0, 'Working hours must be positive.'),
+  otHours: z.coerce.number().min(0, 'OT hours must be a positive number.').optional(),
   engineerName: z.string().min(1, "Engineer's name is required."),
   buildingName: z.string().min(1, 'Building name is required.'),
   boqItem: z.string().min(1, 'BOQ item is required.'),
@@ -67,6 +68,7 @@ export default function VehicleEntryPage() {
       vehicleNumber: '',
       vehicleName: '',
       dailyWorkingHours: 0,
+      otHours: 0,
       engineerName: '',
       buildingName: '',
       boqItem: '',
@@ -126,9 +128,12 @@ export default function VehicleEntryPage() {
                   {/* Usage Details */}
                   <div className="space-y-4 rounded-lg border p-4">
                      <h3 className="text-lg font-medium">Usage Details</h3>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <FormField name="dailyWorkingHours" control={form.control} render={({ field }) => (
                             <FormItem><FormLabel>Daily Working Hours</FormLabel><FormControl><Input type="number" placeholder="e.g., 8" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField name="otHours" control={form.control} render={({ field }) => (
+                            <FormItem><FormLabel>OT Hours</FormLabel><FormControl><Input type="number" placeholder="e.g., 2" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField name="engineerName" control={form.control} render={({ field }) => (
                             <FormItem><FormLabel className="flex items-center gap-1"><HardHat className="h-4 w-4" />Engineer's Name</FormLabel><FormControl><Input placeholder="e.g., John Smith" {...field} /></FormControl><FormMessage /></FormItem>
@@ -248,6 +253,7 @@ export default function VehicleEntryPage() {
                         <p><strong>Engineer:</strong> {lastEntry.engineerName}</p>
                         <p><strong>Building:</strong> {lastEntry.buildingName}</p>
                         <p><strong>Daily Hours:</strong> {lastEntry.dailyWorkingHours}</p>
+                        <p><strong>OT Hours:</strong> {lastEntry.otHours}</p>
                         <p><strong>BOQ Item:</strong> {lastEntry.boqItem}</p>
                     </div>
                 </div>
@@ -286,5 +292,3 @@ export default function VehicleEntryPage() {
     </div>
   );
 }
-
-    
