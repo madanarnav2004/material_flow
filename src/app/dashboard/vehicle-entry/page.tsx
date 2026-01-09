@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CalendarIcon, Car, Fuel, HardHat, Building, Wrench, Upload, Download, FileText } from 'lucide-react';
+import { CalendarIcon, Car, Fuel, HardHat, Building, Wrench, Upload, Download, FileText, Save } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -95,7 +95,7 @@ export default function VehicleEntryPage() {
   const vehicleType = form.watch('vehicleType');
   const fuelFilledBy = form.watch('fuelFilledBy');
 
-  function onSubmit(values: z.infer<typeof vehicleEntrySchema>) {
+  function onBillSubmit(values: z.infer<typeof vehicleEntrySchema>) {
     const totalWorkingHours = (values.dailyWorkingHours || 0) + (values.otHours || 0);
     // Dummy rate calculation for now
     const rate = values.vehicleType === 'Rented' ? 60 : 0; 
@@ -116,8 +116,16 @@ export default function VehicleEntryPage() {
       title: 'Vehicle Bill Generated',
       description: `Bill ${generatedBill.billId} for vehicle ${values.vehicleNumber} has been successfully created.`,
     });
-    // form.reset(); // Optionally reset form after submission
   }
+
+  const onSaveData = () => {
+    const values = form.getValues();
+    console.log("Saving data:", values);
+    toast({
+      title: 'Data Saved',
+      description: `Vehicle entry for ${values.vehicleNumber} on ${format(values.billDate, 'PPP')} has been saved.`,
+    });
+  };
   
   const handleDownload = (billId: string) => {
     if (billContentRef.current) {
@@ -153,12 +161,12 @@ export default function VehicleEntryPage() {
         <div className="lg:col-span-3">
           <Card>
             <CardHeader>
-              <CardTitle>Log Vehicle Usage</CardTitle>
-              <CardDescription>Enter daily vehicle usage details to generate an accurate bill.</CardDescription>
+              <CardTitle>Log Vehicle Usage & Generate Bill</CardTitle>
+              <CardDescription>Select a date and vehicle to generate a bill based on site entries.</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <form onSubmit={form.handleSubmit(onBillSubmit)} className="space-y-6">
                   {/* Vehicle Details */}
                   <div className="space-y-4 rounded-lg border p-4">
                     <h3 className="text-lg font-medium">Vehicle Information</h3>
@@ -239,7 +247,12 @@ export default function VehicleEntryPage() {
                         <FormItem><FormLabel>Remarks (Mandatory)</FormLabel><FormControl><Textarea placeholder="e.g., Fuel filled at local station, 20 liters of diesel." {...field} /></FormControl><FormMessage /></FormItem>
                      )} />
                   </div>
-                  
+
+                  <Button type="button" variant="secondary" size="lg" onClick={onSaveData}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Entry
+                  </Button>
+
                   {/* GST */}
                   <div className="space-y-4 rounded-lg border p-4">
                      <h3 className="text-lg font-medium">Billing Details</h3>
