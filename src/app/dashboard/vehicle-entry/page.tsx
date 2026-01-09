@@ -141,6 +141,10 @@ export default function VehicleEntryPage() {
 
   const isPrivilegedUser = role === 'director' || role === 'coordinator';
 
+  const shouldShowComparison = lastGeneratedBill && isPrivilegedUser && lastGeneratedBill.vehicleType === 'Rented';
+  const shouldShowSummary = lastGeneratedBill && !shouldShowComparison;
+
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
@@ -301,11 +305,11 @@ export default function VehicleEntryPage() {
         <div className="lg:col-span-2 space-y-6">
           {isPrivilegedUser && <RateConfiguration />}
 
-          {lastGeneratedBill && isPrivilegedUser && lastGeneratedBill.vehicleType === 'Rented' && (
+          {shouldShowComparison && lastGeneratedBill && (
             <BillComparison bill={lastGeneratedBill} />
           )}
 
-          {lastGeneratedBill && !isPrivilegedUser && (
+          {shouldShowSummary && lastGeneratedBill && (
             <Card>
               <CardHeader className="flex flex-row items-start justify-between">
                  <div>
