@@ -33,6 +33,8 @@ import {
   pendingRequests as initialPendingRequests,
   materialReturnReminders as initialRequests,
   detailedMonthlyConsumption,
+  detailedStock,
+  stockUpdates,
 } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
@@ -181,13 +183,14 @@ export default function DirectorDashboard() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <Dialog>
             <DialogTrigger asChild>
-              <StatCard
-                title="Total Material Value"
-                value={`$${(totalValue / 1000000).toFixed(1)}M`}
-                icon={DollarSign}
-                description="+20.1% from last month"
-                onClick={() => {}}
-              />
+              <div className="cursor-pointer">
+                <StatCard
+                  title="Total Material Value"
+                  value={`$${(totalValue / 1000000).toFixed(1)}M`}
+                  icon={DollarSign}
+                  description="+20.1% from last month"
+                />
+              </div>
             </DialogTrigger>
             <DialogContent className="max-w-6xl">
               <DialogHeader>
@@ -260,17 +263,87 @@ export default function DirectorDashboard() {
             </DialogContent>
           </Dialog>
 
-          <StatCard title="Total Materials" value="5,842 units" icon={PackageSearch} description="Across 12 sites" />
+          <Dialog>
+            <DialogTrigger asChild>
+                <div className="cursor-pointer">
+                    <StatCard title="Total Materials" value="5,842 units" icon={PackageSearch} description="Across 12 sites" />
+                </div>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                  <DialogTitle>Material Stock Distribution</DialogTitle>
+                  <DialogDescription>Detailed view of material stock, including transfers and mismatches.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-4">
+                  <div>
+                      <h3 className="text-lg font-semibold mb-2">Stock Mismatches</h3>
+                      <Table>
+                          <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Site</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Actual Qty</TableHead><TableHead className="text-right">Expected Qty</TableHead></TableRow></TableHeader>
+                          <TableBody>
+                              {detailedStock.filter(s => s.mismatch).map(item => (
+                                  <TableRow key={item.id} className="text-destructive">
+                                      <TableCell className="font-medium">{item.material}</TableCell>
+                                      <TableCell>{item.site}</TableCell>
+                                      <TableCell><Badge variant="outline">{item.type}</Badge></TableCell>
+                                      <TableCell className="text-right font-bold">{item.quantity}</TableCell>
+                                      <TableCell className="text-right">{item.expected}</TableCell>
+                                  </TableRow>
+                              ))}
+                          </TableBody>
+                      </Table>
+                  </div>
+                  <div>
+                      <h3 className="text-lg font-semibold mb-2">Full Stock Ledger</h3>
+                      <Table>
+                          <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Site</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Quantity</TableHead></TableRow></TableHeader>
+                          <TableBody>
+                              {detailedStock.map(item => (
+                                  <TableRow key={item.id}>
+                                      <TableCell className="font-medium">{item.material}</TableCell>
+                                      <TableCell>{item.site}</TableCell>
+                                      <TableCell><Badge variant="secondary">{item.type}</Badge></TableCell>
+                                      <TableCell className="text-right">{item.quantity}</TableCell>
+                                  </TableRow>
+                              ))}
+                          </TableBody>
+                      </Table>
+                  </div>
+                   <div>
+                      <h3 className="text-lg font-semibold mb-2">Last 5 Stock Updates</h3>
+                      <Table>
+                          <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Site</TableHead><TableHead>Change</TableHead><TableHead>Date</TableHead></TableRow></TableHeader>
+                          <TableBody>
+                              {stockUpdates.map(item => (
+                                  <TableRow key={item.id}>
+                                      <TableCell>{item.material}</TableCell>
+                                      <TableCell>{item.site}</TableCell>
+                                      <TableCell className={cn(item.change.startsWith('+') ? 'text-green-600' : 'text-red-600')}>{item.change}</TableCell>
+                                      <TableCell>{item.date}</TableCell>
+                                  </TableRow>
+                              ))}
+                          </TableBody>
+                      </Table>
+                  </div>
+              </div>
+              <div className="flex justify-end gap-4 mt-4">
+                  <Button onClick={handleDownloadExcel}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Download Full Ledger
+                  </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <Dialog>
             <DialogTrigger asChild>
-              <StatCard
-                title="Pending Requests"
-                value={pendingRequests.length.toString()}
-                icon={Package}
-                description={`From ${new Set(pendingRequests.map(p => p.site)).size} sites`}
-                onClick={() => {}}
-              />
+              <div className="cursor-pointer">
+                <StatCard
+                  title="Pending Requests"
+                  value={pendingRequests.length.toString()}
+                  icon={Package}
+                  description={`From ${new Set(pendingRequests.map(p => p.site)).size} sites`}
+                />
+              </div>
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
@@ -310,14 +383,15 @@ export default function DirectorDashboard() {
 
           <Dialog>
             <DialogTrigger asChild>
-              <StatCard
-                title="Low Stock Alerts"
-                value={`${lowStockMaterials.length} materials`}
-                icon={AlertTriangle}
-                description={`At ${new Set(lowStockMaterials.map(m => m.site)).size} sites`}
-                className="text-destructive border-destructive/50"
-                onClick={() => {}}
-              />
+              <div className="cursor-pointer">
+                <StatCard
+                  title="Low Stock Alerts"
+                  value={`${lowStockMaterials.length} materials`}
+                  icon={AlertTriangle}
+                  description={`At ${new Set(lowStockMaterials.map(m => m.site)).size} sites`}
+                  className="text-destructive border-destructive/50"
+                />
+              </div>
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader>

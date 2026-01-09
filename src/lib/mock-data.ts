@@ -120,3 +120,20 @@ const generateMonthlyDetailedData = (months: string[]) => {
 };
 
 export const detailedMonthlyConsumption = generateMonthlyDetailedData(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']);
+
+export const detailedStock = [
+  { id: 'ds1', material: 'Cement', site: 'North Site', quantity: 100, type: 'Received', mismatch: false },
+  { id: 'ds2', material: 'Cement', site: 'South Site', quantity: 50, type: 'Transferred', mismatch: false },
+  { id: 'ds3', material: 'Steel Rebar', site: 'North Site', quantity: 20, type: 'Received', mismatch: true, expected: 25 },
+  { id: 'ds4', material: 'Bricks', site: 'West Site', quantity: 4800, type: 'Received', mismatch: true, expected: 5000 },
+  { id: 'ds5', material: 'Sand', site: 'MAPI Store', quantity: 200, type: 'Received', mismatch: false },
+  { id: 'ds6', material: 'Sand', site: 'North Site', quantity: 30, type: 'Transferred', mismatch: false },
+];
+
+export const stockUpdates = [
+    { id: 'su1', material: 'Cement', site: 'North Site', change: '+100 bags', date: '1 day ago' },
+    { id: 'su2', material: 'Steel Rebar', site: 'North Site', change: '-5 tons', date: '1 day ago' },
+    { id: 'su3', material: 'Bricks', site: 'West Site', change: '+5000 pcs', date: '2 days ago' },
+    { id: 'su4', material: 'Sand', site: 'MAPI Store', change: '+200 m³', date: '3 days ago' },
+    { id: 'su5', material: 'Cement', site: 'South Site', change: '-50 bags', date: '4 days ago' },
+];
