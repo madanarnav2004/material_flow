@@ -32,6 +32,7 @@ const materialItemSchema = z.object({
 const invoiceSchema = z.object({
   invoiceNumber: z.string().min(1, 'Invoice number is required.'),
   vendorName: z.string().min(1, 'Vendor name is required.'),
+  invoiceDate: z.date({ required_error: 'Invoice date is required.' }),
   receivedDate: z.date({ required_error: 'The date the material was received is required.' }),
   materials: z.array(materialItemSchema).min(1, 'Please add at least one material.'),
 });
@@ -39,7 +40,7 @@ const invoiceSchema = z.object({
 type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 
 // Mock data for uploaded invoices - CLEARED
-const initialInvoices: { invoiceNumber: string; vendorName: string; receivedDate: Date; totalAmount: number }[] = [];
+const initialInvoices: { invoiceNumber: string; vendorName: string; invoiceDate: Date; receivedDate: Date; totalAmount: number }[] = [];
 
 export default function InventoryPage() {
   const { toast } = useToast();
@@ -64,7 +65,7 @@ export default function InventoryPage() {
   function onInvoiceSubmit(values: InvoiceFormValues) {
     console.log(values);
     const totalAmount = values.materials.reduce((acc, item) => acc + (item.quantity * item.rate), 0);
-    setUploadedInvoices(prev => [...prev, { ...values, receivedDate: values.receivedDate || new Date(), totalAmount }]);
+    setUploadedInvoices(prev => [...prev, { ...values, invoiceDate: values.invoiceDate, receivedDate: values.receivedDate, totalAmount }]);
     toast({
       title: 'Invoice Submitted!',
       description: `Invoice ${values.invoiceNumber} has been successfully uploaded.`,
@@ -92,7 +93,7 @@ export default function InventoryPage() {
                     <CardContent>
                     <Form {...invoiceForm}>
                         <form onSubmit={invoiceForm.handleSubmit(onInvoiceSubmit)} className="space-y-8">
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                             <FormField
                             control={invoiceForm.control}
                             name="invoiceNumber"
@@ -115,6 +116,34 @@ export default function InventoryPage() {
                                 <FormControl>
                                     <Input placeholder="e.g., Acme Suppliers" {...field} />
                                 </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        </div>
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                            <FormField
+                            control={invoiceForm.control}
+                            name="invoiceDate"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                <FormLabel>Invoice Date</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button
+                                        variant={'outline'}
+                                        className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
+                                        >
+                                        {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                        </Button>
+                                    </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                    </PopoverContent>
+                                </Popover>
                                 <FormMessage />
                                 </FormItem>
                             )}
@@ -289,7 +318,8 @@ export default function InventoryPage() {
                                     <TableRow>
                                     <TableHead>Invoice #</TableHead>
                                     <TableHead>Vendor</TableHead>
-                                    <TableHead>Date</TableHead>
+                                    <TableHead>Invoice Date</TableHead>
+                                    <TableHead>Received Date</TableHead>
                                     <TableHead className="text-right">Amount</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -298,6 +328,7 @@ export default function InventoryPage() {
                                     <TableRow key={invoice.invoiceNumber}>
                                         <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                                         <TableCell>{invoice.vendorName}</TableCell>
+                                        <TableCell>{format(invoice.invoiceDate, 'PPP')}</TableCell>
                                         <TableCell>{format(invoice.receivedDate, 'PPP')}</TableCell>
                                         <TableCell className="text-right">${invoice.totalAmount.toFixed(2)}</TableCell>
                                     </TableRow>
