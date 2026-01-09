@@ -9,9 +9,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Input } from '@/components/ui/input';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { format } from 'date-fns';
+import { useUser } from '@/hooks/use-user';
+import DashboardSearch from './search';
 
 export default function DashboardHeader({ user }: { user: { name: string; email: string } | null }) {
   const router = useRouter();
+  const { role } = useUser();
   const [lastLogin, setLastLogin] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -37,16 +40,9 @@ export default function DashboardHeader({ user }: { user: { name: string; email:
         <SidebarTrigger />
       </div>
       <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
-        <form className="ml-auto flex-1 sm:flex-initial">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search materials..."
-              className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px]"
-            />
-          </div>
-        </form>
+        <div className="ml-auto flex-1 sm:flex-initial">
+           <DashboardSearch role={role} />
+        </div>
         <Button variant="ghost" size="icon" className="rounded-full">
           <Bell className="h-5 w-5" />
           <span className="sr-only">Toggle notifications</span>
