@@ -99,11 +99,13 @@ export default function SiteManagerDashboard() {
       const returnDate = new Date(request.returnDate);
       const fromDate = new Date(returnDate.getTime() - 10 * 24 * 60 * 60 * 1000);
       const requestDate = new Date(returnDate.getTime() - 11 * 24 * 60 * 60 * 1000);
-      const datePart = format(requestDate, 'yyyyMMdd');
-      const countPart = request.id.slice(-3);
+      const idParts = request.id.split('-');
+      const datePart = idParts.length > 2 ? idParts[2] : format(requestDate, 'yyyyMMdd');
+      const countPart = idParts.length > 3 ? idParts[3] : request.id.slice(-3);
+      const siteCode = idParts.length > 1 ? idParts[1] : 'SITE';
 
       const bill: MaterialRequestBill = {
-        requestId: `REQ-${datePart}-${countPart}`,
+        requestId: `REQ-${siteCode}-${datePart}-${countPart}`,
         requestDate: requestDate,
         requesterName: 'Sample Requester',
         requestingSite: request.site,
@@ -111,7 +113,7 @@ export default function SiteManagerDashboard() {
         materials: [{ materialName: request.material, quantity: request.quantity, rate: 10 }], // Mock rate
         requiredPeriod: { from: fromDate, to: returnDate },
         remarks: `This is a sample bill for request ${request.id}`,
-        issuedId: `ISS-${datePart}-${countPart}`,
+        issuedId: `ISS-${siteCode}-${datePart}-${countPart}`,
         shiftingDate: new Date(returnDate.getTime() - 9 * 24 * 60 * 60 * 1000),
         requester: { name: 'Sample Requester' },
         totalValue: request.quantity * 10, // Mock total value
@@ -199,6 +201,32 @@ export default function SiteManagerDashboard() {
                     <Download className="mr-2 h-4 w-4" />
                     Download Excel
                 </Button>
+            </div>
+          </DialogContent>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+                <DialogTitle>Pending Requests</DialogTitle>
+                <DialogDescription>Material requests awaiting action for this site.</DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[60vh] overflow-y-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Material</TableHead>
+                            <TableHead>Quantity</TableHead>
+                            <TableHead>Requested From</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {pendingSiteRequests.map(req => (
+                            <TableRow key={req.id}>
+                                <TableCell className="font-medium">{req.material}</TableCell>
+                                <TableCell>{req.quantity}</TableCell>
+                                <TableCell>{req.requestedFrom}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
             </div>
           </DialogContent>
            <DialogContent className="max-w-3xl">

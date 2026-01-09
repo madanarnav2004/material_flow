@@ -177,6 +177,67 @@ export default function CoordinatorDashboard() {
                 </Button>
             </div>
           </DialogContent>
+           <DialogContent className="max-w-3xl">
+            <DialogHeader>
+                <DialogTitle>Engineers Monitored</DialogTitle>
+                <DialogDescription>List of engineers and their material handling.</DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[60vh] overflow-y-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Engineer Name</TableHead>
+                            <TableHead>Materials</TableHead>
+                            <TableHead>Site</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {engineerUsage.map(eng => (
+                            <TableRow key={eng.name}>
+                                <TableCell className="font-medium">{eng.name}</TableCell>
+                                <TableCell>{eng.materials}</TableCell>
+                                <TableCell>{eng.site}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+          </DialogContent>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+                <DialogTitle>Pending Requests</DialogTitle>
+                <DialogDescription>Material requests awaiting action across all sites.</DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[60vh] overflow-y-auto">
+              <Table>
+                  <TableHeader>
+                      <TableRow>
+                          <TableHead>Material</TableHead>
+                          <TableHead>Qty</TableHead>
+                          <TableHead>Site</TableHead>
+                          <TableHead>Status</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      {pendingRequests.map((item) => (
+                          <TableRow key={item.id} className="text-sm">
+                              <TableCell className="font-medium">{item.material}</TableCell>
+                              <TableCell>{item.quantity}</TableCell>
+                              <TableCell>{item.site}</TableCell>
+                              <TableCell>
+                                <Badge 
+                                  variant={item.status === 'Partially Issued' ? 'destructive' : 'secondary'}
+                                  className={cn(item.status === 'Partially Issued' && 'bg-orange-500/80 text-white')}
+                                >
+                                  {item.status}
+                                </Badge>
+                              </TableCell>
+                          </TableRow>
+                      ))}
+                  </TableBody>
+              </Table>
+            </div>
+          </DialogContent>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <div className="lg:col-span-1 space-y-6">
                   <Card>
