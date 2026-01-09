@@ -32,6 +32,7 @@ import {
   lowStockMaterials as initialLowStockMaterials,
   pendingRequests as initialPendingRequests,
   materialReturnReminders as initialRequests,
+  detailedMonthlyConsumption,
 } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
@@ -114,6 +115,9 @@ export default function DirectorDashboard() {
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialRequestBill | null>(null);
   const [pendingRequests, setPendingRequests] = React.useState(initialPendingRequests);
   const [lowStockMaterials, setLowStockMaterials] = React.useState(initialLowStockMaterials);
+  const [selectedMonth, setSelectedMonth] = React.useState<string | null>(null);
+  const [isConsumptionDialogOpen, setIsConsumptionDialogOpen] = React.useState(false);
+
 
   const handleStatusChange = (reqId: string, newStatus: RequestStatus) => {
     setRequests(requests.map(req => (req.id === reqId ? { ...req, status: newStatus } : req)));
@@ -158,6 +162,17 @@ export default function DirectorDashboard() {
       description: 'Your Excel file is being generated and will download shortly.',
     });
   };
+  
+  const handleBarClick = (data: any) => {
+    if (data && data.activePayload && data.activePayload.length > 0) {
+      const month = data.activePayload[0].payload.month;
+      setSelectedMonth(month);
+      setIsConsumptionDialogOpen(true);
+    }
+  };
+  
+  const selectedMonthData = selectedMonth ? detailedMonthlyConsumption[selectedMonth as keyof typeof detailedMonthlyConsumption] : null;
+
 
   return (
     <>
@@ -343,7 +358,7 @@ export default function DirectorDashboard() {
         
         <div className="grid gap-6 lg:grid-cols-5">
           <div className="lg:col-span-3 space-y-6">
-            <Dialog>
+            <Dialog open={isConsumptionDialogOpen} onOpenChange={setIsConsumptionDialogOpen}>
               <DialogTrigger asChild>
                 <Card className="cursor-pointer hover:shadow-lg transition-shadow">
                   <CardHeader className="flex flex-row items-center justify-between">
@@ -355,7 +370,7 @@ export default function DirectorDashboard() {
                   </CardHeader>
                   <CardContent>
                     <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                      <BarChart data={monthlyConsumption} accessibilityLayer>
+                      <BarChart data={monthlyConsumption} accessibilityLayer onClick={handleBarClick}>
                         <CartesianGrid vertical={false} />
                         <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
                         <ChartTooltip content={<ChartTooltipContent />} />
@@ -365,29 +380,62 @@ export default function DirectorDashboard() {
                   </CardContent>
                 </Card>
               </DialogTrigger>
-              <DialogContent className="max-w-3xl">
+              <DialogContent className="max-w-4xl">
                 <DialogHeader>
-                  <DialogTitle>Monthly Consumption Details</DialogTitle>
-                  <DialogDescription>Detailed material consumption data for the last 6 months.</DialogDescription>
+                  <DialogTitle>Monthly Consumption Details: {selectedMonth}</DialogTitle>
+                  <DialogDescription>
+                    Detailed material consumption for {selectedMonth}.
+                  </DialogDescription>
                 </DialogHeader>
-                <div className="max-h-[60vh] overflow-y-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Month</TableHead>
-                        <TableHead className="text-right">Consumption (units)</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {monthlyConsumption.map(item => (
-                        <TableRow key={item.month}>
-                          <TableCell className="font-medium">{item.month}</TableCell>
-                          <TableCell className="text-right">{item.consumption.toLocaleString()}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                {selectedMonthData ? (
+                  <div className="max-h-[60vh] overflow-y-auto space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Organization-wise Consumption</h3>
+                       <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Material</TableHead>
+                              <TableHead className="text-right">Total Quantity</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {selectedMonthData.organizationWise.map(item => (
+                              <TableRow key={item.name}>
+                                <TableCell>{item.name}</TableCell>
+                                <TableCell className="text-right">{item.quantity} {item.unit}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Site-wise Consumption</h3>
+                       {selectedMonthData.siteWise.map(siteData => (
+                         <div key={siteData.site} className="mb-4">
+                           <h4 className="font-medium text-md mb-1">{siteData.site}</h4>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Material</TableHead>
+                                  <TableHead className="text-right">Quantity</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {siteData.materials.map(material => (
+                                  <TableRow key={material.name}>
+                                    <TableCell>{material.name}</TableCell>
+                                    <TableCell className="text-right">{material.quantity} {material.unit}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                         </div>
+                       ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p>Select a month from the chart to see details.</p>
+                )}
                 <div className="flex justify-end mt-4">
                   <Button onClick={handleDownloadExcel}>
                     <Download className="mr-2 h-4 w-4" />

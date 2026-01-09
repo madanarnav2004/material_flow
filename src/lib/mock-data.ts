@@ -79,3 +79,44 @@ export const issuedMaterialsForReceipt = [
         receivingSite: 'West Site',
     }
 ];
+
+const generateSiteConsumption = (materials: {name: string, unit: string}[], sites: string[]) => {
+    return sites.map(site => ({
+        site,
+        materials: materials.map(mat => ({
+            name: mat.name,
+            quantity: Math.floor(Math.random() * 200) + 10,
+            unit: mat.unit,
+        })).filter(() => Math.random() > 0.3) // Randomly include materials
+    }));
+};
+
+const aggregateOrganizationConsumption = (siteWiseData: {site: string; materials: {name: string; quantity: number; unit: string}[]}[]) => {
+    const orgMap = new Map<string, { quantity: number; unit: string }>();
+    siteWiseData.forEach(site => {
+        site.materials.forEach(mat => {
+            if (orgMap.has(mat.name)) {
+                const existing = orgMap.get(mat.name)!;
+                existing.quantity += mat.quantity;
+            } else {
+                orgMap.set(mat.name, { quantity: mat.quantity, unit: mat.unit });
+            }
+        });
+    });
+    return Array.from(orgMap.entries()).map(([name, data]) => ({ name, ...data }));
+};
+
+const sites = ['North Site', 'South Site', 'West Site', 'East Site'];
+const materialTypes = allMaterials.map(m => ({name: m.name, unit: m.unit}));
+
+const generateMonthlyDetailedData = (months: string[]) => {
+    const data: Record<string, any> = {};
+    months.forEach(month => {
+        const siteWise = generateSiteConsumption(materialTypes, sites);
+        const organizationWise = aggregateOrganizationConsumption(siteWise);
+        data[month] = { organizationWise, siteWise };
+    });
+    return data;
+};
+
+export const detailedMonthlyConsumption = generateMonthlyDetailedData(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']);
