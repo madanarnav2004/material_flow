@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import RateConfiguration from '@/components/vehicle/rate-configuration';
 import { useUser } from '@/hooks/use-user';
+import BillComparison from '@/components/vehicle/bill-comparison';
 
 const vehicleEntrySchema = z.object({
   billDate: z.date(),
@@ -62,7 +63,7 @@ const vehicleEntrySchema = z.object({
     path: ['litersFilled'],
 });
 
-type VehicleBillValues = z.infer<typeof vehicleEntrySchema> & {
+export type VehicleBillValues = z.infer<typeof vehicleEntrySchema> & {
     billId: string;
     totalWorkingHours: number;
     totalAmount: number;
@@ -301,11 +302,13 @@ export default function VehicleEntryPage() {
           {isPrivilegedUser && (
             <>
                 <RateConfiguration />
-                {/* Bill Comparison Component will go here for Director/Coordinator */}
+                {lastGeneratedBill && lastGeneratedBill.vehicleType === 'Rented' && (
+                    <BillComparison bill={lastGeneratedBill} />
+                )}
             </>
           )}
 
-          {lastGeneratedBill && (
+          {lastGeneratedBill && !isPrivilegedUser && (
             <Card>
               <CardHeader className="flex flex-row items-start justify-between">
                  <div>
@@ -350,5 +353,3 @@ export default function VehicleEntryPage() {
     </div>
   );
 }
-
-    
