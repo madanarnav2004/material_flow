@@ -40,39 +40,39 @@ export const lowStockMaterials = [
 ];
 
 export const pendingRequests = [
-    { id: 'pr-1', material: 'Cement', quantity: '100 bags', site: 'North Site' },
-    { id: 'pr-2', material: 'Bricks', quantity: '5000 pcs', site: 'South Site' },
-    { id: 'pr-3', material: 'Sand', quantity: '20 m³', site: 'West Site' },
+    { id: 'pr-1', material: 'Cement', quantity: '100 bags', site: 'North Site', status: 'Pending' },
+    { id: 'pr-2', material: 'Bricks', quantity: '5000 pcs', site: 'South Site', status: 'Partially Issued' },
+    { id: 'pr-3', material: 'Sand', quantity: '20 m³', site: 'West Site', status: 'Pending' },
 ];
 
 export const materialReturnReminders = [
-    { id: 'REQ-005', material: 'Cement', quantity: '50 bags', site: 'North Site', status: 'Pending', returnDate: '2024-08-15' },
-    { id: 'REQ-004', material: 'Steel Rebar', quantity: '10 tons', site: 'South Site', status: 'Approved', returnDate: '2024-08-10' },
-    { id: 'REQ-003', material: 'Bricks', quantity: '2000 pcs', site: 'West Site', status: 'Issued', returnDate: '2024-08-05' },
-    { id: 'REQ-002', material: 'Sand', quantity: '15 m³', site: 'North Site', status: 'Completed', returnDate: '2024-07-25' },
-    { id: 'REQ-001', material: 'Gravel', quantity: '5 m³', site: 'South Site', status: 'Extended', returnDate: '2024-07-20 (Ext. 07-27)' },
+    { id: 'REQ-005', material: 'Cement', quantity: 50, site: 'North Site', status: 'Pending', returnDate: '2024-08-15' },
+    { id: 'REQ-004', material: 'Steel Rebar', quantity: 10, site: 'South Site', status: 'Approved', returnDate: '2024-08-10' },
+    { id: 'REQ-003', material: 'Bricks', quantity: 2000, site: 'West Site', status: 'Issued', returnDate: '2024-08-05' },
+    { id: 'REQ-002', material: 'Sand', quantity: 15, site: 'North Site', status: 'Completed', returnDate: '2024-07-25' },
+    { id: 'REQ-001', material: 'Gravel', quantity: 5, site: 'South Site', status: 'Extended', returnDate: '2024-07-20 (Ext. 07-27)' },
 ];
 
 export const issuedMaterialsForReceipt = [
     { 
-        requestId: 'REQ-20240810-004',
-        issuedId: 'ISS-20240810-004',
+        requestId: 'REQ-NORT-20240810-004',
+        issuedId: 'ISS-NORT-20240810-004',
         materialName: 'Steel Rebar', 
         issuedQuantity: 10, 
         issuingSite: 'South Site',
         receivingSite: 'North Site',
     },
     {
-        requestId: 'REQ-20240801-001',
-        issuedId: 'ISS-20240801-001',
+        requestId: 'REQ-NORT-20240801-001',
+        issuedId: 'ISS-NORT-20240801-001',
         materialName: 'Cement', 
         issuedQuantity: 50, 
         issuingSite: 'MAPI Store',
         receivingSite: 'North Site',
     },
     {
-        requestId: 'REQ-20240803-002',
-        issuedId: 'ISS-20240803-002',
+        requestId: 'REQ-WEST-20240803-002',
+        issuedId: 'ISS-WEST-20240803-002',
         materialName: 'Bricks', 
         issuedQuantity: 2000, 
         issuingSite: 'MAPI Store',

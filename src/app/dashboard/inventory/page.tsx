@@ -56,7 +56,7 @@ const initialInvoices = [
 
 export default function InventoryPage() {
   const { toast } = useToast();
-  const [materials, setMaterials] = React.useState(allMaterials.map(m => ({...m, quantity: Math.floor(Math.random() * 200) + 50, rate: Math.floor(Math.random() * 100) + 10})));
+  const [materials, setMaterials] = React.useState(allMaterials);
   const [uploadedInvoices, setUploadedInvoices] = React.useState(initialInvoices);
 
   // Invoice Form
@@ -342,8 +342,8 @@ export default function InventoryPage() {
                     <TableCell className="font-medium">{material.name}</TableCell>
                     <TableCell>{material.unit}</TableCell>
                     <TableCell>{material.description}</TableCell>
-                    <TableCell className="text-right">{material.quantity}</TableCell>
-                    <TableCell className="text-right">${material.rate.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{Math.floor(Math.random() * 200) + 50}</TableCell>
+                    <TableCell className="text-right">${(Math.random() * 100).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
