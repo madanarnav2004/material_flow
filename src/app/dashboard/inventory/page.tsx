@@ -17,13 +17,12 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { allMaterials } from '@/lib/mock-data';
 
 // Schemas
 const materialItemSchema = z.object({
   materialName: z.string().min(1, 'Material name is required.'),
-  unit: z.string().optional(),
+  unit: z.string().min(1, 'Unit is required.'),
   quantity: z.coerce.number().min(0.1, 'Quantity must be > 0.'),
   rate: z.coerce.number().min(0.01, 'Rate must be > 0.'),
   remark: z.string().optional(),
@@ -44,7 +43,6 @@ const initialInvoices: { invoiceNumber: string; vendorName: string; invoiceDate:
 
 export default function InventoryPage() {
   const { toast } = useToast();
-  const [materials, setMaterials] = React.useState(allMaterials);
   const [uploadedInvoices, setUploadedInvoices] = React.useState(initialInvoices);
 
   // Invoice Form
@@ -72,13 +70,6 @@ export default function InventoryPage() {
     });
     invoiceForm.reset();
   }
-  
-  const handleMaterialChange = (materialName: string, index: number) => {
-    const material = materials.find(m => m.name === materialName);
-    if (material) {
-      invoiceForm.setValue(`materials.${index}.unit`, material.unit);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -199,20 +190,9 @@ export default function InventoryPage() {
                                         name={`materials.${index}.materialName`}
                                         render={({ field }) => (
                                             <FormItem>
-                                                <Select onValueChange={(value) => { field.onChange(value); handleMaterialChange(value, index); }} defaultValue={field.value}>
-                                                    <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select a material" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {materials.map(material => (
-                                                            <SelectItem key={material.id} value={material.name}>
-                                                                {material.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                <FormControl>
+                                                    <Input placeholder="e.g., Cement" {...field} />
+                                                </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
@@ -225,8 +205,9 @@ export default function InventoryPage() {
                                         render={({ field }) => (
                                             <FormItem>
                                             <FormControl>
-                                                <Input {...field} readOnly placeholder="Unit" />
+                                                <Input placeholder="e.g., bag" {...field} />
                                             </FormControl>
+                                            <FormMessage />
                                             </FormItem>
                                         )}
                                         />
