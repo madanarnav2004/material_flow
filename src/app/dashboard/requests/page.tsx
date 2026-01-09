@@ -206,7 +206,7 @@ export default function RequestsPage() {
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <FormField
                       control={form.control}
@@ -372,7 +372,7 @@ export default function RequestsPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => append({ materialName: '', unit: '', quantity: 1, remarks: '' })}
-                        className="mt-2"
+                        className="mt-4"
                       >
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Add Another Material
@@ -542,6 +542,7 @@ export default function RequestsPage() {
             <CardDescription>A log of the most recent requests and their statuses, which become Material Request Bills upon approval.</CardDescription>
         </CardHeader>
         <CardContent>
+          {requests.length > 0 ? (
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -608,6 +609,11 @@ export default function RequestsPage() {
                     ))}
                 </TableBody>
             </Table>
+            ) : (
+                <div className="flex items-center justify-center p-8">
+                    <p className="text-center text-muted-foreground">No requests submitted yet.</p>
+                </div>
+            )}
         </CardContent>
       </Card>
     </div>

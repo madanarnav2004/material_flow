@@ -17,7 +17,6 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
-import { allMaterials } from '@/lib/mock-data';
 
 // Schemas
 const materialItemSchema = z.object({
@@ -25,7 +24,6 @@ const materialItemSchema = z.object({
   unit: z.string().min(1, 'Unit is required.'),
   quantity: z.coerce.number().min(0.1, 'Quantity must be > 0.'),
   rate: z.coerce.number().min(0.01, 'Rate must be > 0.'),
-  remark: z.string().optional(),
 });
 
 const invoiceSchema = z.object({
@@ -51,7 +49,7 @@ export default function InventoryPage() {
     defaultValues: {
       invoiceNumber: '',
       vendorName: '',
-      materials: [{ materialName: '', unit: '', quantity: 0, rate: 0, remark: '' }],
+      materials: [{ materialName: '', unit: '', quantity: 0, rate: 0 }],
     },
   });
 
@@ -83,7 +81,7 @@ export default function InventoryPage() {
                     </CardHeader>
                     <CardContent>
                     <Form {...invoiceForm}>
-                        <form onSubmit={invoiceForm.handleSubmit(onInvoiceSubmit)} className="space-y-8">
+                        <form onSubmit={invoiceForm.handleSubmit(onInvoiceSubmit)} className="space-y-6">
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                             <FormField
                             control={invoiceForm.control}
@@ -177,7 +175,6 @@ export default function InventoryPage() {
                                     <TableHead>Unit</TableHead>
                                     <TableHead>Quantity</TableHead>
                                     <TableHead>Rate</TableHead>
-                                    <TableHead className="w-1/6">Remark</TableHead>
                                     <TableHead className="w-12"></TableHead>
                                 </TableRow>
                                 </TableHeader>
@@ -241,20 +238,6 @@ export default function InventoryPage() {
                                         />
                                     </TableCell>
                                     <TableCell>
-                                        <FormField
-                                        control={invoiceForm.control}
-                                        name={`materials.${index}.remark`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                            <FormControl>
-                                                <Input placeholder="Optional" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                            </FormItem>
-                                        )}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
                                         <Button variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
                                         <Trash className="h-4 w-4" />
                                         </Button>
@@ -268,8 +251,8 @@ export default function InventoryPage() {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={() => append({ materialName: '', unit: '', quantity: 0, rate: 0, remark: '' })}
-                                className="mt-2"
+                                onClick={() => append({ materialName: '', unit: '', quantity: 0, rate: 0 })}
+                                className="mt-4"
                             >
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 Add Material
@@ -317,7 +300,9 @@ export default function InventoryPage() {
                                 </TableBody>
                             </Table>
                         ) : (
-                            <p className="text-center text-muted-foreground">No invoices uploaded yet.</p>
+                            <div className="flex items-center justify-center p-8">
+                                <p className="text-center text-muted-foreground">No invoices uploaded yet.</p>
+                            </div>
                         )}
                     </CardContent>
                 </Card>

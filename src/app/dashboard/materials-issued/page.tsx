@@ -17,7 +17,6 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 
 // Schemas
 const materialIssueItemSchema = z.object({
@@ -115,7 +114,7 @@ export default function MaterialsIssuedPage() {
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <FormField
                       control={form.control}
@@ -255,7 +254,7 @@ export default function MaterialsIssuedPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => append({ boqItem: '', materialName: '', materialUnit: '', issuedQuantity: 0, engineerName: '', buildingName: '', remarks: '' })}
-                      className="mt-2"
+                      className="mt-4"
                     >
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Add Material

@@ -178,7 +178,7 @@ export default function ReceiptsPage() {
             </CardHeader>
             <CardContent>
                 <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <FormField
@@ -289,7 +289,7 @@ export default function ReceiptsPage() {
                         )}
                         />
 
-                    <div className="rounded-md border p-4 bg-secondary/20">
+                    <div className="rounded-md border p-4 bg-secondary/20 space-y-4">
                         <FormField
                             control={form.control}
                             name="receivedQuantity"
@@ -551,7 +551,9 @@ export default function ReceiptsPage() {
                     </TableBody>
                 </Table>
             ) : (
-                <p className="text-center text-muted-foreground">No receipts logged yet.</p>
+                <div className="flex items-center justify-center p-8">
+                    <p className="text-center text-muted-foreground">No receipts logged yet.</p>
+                </div>
             )}
         </CardContent>
       </Card>

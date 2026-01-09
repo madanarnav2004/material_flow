@@ -50,7 +50,7 @@ export default function AIReviewClient() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -117,11 +117,11 @@ export default function AIReviewClient() {
                 </AlertDescription>
             </Alert>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-2">
             <h4 className="font-semibold">Summary</h4>
             <p className="text-muted-foreground">{result.summary}</p>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-2">
             <h4 className="font-semibold">Discrepancies</h4>
             <p className="text-muted-foreground whitespace-pre-wrap font-code text-sm">{result.discrepancies || "None."}</p>
           </div>
