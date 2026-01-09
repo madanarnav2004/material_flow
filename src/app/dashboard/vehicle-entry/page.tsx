@@ -17,7 +17,8 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
+import RateConfiguration from '@/components/vehicle/rate-configuration';
+import { useUser } from '@/hooks/use-user';
 
 const vehicleEntrySchema = z.object({
   vehicleNumber: z.string().min(1, 'Vehicle number is required.'),
@@ -43,7 +44,7 @@ const vehicleEntrySchema = z.object({
   totalInvoiceAmount: z.coerce.number().optional(),
   rentPeriodFrom: z.date().optional(),
   rentPeriodTo: z.date().optional(),
-totalWorkingHoursRent: z.coerce.number().optional(),
+  totalWorkingHoursRent: z.coerce.number().optional(),
   billFile: z.any().optional(),
 }).refine(data => data.vehicleType !== 'Rented' || (data.vendorName && data.vendorName.length > 0), {
   message: 'Vendor name is required for rented vehicles.',
@@ -60,6 +61,7 @@ type VehicleEntryFormValues = z.infer<typeof vehicleEntrySchema>;
 
 export default function VehicleEntryPage() {
   const { toast } = useToast();
+  const { role } = useUser();
   const [lastEntry, setLastEntry] = React.useState<VehicleEntryFormValues | null>(null);
 
   const form = useForm<VehicleEntryFormValues>({
@@ -88,6 +90,8 @@ export default function VehicleEntryPage() {
     });
     // form.reset(); // Optionally reset form after submission
   }
+
+  const isPrivilegedUser = role === 'director' || role === 'coordinator';
 
   return (
     <div className="space-y-6">
@@ -232,8 +236,10 @@ export default function VehicleEntryPage() {
           </Card>
         </div>
 
-        {lastEntry && (
-          <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
+          {isPrivilegedUser && <RateConfiguration />}
+
+          {lastEntry && !isPrivilegedUser && (
             <Card>
               <CardHeader className="flex flex-row items-start justify-between">
                  <div>
@@ -286,8 +292,8 @@ export default function VehicleEntryPage() {
                 )}
               </CardContent>
             </Card>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
