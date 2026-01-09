@@ -89,16 +89,8 @@ type MaterialRequestBill = RequestFormValues & {
   totalValue: number;
 };
 
-const sites = ['North Site', 'South Site', 'West Site', 'East Site', 'MAPI Store'];
-const detailedMaterialValue = allMaterials.flatMap(m =>
-  sites.map(site => ({
-    ...m,
-    id: `${m.id}-${site}`,
-    site,
-    quantity: Math.floor(Math.random() * 200) + 20,
-    rate: Math.floor(Math.random() * 50) + 10,
-  }))
-);
+const sites: string[] = [];
+const detailedMaterialValue: any[] = [];
 
 const totalValue = detailedMaterialValue.reduce((acc, item) => acc + item.quantity * item.rate, 0);
 
@@ -188,7 +180,7 @@ export default function DirectorDashboard() {
                   title="Total Material Value"
                   value={`$${(totalValue / 1000000).toFixed(1)}M`}
                   icon={DollarSign}
-                  description="+20.1% from last month"
+                  description="+0.0% from last month"
                 />
               </div>
             </DialogTrigger>
@@ -213,7 +205,7 @@ export default function DirectorDashboard() {
                                               <Building className="h-4 w-4 text-muted-foreground" />
                                               <span className="font-medium">{site}</span>
                                           </div>
-                                          <span className="font-mono">${value.toLocaleString()}</span>
+                                          <span className="font-mono">${(value as number).toLocaleString()}</span>
                                       </div>
                                   ))}
                               </div>
@@ -266,7 +258,7 @@ export default function DirectorDashboard() {
           <Dialog>
             <DialogTrigger asChild>
                 <div className="cursor-pointer">
-                    <StatCard title="Total Materials" value="5,842 units" icon={PackageSearch} description="Across 12 sites" />
+                    <StatCard title="Total Materials" value="0 units" icon={PackageSearch} description="Across 0 sites" />
                 </div>
             </DialogTrigger>
             <DialogContent className="max-w-4xl">
