@@ -26,8 +26,9 @@ import { useMaterialContext } from '@/context/material-context';
 
 const materialItemSchema = z.object({
   materialName: z.string().min(1, 'Material name is required.'),
+  unit: z.string().min(1, 'Unit is required.'),
   quantity: z.coerce.number().min(0.1, 'Quantity must be > 0.'),
-  rate: z.coerce.number().min(0.01, 'Rate is required.'),
+  remarks: z.string().optional(),
 });
 
 const requestSchema = z.object({
@@ -49,7 +50,7 @@ type MaterialRequestBill = RequestFormValues & {
   issuedId: string;
   shiftingDate: Date;
   requester: { name: string; } | null;
-  totalValue: number;
+  totalValue: number; // This can be calculated differently or removed if rate is not present
 }
 type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended' | 'Partially Issued';
 
@@ -75,7 +76,7 @@ export default function RequestsPage() {
       requesterName: '',
       requestingSite: '',
       issuingSite: '',
-      materials: [{ materialName: '', quantity: 1, rate: 10 }],
+      materials: [{ materialName: '', unit: '', quantity: 1, remarks: '' }],
       remarks: '',
     },
   });
@@ -97,7 +98,9 @@ export default function RequestsPage() {
   });
 
   function onSubmit(values: RequestFormValues) {
-    const totalValue = values.materials.reduce((acc, item) => acc + item.quantity * item.rate, 0);
+    // Since rate is removed, totalValue calculation needs to be reconsidered.
+    // For now, let's set it to 0 or remove it from the bill generation logic if not needed.
+    const totalValue = 0; 
     const idParts = values.requestId.split('-');
     const datePart = idParts.length > 2 ? idParts[2] : format(new Date(), 'yyyyMMdd');
     const countPart = idParts.length > 3 ? idParts[3] : (requests.length + 1).toString().padStart(3, '0');
@@ -152,13 +155,13 @@ export default function RequestsPage() {
         requesterName: 'Sample Requester',
         requestingSite: request.site,
         issuingSite: 'MAPI Store', // Mock issuing site
-        materials: [{ materialName: request.material, quantity: request.quantity, rate: 10 }], // Mock rate
+        materials: [{ materialName: request.material, unit: 'unit', quantity: request.quantity, remarks: '' }], // Mock unit
         requiredPeriod: { from: fromDate, to: returnDate },
         remarks: `This is a sample bill for request ${request.id}`,
         issuedId: `ISS-${siteCode}-${datePart}-${countPart}`,
         shiftingDate: new Date(returnDate.getTime() - 9 * 24 * 60 * 60 * 1000),
         requester: { name: 'Sample Requester' },
-        totalValue: request.quantity * 10, // Mock total value
+        totalValue: 0, // No rate, so no value
       };
       setLastGeneratedBill(bill);
     }
@@ -175,7 +178,7 @@ export default function RequestsPage() {
   const handleDownload = (billId: string) => {
     if (billContentRef.current) {
       const billHtml = billContentRef.current.innerHTML;
-      const blob = new Blob([`<html><head><title>${billId}</title></head><body>${billHtml}</body></html>`], { type: 'text/html' });
+      const blob = new Blob([`<html><head><title>${billId}</title><style>body{font-family:sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:left}.grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}.font-semibold{font-weight:600}</style></head><body>${billHtml}</body></html>`], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -289,8 +292,9 @@ export default function RequestsPage() {
                         <TableHeader>
                           <TableRow>
                             <TableHead className="w-2/5">Material Name</TableHead>
+                            <TableHead>Unit</TableHead>
                             <TableHead>Quantity</TableHead>
-                            <TableHead>Rate</TableHead>
+                            <TableHead>Remarks</TableHead>
                             <TableHead className="w-12"></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -305,6 +309,20 @@ export default function RequestsPage() {
                                     <FormItem>
                                       <FormControl>
                                         <Input placeholder="e.g., Cement" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </TableCell>
+                               <TableCell>
+                                <FormField
+                                  control={form.control}
+                                  name={`materials.${index}.unit`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormControl>
+                                        <Input placeholder="e.g., bag" {...field} />
                                       </FormControl>
                                       <FormMessage />
                                     </FormItem>
@@ -328,11 +346,11 @@ export default function RequestsPage() {
                               <TableCell>
                                 <FormField
                                   control={form.control}
-                                  name={`materials.${index}.rate`}
+                                  name={`materials.${index}.remarks`}
                                   render={({ field }) => (
                                     <FormItem>
                                       <FormControl>
-                                        <Input type="number" placeholder="e.g., 10" {...field} />
+                                        <Input placeholder="Optional" {...field} />
                                       </FormControl>
                                       <FormMessage />
                                     </FormItem>
@@ -353,7 +371,7 @@ export default function RequestsPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => append({ materialName: '', quantity: 1, rate: 10 })}
+                        onClick={() => append({ materialName: '', unit: '', quantity: 1, remarks: '' })}
                         className="mt-2"
                       >
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -450,7 +468,7 @@ export default function RequestsPage() {
                     <FileText /> Material Request Bill
                   </CardTitle>
                   <CardDescription>
-                    This is the generated bill for your request. It's created automatically upon approval and issue.
+                    This is the generated bill for your request.
                   </CardDescription>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => handleDownload(lastGeneratedBill.requestId)}>
@@ -489,26 +507,22 @@ export default function RequestsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Material</TableHead>
+                        <TableHead>Unit</TableHead>
                         <TableHead>Qty</TableHead>
-                        <TableHead>Rate</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead>Remarks</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {lastGeneratedBill.materials.map((m, i) => (
                         <TableRow key={i}>
                           <TableCell>{m.materialName}</TableCell>
+                          <TableCell>{m.unit}</TableCell>
                           <TableCell>{m.quantity}</TableCell>
-                          <TableCell>${m.rate.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">${(m.quantity * m.rate).toFixed(2)}</TableCell>
+                          <TableCell>{m.remarks}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
-                  <Separator />
-                  <div className="flex justify-end font-bold text-lg">
-                      Total Value: ${lastGeneratedBill.totalValue.toFixed(2)}
-                  </div>
                 </div>
                  {lastGeneratedBill.remarks && (
                     <div className="space-y-2">

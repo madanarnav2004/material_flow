@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 // Schemas
 const materialIssueItemSchema = z.object({
@@ -26,6 +27,7 @@ const materialIssueItemSchema = z.object({
   issuedQuantity: z.coerce.number().min(0.1, 'Quantity must be > 0.'),
   engineerName: z.string().min(1, 'Engineer name is required.'),
   buildingName: z.string().min(1, 'Building name is required.'),
+  remarks: z.string().optional(),
 });
 
 const issueBillSchema = z.object({
@@ -51,7 +53,7 @@ export default function MaterialsIssuedPage() {
     defaultValues: {
       materialRequestBillNumber: '',
       issuedDate: new Date(),
-      materials: [{ boqItem: '', materialName: '', materialUnit: '', issuedQuantity: 0, engineerName: '', buildingName: '' }],
+      materials: [{ boqItem: '', materialName: '', materialUnit: '', issuedQuantity: 0, engineerName: '', buildingName: '', remarks: '' }],
     },
   });
 
@@ -84,7 +86,7 @@ export default function MaterialsIssuedPage() {
   const handleDownload = (billId: string) => {
     if (billContentRef.current) {
       const billHtml = billContentRef.current.innerHTML;
-      const blob = new Blob([`<html><head><title>${billId}</title></head><body>${billHtml}</body></html>`], { type: 'text/html' });
+      const blob = new Blob([`<html><head><title>${billId}</title><style>body{font-family:sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:left}.grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}.font-semibold{font-weight:600}</style></head><body>${billHtml}</body></html>`], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -168,6 +170,7 @@ export default function MaterialsIssuedPage() {
                             <TableHead>Engineer</TableHead>
                             <TableHead>Building</TableHead>
                             <TableHead>BOQ Item</TableHead>
+                            <TableHead>Remarks</TableHead>
                             <TableHead className="w-12"></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -229,6 +232,15 @@ export default function MaterialsIssuedPage() {
                                 />
                               </TableCell>
                               <TableCell>
+                                <FormField
+                                  control={form.control}
+                                  name={`materials.${index}.remarks`}
+                                  render={({ field }) => (
+                                    <FormItem><FormControl><Input placeholder="Remarks" {...field} /></FormControl><FormMessage /></FormItem>
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
                                 <Button variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
                                   <Trash className="h-4 w-4" />
                                 </Button>
@@ -242,7 +254,7 @@ export default function MaterialsIssuedPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => append({ boqItem: '', materialName: '', materialUnit: '', issuedQuantity: 0, engineerName: '', buildingName: '' })}
+                      onClick={() => append({ boqItem: '', materialName: '', materialUnit: '', issuedQuantity: 0, engineerName: '', buildingName: '', remarks: '' })}
                       className="mt-2"
                     >
                       <PlusCircle className="mr-2 h-4 w-4" />
@@ -297,16 +309,18 @@ export default function MaterialsIssuedPage() {
                         <TableHead>Engineer</TableHead>
                         <TableHead>Building</TableHead>
                         <TableHead>BOQ Item</TableHead>
+                        <TableHead>Remarks</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {lastGeneratedBill.materials.map((item, index) => (
                         <TableRow key={index}>
-                          <TableCell>{item.materialName}</TableCell>
-                          <TableCell>{item.issuedQuantity} {item.materialUnit}</TableCell>
+                          <TableCell>{item.materialName} ({item.materialUnit})</TableCell>
+                          <TableCell>{item.issuedQuantity}</TableCell>
                           <TableCell>{item.engineerName}</TableCell>
                           <TableCell>{item.buildingName}</TableCell>
                           <TableCell>{item.boqItem}</TableCell>
+                          <TableCell>{item.remarks}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
