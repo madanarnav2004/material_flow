@@ -311,36 +311,6 @@ export default function InventoryPage() {
                 </Card>
             </div>
         </div>
-      <Card>
-          <CardHeader>
-            <CardTitle>Materials List</CardTitle>
-            <CardDescription>Available materials across all sites and MAPI store.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Unit</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Current Stock</TableHead>
-                  <TableHead className="text-right">Avg. Rate</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {materials.map((material) => (
-                  <TableRow key={material.id}>
-                    <TableCell className="font-medium">{material.name}</TableCell>
-                    <TableCell>{material.unit}</TableCell>
-                    <TableCell>{material.description}</TableCell>
-                    <TableCell className="text-right">{Math.floor(Math.random() * 200) + 50}</TableCell>
-                    <TableCell className="text-right">${(Math.random() * 100).toFixed(2)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
     </div>
   );
 }
