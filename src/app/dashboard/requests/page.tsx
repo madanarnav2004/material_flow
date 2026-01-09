@@ -97,12 +97,10 @@ export default function RequestsPage() {
   });
 
   function onSubmit(values: RequestFormValues) {
-    console.log(values);
-    
     const totalValue = values.materials.reduce((acc, item) => acc + item.quantity * item.rate, 0);
     const idParts = values.requestId.split('-');
-    const datePart = idParts[2];
-    const countPart = idParts[3];
+    const datePart = idParts.length > 2 ? idParts[2] : format(new Date(), 'yyyyMMdd');
+    const countPart = idParts.length > 3 ? idParts[3] : (requests.length + 1).toString().padStart(3, '0');
 
     const newIssuedId = `ISS-${idParts[1]}-${datePart}-${countPart}`;
 
@@ -117,7 +115,6 @@ export default function RequestsPage() {
     
     setLastGeneratedBill(bill);
 
-    // Add to mock requests list
     const newRequestEntry = {
       id: values.requestId,
       material: values.materials.map(m => m.materialName).join(', '),

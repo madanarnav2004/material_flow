@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CheckCircle2, Loader, AlertTriangle, XCircle } from "lucide-react";
+import { CheckCircle2, Loader, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
@@ -108,11 +108,11 @@ export default function AIReviewClient() {
           <div>
             <Alert 
               variant={result.isAccurate ? "default" : "destructive"} 
-              className={result.isAccurate ? "border-[hsl(var(--chart-2)_/_0.5)] bg-[hsl(var(--chart-2)_/_0.1)] text-[hsl(var(--chart-2))] dark:border-[hsl(var(--chart-2))] dark:bg-[hsl(var(--chart-2)_/_0.2)]" : ""}
+              className={result.isAccurate ? "border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400" : ""}
             >
-                {result.isAccurate ? <CheckCircle2 className="h-4 w-4 text-[hsl(var(--chart-2))]" /> : <XCircle className="h-4 w-4" />}
+                {result.isAccurate ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <XCircle className="h-4 w-4" />}
                 <AlertTitle className="font-bold">{result.isAccurate ? "Bill is Accurate" : "Bill is Inaccurate"}</AlertTitle>
-                <AlertDescription className={result.isAccurate ? "text-[hsl(var(--chart-2))] dark:text-[hsl(var(--chart-2))]" : ""}>
+                <AlertDescription className={result.isAccurate ? "" : ""}>
                 {result.isAccurate ? "No discrepancies found between the bill and ledger entries." : "Discrepancies were found. See details below."}
                 </AlertDescription>
             </Alert>
