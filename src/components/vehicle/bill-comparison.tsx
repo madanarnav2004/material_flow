@@ -2,10 +2,8 @@
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, CheckCircle2, FileWarning } from 'lucide-react';
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { VehicleBillValues } from '@/app/dashboard/vehicle-entry/page';
 import { cn } from '@/lib/utils';
 
@@ -29,7 +27,7 @@ export default function BillComparison({ bill }: BillComparisonProps) {
   const vendorTotal = bill.totalInvoiceAmount || 0;
   const discrepancy = calculatedTotal - vendorTotal;
 
-  const discrepancyStatus = discrepancy === 0 ? 'match' : discrepancy > 0 ? 'over-billed' : 'under-billed';
+  const discrepancyStatus = Math.abs(discrepancy) < 0.01 ? 'match' : discrepancy > 0 ? 'over-billed' : 'under-billed';
 
   return (
     <Card>

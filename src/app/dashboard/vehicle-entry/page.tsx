@@ -299,13 +299,10 @@ export default function VehicleEntryPage() {
         </div>
 
         <div className="lg:col-span-2 space-y-6">
-          {isPrivilegedUser && (
-            <>
-                <RateConfiguration />
-                {lastGeneratedBill && lastGeneratedBill.vehicleType === 'Rented' && (
-                    <BillComparison bill={lastGeneratedBill} />
-                )}
-            </>
+          {isPrivilegedUser && <RateConfiguration />}
+
+          {lastGeneratedBill && isPrivilegedUser && lastGeneratedBill.vehicleType === 'Rented' && (
+            <BillComparison bill={lastGeneratedBill} />
           )}
 
           {lastGeneratedBill && !isPrivilegedUser && (
