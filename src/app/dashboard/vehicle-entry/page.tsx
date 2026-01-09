@@ -21,6 +21,7 @@ import { Separator } from '@/components/ui/separator';
 
 const vehicleEntrySchema = z.object({
   vehicleNumber: z.string().min(1, 'Vehicle number is required.'),
+  vehicleName: z.string().min(1, 'Vehicle name is required.'),
   vehicleType: z.enum(['Owned', 'Rented'], { required_error: 'Vehicle type is required.' }),
   vendorName: z.string().optional(),
   dailyWorkingHours: z.coerce.number().min(0, 'Working hours must be positive.'),
@@ -31,6 +32,7 @@ const vehicleEntrySchema = z.object({
   fuelType: z.enum(['Petrol', 'Diesel']).optional(),
   initialSpeedometer: z.coerce.number().optional(),
   finalSpeedometer: z.coerce.number().optional(),
+  litersFilled: z.coerce.number().optional(),
   remarks: z.string().min(1, 'Remarks are mandatory for fuel entries.'),
   
   // Rented vehicle payment details
@@ -40,7 +42,7 @@ const vehicleEntrySchema = z.object({
   totalInvoiceAmount: z.coerce.number().optional(),
   rentPeriodFrom: z.date().optional(),
   rentPeriodTo: z.date().optional(),
-  totalWorkingHoursRent: z.coerce.number().optional(),
+totalWorkingHoursRent: z.coerce.number().optional(),
   billFile: z.any().optional(),
 }).refine(data => data.vehicleType !== 'Rented' || (data.vendorName && data.vendorName.length > 0), {
   message: 'Vendor name is required for rented vehicles.',
@@ -48,6 +50,9 @@ const vehicleEntrySchema = z.object({
 }).refine(data => data.fuelFilledBy !== 'Site' || (data.initialSpeedometer !== undefined && data.finalSpeedometer !== undefined), {
   message: 'Initial and final speedometer readings are required when fuel is filled by site.',
   path: ['finalSpeedometer'],
+}).refine(data => data.fuelFilledBy !== 'Site' || (data.litersFilled && data.litersFilled > 0), {
+    message: 'Liters filled is required when fuel is filled by site.',
+    path: ['litersFilled'],
 });
 
 type VehicleEntryFormValues = z.infer<typeof vehicleEntrySchema>;
@@ -60,6 +65,7 @@ export default function VehicleEntryPage() {
     resolver: zodResolver(vehicleEntrySchema),
     defaultValues: {
       vehicleNumber: '',
+      vehicleName: '',
       dailyWorkingHours: 0,
       engineerName: '',
       buildingName: '',
@@ -103,6 +109,9 @@ export default function VehicleEntryPage() {
                       <FormField name="vehicleNumber" control={form.control} render={({ field }) => (
                         <FormItem><FormLabel>Vehicle Number</FormLabel><FormControl><Input placeholder="e.g., MH-12-AB-1234" {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
+                      <FormField name="vehicleName" control={form.control} render={({ field }) => (
+                        <FormItem><FormLabel>Vehicle Name</FormLabel><FormControl><Input placeholder="e.g., JCB, Dumper" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
                       <FormField name="vehicleType" control={form.control} render={({ field }) => (
                         <FormItem><FormLabel>Vehicle Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select vehicle type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Owned">Owned</SelectItem><SelectItem value="Rented">Rented</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                       )} />
@@ -143,6 +152,11 @@ export default function VehicleEntryPage() {
                         {fuelFilledBy === 'Owner' && (
                             <FormField name="fuelType" control={form.control} render={({ field }) => (
                                 <FormItem><FormLabel>Fuel Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select fuel type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Petrol">Petrol</SelectItem><SelectItem value="Diesel">Diesel</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                            )} />
+                        )}
+                         {fuelFilledBy === 'Site' && (
+                             <FormField name="litersFilled" control={form.control} render={({ field }) => (
+                                <FormItem><FormLabel>Liters Filled</FormLabel><FormControl><Input type="number" placeholder="e.g., 20" {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                         )}
                      </div>
@@ -225,7 +239,7 @@ export default function VehicleEntryPage() {
               </CardHeader>
               <CardContent className="space-y-4 text-sm">
                 <div className="space-y-2 rounded-lg border p-4">
-                    <h3 className="font-semibold">Vehicle: {lastEntry.vehicleNumber} ({lastEntry.vehicleType})</h3>
+                    <h3 className="font-semibold">Vehicle: {lastEntry.vehicleName} ({lastEntry.vehicleNumber} - {lastEntry.vehicleType})</h3>
                     {lastEntry.vehicleType === 'Rented' && <p><strong>Vendor:</strong> {lastEntry.vendorName}</p>}
                 </div>
                  <div className="space-y-2 rounded-lg border p-4">
@@ -246,6 +260,7 @@ export default function VehicleEntryPage() {
                              <p><strong>Initial km:</strong> {lastEntry.initialSpeedometer}</p>
                              <p><strong>Final km:</strong> {lastEntry.finalSpeedometer}</p>
                              <p><strong>Usage:</strong> {lastEntry.finalSpeedometer! - lastEntry.initialSpeedometer!} km</p>
+                             <p><strong>Liters Filled:</strong> {lastEntry.litersFilled} L</p>
                         </div>
                     )}
                     <p><strong>Remarks:</strong> {lastEntry.remarks}</p>
@@ -271,3 +286,5 @@ export default function VehicleEntryPage() {
     </div>
   );
 }
+
+    
