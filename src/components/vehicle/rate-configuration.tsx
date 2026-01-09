@@ -16,6 +16,7 @@ import { Label } from '../ui/label';
 
 const rateSchema = z.object({
   vendorName: z.string().min(1, 'Vendor name is required.'),
+  vehicleName: z.string().min(1, 'Vehicle name is required.'),
   generalRate: z.coerce.number().min(0, 'Rate must be positive.'),
   otRate: z.coerce.number().min(0, 'OT rate must be positive.'),
 });
@@ -28,8 +29,8 @@ type RateFormValues = z.infer<typeof formSchema>;
 
 // Mock existing rates
 const initialRates = [
-  { vendorName: 'Reliable Rentals Co.', generalRate: 50, otRate: 75 },
-  { vendorName: 'Heavy Movers Inc.', generalRate: 55, otRate: 80 },
+  { vendorName: 'Reliable Rentals Co.', vehicleName: 'JCB', generalRate: 50, otRate: 75 },
+  { vendorName: 'Heavy Movers Inc.', vehicleName: 'Dumper', generalRate: 55, otRate: 80 },
 ];
 
 export default function RateConfiguration() {
@@ -73,6 +74,7 @@ export default function RateConfiguration() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Vendor Name</TableHead>
+                      <TableHead>Vehicle Name</TableHead>
                       <TableHead>General Rate/hr</TableHead>
                       <TableHead>OT Rate/hr</TableHead>
                       <TableHead className="w-12"></TableHead>
@@ -89,6 +91,20 @@ export default function RateConfiguration() {
                               <FormItem>
                                 <FormControl>
                                   <Input placeholder="Vendor Name" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <FormField
+                            control={form.control}
+                            name={`rates.${index}.vehicleName`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input placeholder="Vehicle Name" {...field} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -137,7 +153,7 @@ export default function RateConfiguration() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => append({ vendorName: '', generalRate: 0, otRate: 0 })}
+                onClick={() => append({ vendorName: '', vehicleName: '', generalRate: 0, otRate: 0 })}
                 className="mt-4"
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
