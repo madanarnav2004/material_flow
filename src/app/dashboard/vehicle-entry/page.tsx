@@ -140,22 +140,21 @@ export default function VehicleEntryPage() {
 
 
   const isPrivilegedUser = role === 'director' || role === 'coordinator';
-
-  const shouldShowComparison = lastGeneratedBill && isPrivilegedUser && lastGeneratedBill.vehicleType === 'Rented';
-  const shouldShowSummary = lastGeneratedBill && !shouldShowComparison;
+  const showComparison = lastGeneratedBill && isPrivilegedUser && lastGeneratedBill.vehicleType === 'Rented';
+  const showSimpleSummary = lastGeneratedBill && !showComparison;
 
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
-        <Car /> Vehicle Entry
+        <Car /> Vehicle Entry & Bill Generation
       </h1>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <div className="lg:col-span-3">
           <Card>
             <CardHeader>
-              <CardTitle>Log Vehicle & Generate Bill</CardTitle>
-              <CardDescription>Record vehicle usage to generate a bill. For rentals, upload vendor invoices separately.</CardDescription>
+              <CardTitle>Log Vehicle Usage</CardTitle>
+              <CardDescription>Enter daily vehicle usage details to generate an accurate bill.</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...form}>
@@ -253,7 +252,8 @@ export default function VehicleEntryPage() {
                   {/* Payment and Bill Upload */}
                   {vehicleType === 'Rented' && (
                     <div className="space-y-4 rounded-lg border p-4">
-                        <h3 className="text-lg font-medium">Vendor Invoice Upload (Optional)</h3>
+                        <h3 className="text-lg font-medium">Vendor Invoice Upload (For Verification)</h3>
+                        <p className="text-sm text-muted-foreground">Upload the vendor's invoice after the work is complete. This is used for comparison.</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormField name="invoiceNumber" control={form.control} render={({ field }) => (
                                 <FormItem><FormLabel>Invoice Number</FormLabel><FormControl><Input placeholder="e.g., RENT-2024-55" {...field} /></FormControl><FormMessage /></FormItem>
@@ -279,7 +279,7 @@ export default function VehicleEntryPage() {
                             )} />
                         </div>
                         <FormField name="totalWorkingHoursRent" control={form.control} render={({ field }) => (
-                            <FormItem><FormLabel>Total Working Hours (for rent period)</FormLabel><FormControl><Input type="number" placeholder="e.g., 120" {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Total Working Hours (from Invoice)</FormLabel><FormControl><Input type="number" placeholder="e.g., 120" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField name="billFile" control={form.control} render={({ field }) => (
                           <FormItem>
@@ -305,11 +305,11 @@ export default function VehicleEntryPage() {
         <div className="lg:col-span-2 space-y-6">
           {isPrivilegedUser && <RateConfiguration />}
 
-          {shouldShowComparison && lastGeneratedBill && (
+          {showComparison && lastGeneratedBill && (
             <BillComparison bill={lastGeneratedBill} />
           )}
 
-          {shouldShowSummary && lastGeneratedBill && (
+          {showSimpleSummary && lastGeneratedBill && (
             <Card>
               <CardHeader className="flex flex-row items-start justify-between">
                  <div>
