@@ -28,7 +28,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { allMaterials, materialReturnReminders as initialRequests } from '@/lib/mock-data';
+import { allMaterials } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -37,28 +37,13 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { lowStockMaterials as initialLowStockMaterials } from '@/lib/mock-data';
+import { useMaterialContext } from '@/context/material-context';
 
 
-const siteStock = [
-  { id: 'mat-1', name: 'Cement', quantity: '250 bags', status: 'In Stock' },
-  { id: 'mat-2', name: 'Steel Rebar', quantity: '15 tons', status: 'In Stock' },
-  { id: 'mat-3', name: 'Sand', quantity: '50 m³', status: 'In Stock' },
-  { id: 'mat-4', name: 'Bricks', quantity: '5000 pcs', status: 'Low Stock' },
-];
-
-const recentSiteActivity = [
-    { id: 'REQ-003', type: 'Request Sent', details: '100 bags of Cement', to: 'MAPI Store', status: 'Pending', date: '1 day ago' },
-    { id: 'REC-002', type: 'Receipt', details: '20 tons of Steel', from: 'West Site', status: 'Completed', date: '2 days ago' },
-    { id: 'SHIFT-002', type: 'Shift Out', details: '500 bricks', to: 'South Site', status: 'In Transit', date: '3 days ago' },
-];
-
-const pendingSiteRequests = [
-    { id: 'pr-1', material: 'Cement', quantity: '100 bags', requestedFrom: 'MAPI Store'},
-    { id: 'pr-2', material: 'Gravel', quantity: '10 m³', requestedFrom: 'West Site'},
-];
-
-const lowStockSite = initialLowStockMaterials.filter(m => m.site === 'North Site' || m.site === 'West Site');
+const siteStock: any[] = [];
+const recentSiteActivity: any[] = [];
+const pendingSiteRequests: any[] = [];
+const lowStockSite: any[] = [];
 
 
 type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended';
@@ -82,7 +67,7 @@ type MaterialRequestBill = RequestFormValues & {
 
 export default function SiteManagerDashboard() {
   const { toast } = useToast();
-  const [requests, setRequests] = React.useState(initialRequests.slice(0,3));
+  const { requests, setRequests } = useMaterialContext();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialRequestBill | null>(null);
 
   const handleStatusChange = (reqId: string, newStatus: RequestStatus) => {
@@ -139,7 +124,7 @@ export default function SiteManagerDashboard() {
             <DialogTrigger asChild>
               <StatCard
                 title="Available Materials"
-                value="125 items"
+                value="0 items"
                 icon={PackageSearch}
                 description="Total distinct materials on site"
                 onClick={() => {}}
@@ -151,24 +136,28 @@ export default function SiteManagerDashboard() {
                   <DialogDescription>A detailed breakdown of all materials available on this site.</DialogDescription>
               </DialogHeader>
               <div className="max-h-[60vh] overflow-y-auto">
-                  <Table>
-                      <TableHeader>
-                          <TableRow>
-                              <TableHead>Material</TableHead>
-                              <TableHead>Unit</TableHead>
-                              <TableHead className="text-right">Quantity</TableHead>
-                          </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                          {allMaterials.slice(0,5).map(item => (
-                              <TableRow key={item.id}>
-                                  <TableCell className="font-medium">{item.name}</TableCell>
-                                  <TableCell>{item.unit}</TableCell>
-                                  <TableCell className="text-right">{Math.floor(Math.random() * 200)}</TableCell>
-                              </TableRow>
-                          ))}
-                      </TableBody>
-                  </Table>
+                  {allMaterials.slice(0,5).length > 0 ? (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Material</TableHead>
+                                <TableHead>Unit</TableHead>
+                                <TableHead className="text-right">Quantity</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {allMaterials.slice(0,5).map(item => (
+                                <TableRow key={item.id}>
+                                    <TableCell className="font-medium">{item.name}</TableCell>
+                                    <TableCell>{item.unit}</TableCell>
+                                    <TableCell className="text-right">{Math.floor(Math.random() * 200)}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-center text-muted-foreground">No materials available on this site.</p>
+                  )}
               </div>
               <div className="flex justify-end gap-4 mt-4">
                   <Button onClick={handleDownloadExcel}>
@@ -194,30 +183,34 @@ export default function SiteManagerDashboard() {
                   <DialogDescription>Material requests awaiting action for this site.</DialogDescription>
               </DialogHeader>
               <div className="max-h-[60vh] overflow-y-auto">
-                  <Table>
-                      <TableHeader>
-                          <TableRow>
-                              <TableHead>Material</TableHead>
-                              <TableHead>Quantity</TableHead>
-                              <TableHead>Requested From</TableHead>
-                          </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                          {pendingSiteRequests.map(req => (
-                              <TableRow key={req.id}>
-                                  <TableCell className="font-medium">{req.material}</TableCell>
-                                  <TableCell>{req.quantity}</TableCell>
-                                  <TableCell>{req.requestedFrom}</TableCell>
-                              </TableRow>
-                          ))}
-                      </TableBody>
-                  </Table>
+                  {pendingSiteRequests.length > 0 ? (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Material</TableHead>
+                                <TableHead>Quantity</TableHead>
+                                <TableHead>Requested From</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {pendingSiteRequests.map(req => (
+                                <TableRow key={req.id}>
+                                    <TableCell className="font-medium">{req.material}</TableCell>
+                                    <TableCell>{req.quantity}</TableCell>
+                                    <TableCell>{req.requestedFrom}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                  ): (
+                    <p className="text-center text-muted-foreground">No pending requests for this site.</p>
+                  )}
               </div>
             </DialogContent>
           </Dialog>
           <StatCard
             title="Pending Receipts"
-            value="2"
+            value="0"
             icon={PackageCheck}
             description="Materials in transit to your site"
           />
@@ -240,24 +233,28 @@ export default function SiteManagerDashboard() {
                 </DialogDescription>
               </DialogHeader>
               <div className="max-h-[60vh] overflow-y-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Material</TableHead>
-                      <TableHead className="text-right">Current Qty</TableHead>
-                      <TableHead className="text-right">Min. Threshold</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {lowStockSite.map((item) => (
-                      <TableRow key={item.id} className="text-destructive">
-                        <TableCell className="font-medium">{item.material}</TableCell>
-                        <TableCell className="text-right font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
-                        <TableCell className="text-right">{`${item.threshold} ${item.unit}`}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                {lowStockSite.length > 0 ? (
+                    <Table>
+                    <TableHeader>
+                        <TableRow>
+                        <TableHead>Material</TableHead>
+                        <TableHead className="text-right">Current Qty</TableHead>
+                        <TableHead className="text-right">Min. Threshold</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {lowStockSite.map((item) => (
+                        <TableRow key={item.id} className="text-destructive">
+                            <TableCell className="font-medium">{item.material}</TableCell>
+                            <TableCell className="text-right font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
+                            <TableCell className="text-right">{`${item.threshold} ${item.unit}`}</TableCell>
+                        </TableRow>
+                        ))}
+                    </TableBody>
+                    </Table>
+                ) : (
+                    <p className="text-center text-muted-foreground">No low stock materials on this site.</p>
+                )}
               </div>
               <div className="flex justify-end mt-4">
                 <Button onClick={handleDownloadExcel}>
@@ -277,24 +274,28 @@ export default function SiteManagerDashboard() {
                         <CardDescription>Material requests awaiting action.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Material</TableHead>
-                                    <TableHead>Quantity</TableHead>
-                                    <TableHead>From</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {pendingSiteRequests.map(req => (
-                                    <TableRow key={req.id}>
-                                        <TableCell className="font-medium">{req.material}</TableCell>
-                                        <TableCell>{req.quantity}</TableCell>
-                                        <TableCell>{req.requestedFrom}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                      </Table>
+                      {pendingSiteRequests.length > 0 ? (
+                        <Table>
+                              <TableHeader>
+                                  <TableRow>
+                                      <TableHead>Material</TableHead>
+                                      <TableHead>Quantity</TableHead>
+                                      <TableHead>From</TableHead>
+                                  </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                  {pendingSiteRequests.map(req => (
+                                      <TableRow key={req.id}>
+                                          <TableCell className="font-medium">{req.material}</TableCell>
+                                          <TableCell>{req.quantity}</TableCell>
+                                          <TableCell>{req.requestedFrom}</TableCell>
+                                      </TableRow>
+                                  ))}
+                              </TableBody>
+                        </Table>
+                      ) : (
+                        <p className="text-center text-muted-foreground">No pending requests.</p>
+                      )}
                     </CardContent>
                 </Card>
                 <Card>
@@ -303,7 +304,8 @@ export default function SiteManagerDashboard() {
                         <CardDescription>Materials running low on this site.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                    <Table>
+                    {lowStockSite.length > 0 ? (
+                        <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Material</TableHead>
@@ -319,6 +321,9 @@ export default function SiteManagerDashboard() {
                                 ))}
                             </TableBody>
                       </Table>
+                    ) : (
+                        <p className="text-center text-muted-foreground">No low stock materials.</p>
+                    )}
                     </CardContent>
                 </Card>
             </div>
@@ -384,46 +389,50 @@ export default function SiteManagerDashboard() {
                   <CardDescription>Materials due for return or with extended dates for this site.</CardDescription>
               </CardHeader>
               <CardContent>
-                  <Table>
-                      <TableHeader>
-                          <TableRow>
-                              <TableHead>Material</TableHead>
-                              <TableHead>Quantity</TableHead>
-                              <TableHead>Site</TableHead>
-                              <TableHead>Return Date</TableHead>
-                              <TableHead>Status</TableHead>
-                          </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                          {requests.slice(0, 3).map(req => (
-                              <TableRow key={req.id}>
-                                  <TableCell className="font-medium">{req.material}</TableCell>
-                                  <TableCell>{req.quantity}</TableCell>
-                                  <TableCell>{req.site}</TableCell>
-                                  <TableCell>{req.returnDate}</TableCell>
-                                  <TableCell>
-                                      <Badge 
-                                          variant={
-                                              req.status === 'Pending' ? 'secondary' : 
-                                              req.status === 'Approved' ? 'default' :
-                                              req.status === 'Issued' ? 'default' :
-                                              req.status === 'Completed' ? 'outline' :
-                                              'destructive'
-                                          }
-                                          className={cn(
-                                              req.status === 'Approved' && 'bg-blue-500/80 text-white',
-                                              req.status === 'Issued' && 'bg-green-600/80 text-white',
-                                              req.status === 'Extended' && 'border-amber-500/50 text-amber-500',
-                                               req.status === 'Mismatch' && 'bg-orange-500/80 text-white'
-                                          )}
-                                      >
-                                          {req.status}
-                                      </Badge>
-                                  </TableCell>
-                              </TableRow>
-                          ))}
-                      </TableBody>
-                  </Table>
+                  {requests.length > 0 ? (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Material</TableHead>
+                                <TableHead>Quantity</TableHead>
+                                <TableHead>Site</TableHead>
+                                <TableHead>Return Date</TableHead>
+                                <TableHead>Status</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {requests.slice(0, 3).map(req => (
+                                <TableRow key={req.id}>
+                                    <TableCell className="font-medium">{req.material}</TableCell>
+                                    <TableCell>{req.quantity}</TableCell>
+                                    <TableCell>{req.site}</TableCell>
+                                    <TableCell>{req.returnDate}</TableCell>
+                                    <TableCell>
+                                        <Badge 
+                                            variant={
+                                                req.status === 'Pending' ? 'secondary' : 
+                                                req.status === 'Approved' ? 'default' :
+                                                req.status === 'Issued' ? 'default' :
+                                                req.status === 'Completed' ? 'outline' :
+                                                'destructive'
+                                            }
+                                            className={cn(
+                                                req.status === 'Approved' && 'bg-blue-500/80 text-white',
+                                                req.status === 'Issued' && 'bg-green-600/80 text-white',
+                                                req.status === 'Extended' && 'border-amber-500/50 text-amber-500',
+                                                req.status === 'Mismatch' && 'bg-orange-500/80 text-white'
+                                            )}
+                                        >
+                                            {req.status}
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-center text-muted-foreground">No return reminders for this site.</p>
+                  )}
               </CardContent>
             </Card>
           </DialogTrigger>
@@ -433,67 +442,71 @@ export default function SiteManagerDashboard() {
               <DialogDescription>Materials due for return or with extended dates for this site.</DialogDescription>
             </DialogHeader>
             <div className="max-h-[60vh] overflow-y-auto">
-              <Table>
-                  <TableHeader>
-                      <TableRow>
-                          <TableHead>Material</TableHead>
-                          <TableHead>Quantity</TableHead>
-                          <TableHead>Site</TableHead>
-                          <TableHead>Return Date</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                      {requests.map(req => (
-                          <TableRow key={req.id}>
-                              <TableCell className="font-medium">{req.material}</TableCell>
-                              <TableCell>{req.quantity}</TableCell>
-                              <TableCell>{req.site}</TableCell>
-                              <TableCell>{req.returnDate}</TableCell>
-                              <TableCell>
-                                  <Badge 
-                                      variant={
-                                          req.status === 'Pending' ? 'secondary' : 
-                                          req.status === 'Approved' ? 'default' :
-                                          req.status === 'Issued' ? 'default' :
-                                          req.status === 'Completed' ? 'outline' :
-                                          'destructive'
-                                      }
-                                      className={cn(
-                                          req.status === 'Approved' && 'bg-blue-500/80 text-white',
-                                          req.status === 'Issued' && 'bg-green-600/80 text-white',
-                                          req.status === 'Extended' && 'border-amber-500/50 text-amber-500',
-                                           req.status === 'Mismatch' && 'bg-orange-500/80 text-white'
-                                      )}
-                                  >
-                                      {req.status}
-                                  </Badge>
+              {requests.length > 0 ? (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Material</TableHead>
+                            <TableHead>Quantity</TableHead>
+                            <TableHead>Site</TableHead>
+                            <TableHead>Return Date</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {requests.map(req => (
+                            <TableRow key={req.id}>
+                                <TableCell className="font-medium">{req.material}</TableCell>
+                                <TableCell>{req.quantity}</TableCell>
+                                <TableCell>{req.site}</TableCell>
+                                <TableCell>{req.returnDate}</TableCell>
+                                <TableCell>
+                                    <Badge 
+                                        variant={
+                                            req.status === 'Pending' ? 'secondary' : 
+                                            req.status === 'Approved' ? 'default' :
+                                            req.status === 'Issued' ? 'default' :
+                                            req.status === 'Completed' ? 'outline' :
+                                            'destructive'
+                                        }
+                                        className={cn(
+                                            req.status === 'Approved' && 'bg-blue-500/80 text-white',
+                                            req.status === 'Issued' && 'bg-green-600/80 text-white',
+                                            req.status === 'Extended' && 'border-amber-500/50 text-amber-500',
+                                            req.status === 'Mismatch' && 'bg-orange-500/80 text-white'
+                                        )}
+                                    >
+                                        {req.status}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="text-right space-x-2">
+                                  <Button variant="outline" size="sm" onClick={() => handleViewBill(req.id)}>
+                                      <Eye className="mr-2 h-4 w-4" />
+                                      View Bill
+                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="outline" size="sm">
+                                        Update Status <ChevronDown className="ml-2 h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Approved')}>Approved</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Rejected')}>Rejected</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Issued')}>Issued</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Completed')}>Completed</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Mismatch')}>Mismatch</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                               </TableCell>
-                              <TableCell className="text-right space-x-2">
-                                <Button variant="outline" size="sm" onClick={() => handleViewBill(req.id)}>
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    View Bill
-                                </Button>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="sm">
-                                      Update Status <ChevronDown className="ml-2 h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Approved')}>Approved</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Rejected')}>Rejected</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Issued')}>Issued</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Completed')}>Completed</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Mismatch')}>Mismatch</DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                      ))}
-                  </TableBody>
-              </Table>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+              ) : (
+                <p className="text-center text-muted-foreground">No return reminders for this site.</p>
+              )}
             </div>
             <div className="flex justify-end mt-4">
               <Button onClick={handleDownloadExcel}>
@@ -512,37 +525,41 @@ export default function SiteManagerDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Material</TableHead>
-                    <TableHead>Available Quantity</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {siteStock.map((material) => (
-                    <TableRow key={material.id}>
-                      <TableCell className="font-medium">
-                        {material.name}
-                      </TableCell>
-                      <TableCell>{material.quantity}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            material.status === 'In Stock'
-                              ? 'default'
-                              : 'destructive'
-                          }
-                          className={material.status === 'Low Stock' ? '' : 'bg-green-600/80'}
-                        >
-                          {material.status}
-                        </Badge>
-                      </TableCell>
+              {siteStock.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Material</TableHead>
+                      <TableHead>Available Quantity</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {siteStock.map((material) => (
+                      <TableRow key={material.id}>
+                        <TableCell className="font-medium">
+                          {material.name}
+                        </TableCell>
+                        <TableCell>{material.quantity}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              material.status === 'In Stock'
+                                ? 'default'
+                                : 'destructive'
+                            }
+                            className={material.status === 'Low Stock' ? '' : 'bg-green-600/80'}
+                          >
+                            {material.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-center text-muted-foreground">No stock data available for this site.</p>
+              )}
             </CardContent>
           </Card>
 
@@ -552,32 +569,36 @@ export default function SiteManagerDashboard() {
             <CardDescription>A log of recent material movements involving your site.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Details</TableHead>
-                  <TableHead>From/To</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentSiteActivity.map(activity => (
-                  <TableRow key={activity.id}>
-                    <TableCell className="font-medium">{activity.type}</TableCell>
-                    <TableCell>{activity.details}</TableCell>
-                    <TableCell>{activity.to || activity.from}</TableCell>
-                    <TableCell>
-                      <Badge variant={activity.status === 'Completed' ? 'default' : activity.status === 'In Transit' ? 'destructive' : 'secondary'} className={cn(activity.status === 'Completed' && 'bg-green-600/80')}>
-                        {activity.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{activity.date}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            {recentSiteActivity.length > 0 ? (
+                <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Details</TableHead>
+                    <TableHead>From/To</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {recentSiteActivity.map(activity => (
+                    <TableRow key={activity.id}>
+                        <TableCell className="font-medium">{activity.type}</TableCell>
+                        <TableCell>{activity.details}</TableCell>
+                        <TableCell>{activity.to || activity.from}</TableCell>
+                        <TableCell>
+                        <Badge variant={activity.status === 'Completed' ? 'default' : activity.status === 'In Transit' ? 'destructive' : 'secondary'} className={cn(activity.status === 'Completed' && 'bg-green-600/80')}>
+                            {activity.status}
+                        </Badge>
+                        </TableCell>
+                        <TableCell>{activity.date}</TableCell>
+                    </TableRow>
+                    ))}
+                </TableBody>
+                </Table>
+            ) : (
+                <p className="text-center text-muted-foreground">No recent activity on this site.</p>
+            )}
           </CardContent>
         </Card>
       </div>

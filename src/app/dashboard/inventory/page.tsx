@@ -38,21 +38,8 @@ const invoiceSchema = z.object({
 
 type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 
-// Mock data for uploaded invoices
-const initialInvoices = [
-    {
-        invoiceNumber: 'INV-2024-001',
-        vendorName: 'Acme Suppliers',
-        receivedDate: new Date('2024-07-20'),
-        totalAmount: 1000,
-    },
-    {
-        invoiceNumber: 'INV-2024-002',
-        vendorName: 'Reliable Builders Inc.',
-        receivedDate: new Date('2024-07-22'),
-        totalAmount: 2500,
-    }
-];
+// Mock data for uploaded invoices - CLEARED
+const initialInvoices: { invoiceNumber: string; vendorName: string; receivedDate: Date; totalAmount: number }[] = [];
 
 export default function InventoryPage() {
   const { toast } = useToast();
@@ -296,26 +283,30 @@ export default function InventoryPage() {
                         <CardDescription>A list of previously uploaded invoices.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                <TableHead>Invoice #</TableHead>
-                                <TableHead>Vendor</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead className="text-right">Amount</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {uploadedInvoices.map((invoice) => (
-                                <TableRow key={invoice.invoiceNumber}>
-                                    <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                                    <TableCell>{invoice.vendorName}</TableCell>
-                                    <TableCell>{format(invoice.receivedDate, 'PPP')}</TableCell>
-                                    <TableCell className="text-right">${invoice.totalAmount.toFixed(2)}</TableCell>
-                                </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                        {uploadedInvoices.length > 0 ? (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                    <TableHead>Invoice #</TableHead>
+                                    <TableHead>Vendor</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead className="text-right">Amount</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {uploadedInvoices.map((invoice) => (
+                                    <TableRow key={invoice.invoiceNumber}>
+                                        <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                                        <TableCell>{invoice.vendorName}</TableCell>
+                                        <TableCell>{format(invoice.receivedDate, 'PPP')}</TableCell>
+                                        <TableCell className="text-right">${invoice.totalAmount.toFixed(2)}</TableCell>
+                                    </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        ) : (
+                            <p className="text-center text-muted-foreground">No invoices uploaded yet.</p>
+                        )}
                     </CardContent>
                 </Card>
             </div>

@@ -49,56 +49,8 @@ type MaterialReceivedBill = ReceiptFormValues & {
 };
 
 
-// Mock data
-const initialPastReceipts: MaterialReceivedBill[] = [
-    { 
-        receivedBillId: 'REC-20240804-001', 
-        requestId: 'REQ-002', 
-        issuedId: 'ISS-002',
-        materialName: 'Bricks', 
-        issuedQuantity: 2000, 
-        receivedQuantity: 2000, 
-        status: 'Accepted', 
-        receivedDate: new Date('2024-08-04'),
-        issuingSite: 'MAPI Store',
-        receivingSite: 'West Site',
-        receiver: { name: 'Leo Gomez' },
-        isDamaged: false,
-        receiverName: 'Leo Gomez',
-    },
-    { 
-        receivedBillId: 'REC-20240802-001', 
-        requestId: 'REQ-001',
-        issuedId: 'ISS-001',
-        materialName: 'Cement', 
-        issuedQuantity: 50, 
-        receivedQuantity: 48, 
-        status: 'Mismatch', 
-        receivedDate: new Date('2024-08-02'), 
-        remarks: '2 bags damaged in transit.',
-        issuingSite: 'MAPI Store',
-        receivingSite: 'North Site',
-        receiver: { name: 'Marcus Kane' },
-        isDamaged: true,
-        damageDescription: '2 bags were torn and cement spilled during transit.',
-        receiverName: 'Marcus Kane',
-    },
-    { 
-        receivedBillId: 'REC-20240811-001', 
-        requestId: 'REQ-004',
-        issuedId: 'ISS-004',
-        materialName: 'Steel Rebar', 
-        issuedQuantity: 10, 
-        receivedQuantity: 10, 
-        status: 'Accepted', 
-        receivedDate: new Date('2024-08-11'),
-        issuingSite: 'South Site',
-        receivingSite: 'North Site',
-        receiver: { name: 'Marcus Kane' },
-        isDamaged: false,
-        receiverName: 'Marcus Kane',
-    },
-];
+// Mock data - CLEARED
+const initialPastReceipts: MaterialReceivedBill[] = [];
 
 export default function ReceiptsPage() {
   const { toast } = useToast();
@@ -544,59 +496,63 @@ export default function ReceiptsPage() {
             <CardDescription>A log of recently verified material receipts.</CardDescription>
         </CardHeader>
         <CardContent>
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Receipt ID</TableHead>
-                        <TableHead>Request ID</TableHead>
-                        <TableHead>Material</TableHead>
-                        <TableHead>Issued</TableHead>
-                        <TableHead>Received</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {pastReceipts.map(rec => (
-                        <TableRow key={rec.receivedBillId}>
-                            <TableCell className="font-medium">{rec.receivedBillId}</TableCell>
-                            <TableCell>{rec.requestId}</TableCell>
-                            <TableCell>{rec.materialName}</TableCell>
-                            <TableCell>{rec.issuedQuantity}</TableCell>
-                            <TableCell>{rec.receivedQuantity}</TableCell>
-                            <TableCell>{format(rec.receivedDate, 'yyyy-MM-dd')}</TableCell>
-                            <TableCell>
-                                <Badge 
-                                    variant={rec.status === 'Accepted' ? 'default' : rec.status === 'Completed' ? 'outline' : 'destructive'}
-                                    className={rec.status === 'Accepted' ? 'bg-green-600/80' : ''}
-                                >
-                                    {rec.status === 'Accepted' ? <CheckCircle className="mr-1 h-3 w-3" /> : rec.status === 'Mismatch' ? <AlertTriangle className="mr-1 h-3 w-3" /> : null}
-                                    {rec.status}
-                                </Badge>
-                            </TableCell>
-                             <TableCell className="text-right space-x-2">
-                                <Button variant="outline" size="sm" onClick={() => handleViewBill(rec.receivedBillId)}>
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    View Bill
-                                </Button>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="sm">
-                                      Update Status <ChevronDown className="ml-2 h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Accepted')}>Accepted</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Mismatch')}>Mismatch</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Completed')}>Completed</DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                            </TableCell>
+            {pastReceipts.length > 0 ? (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Receipt ID</TableHead>
+                            <TableHead>Request ID</TableHead>
+                            <TableHead>Material</TableHead>
+                            <TableHead>Issued</TableHead>
+                            <TableHead>Received</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Action</TableHead>
                         </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+                    </TableHeader>
+                    <TableBody>
+                        {pastReceipts.map(rec => (
+                            <TableRow key={rec.receivedBillId}>
+                                <TableCell className="font-medium">{rec.receivedBillId}</TableCell>
+                                <TableCell>{rec.requestId}</TableCell>
+                                <TableCell>{rec.materialName}</TableCell>
+                                <TableCell>{rec.issuedQuantity}</TableCell>
+                                <TableCell>{rec.receivedQuantity}</TableCell>
+                                <TableCell>{format(rec.receivedDate, 'yyyy-MM-dd')}</TableCell>
+                                <TableCell>
+                                    <Badge 
+                                        variant={rec.status === 'Accepted' ? 'default' : rec.status === 'Completed' ? 'outline' : 'destructive'}
+                                        className={rec.status === 'Accepted' ? 'bg-green-600/80' : ''}
+                                    >
+                                        {rec.status === 'Accepted' ? <CheckCircle className="mr-1 h-3 w-3" /> : rec.status === 'Mismatch' ? <AlertTriangle className="mr-1 h-3 w-3" /> : null}
+                                        {rec.status}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="text-right space-x-2">
+                                    <Button variant="outline" size="sm" onClick={() => handleViewBill(rec.receivedBillId)}>
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        View Bill
+                                    </Button>
+                                    <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" size="sm">
+                                        Update Status <ChevronDown className="ml-2 h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Accepted')}>Accepted</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Mismatch')}>Mismatch</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Completed')}>Completed</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            ) : (
+                <p className="text-center text-muted-foreground">No receipts logged yet.</p>
+            )}
         </CardContent>
       </Card>
     </div>

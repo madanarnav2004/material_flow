@@ -38,23 +38,11 @@ const searchCategories: SearchCategory[] = [
     { value: 'request-search-site', label: 'Request Search (by Site)', placeholder: 'Search site name...', roles: ['store-manager', 'director', 'coordinator'] },
 ];
 
-// Mock Data for Search Results
-const mockEngineerUsage = [
-    { engineer: 'R. Sharma', material: 'Cement', quantity: '50 bags', boqItem: 'CON-001', site: 'North Site' },
-    { engineer: 'R. Sharma', material: 'Steel', quantity: '2 tons', boqItem: 'STR-002', site: 'North Site' },
-];
-
-const mockBoqUsage = [
-    { boqItem: 'CON-001', engineer: 'R. Sharma', quantity: '50 bags', material: 'Cement', site: 'North Site', building: 'Tower A' },
-];
-
-const mockBuildingUsage = [
-    { building: 'Tower A', material: 'Cement', quantity: '150 bags', engineer: 'R. Sharma' },
-];
-
-const mockMonthUsage = [
-    { month: 'July', material: 'Cement', quantity: '500 bags', site: 'North Site' },
-];
+// Mock Data for Search Results - CLEARED
+const mockEngineerUsage: any[] = [];
+const mockBoqUsage: any[] = [];
+const mockBuildingUsage: any[] = [];
+const mockMonthUsage: any[] = [];
 
 
 export default function DashboardSearch({ role }: { role: UserRole }) {
@@ -108,6 +96,9 @@ export default function DashboardSearch({ role }: { role: UserRole }) {
                 break;
             default:
                 toast({ title: 'Not Implemented', description: 'This search category is not yet implemented.' });
+                setSearchResults([]);
+                setSearchTitle('Not Implemented');
+                setIsDialogOpen(true);
                 return;
         }
         
@@ -120,7 +111,7 @@ export default function DashboardSearch({ role }: { role: UserRole }) {
 
     const renderResults = () => {
         if (searchResults.length === 0) {
-            return <p>No results found.</p>;
+            return <p>No results found for your query.</p>;
         }
 
         switch(searchCategory) {
@@ -153,7 +144,7 @@ export default function DashboardSearch({ role }: { role: UserRole }) {
                     </Table>
                 );
             default:
-                return null;
+                return <p>This search category is not yet implemented.</p>;
         }
     };
 
