@@ -21,6 +21,7 @@ import RateConfiguration from '@/components/vehicle/rate-configuration';
 import { useUser } from '@/hooks/use-user';
 
 const vehicleEntrySchema = z.object({
+  billDate: z.date(),
   vehicleNumber: z.string().min(1, 'Vehicle number is required.'),
   vehicleName: z.string().min(1, 'Vehicle name is required.'),
   vehicleType: z.enum(['Owned', 'Rented'], { required_error: 'Vehicle type is required.' }),
@@ -46,6 +47,10 @@ const vehicleEntrySchema = z.object({
   rentPeriodTo: z.date().optional(),
   totalWorkingHoursRent: z.coerce.number().optional(),
   billFile: z.any().optional(),
+  
+  // Billing
+  gstPercentage: z.coerce.number().min(0).optional(),
+
 }).refine(data => data.vehicleType !== 'Rented' || (data.vendorName && data.vendorName.length > 0), {
   message: 'Vendor name is required for rented vehicles.',
   path: ['vendorName'],
@@ -57,16 +62,23 @@ const vehicleEntrySchema = z.object({
     path: ['litersFilled'],
 });
 
-type VehicleEntryFormValues = z.infer<typeof vehicleEntrySchema>;
+type VehicleBillValues = z.infer<typeof vehicleEntrySchema> & {
+    billId: string;
+    totalWorkingHours: number;
+    totalAmount: number;
+};
 
 export default function VehicleEntryPage() {
   const { toast } = useToast();
   const { role } = useUser();
-  const [lastEntry, setLastEntry] = React.useState<VehicleEntryFormValues | null>(null);
+  const [lastGeneratedBill, setLastGeneratedBill] = React.useState<VehicleBillValues | null>(null);
+  const billContentRef = React.useRef<HTMLDivElement>(null);
 
-  const form = useForm<VehicleEntryFormValues>({
+
+  const form = useForm<z.infer<typeof vehicleEntrySchema>>({
     resolver: zodResolver(vehicleEntrySchema),
     defaultValues: {
+      billDate: new Date(),
       vehicleNumber: '',
       vehicleName: '',
       dailyWorkingHours: 0,
@@ -75,21 +87,56 @@ export default function VehicleEntryPage() {
       buildingName: '',
       boqItem: '',
       remarks: '',
+      gstPercentage: 18,
     },
   });
 
   const vehicleType = form.watch('vehicleType');
   const fuelFilledBy = form.watch('fuelFilledBy');
 
-  function onSubmit(values: VehicleEntryFormValues) {
-    setLastEntry(values);
-    console.log(values);
+  function onSubmit(values: z.infer<typeof vehicleEntrySchema>) {
+    const totalWorkingHours = (values.dailyWorkingHours || 0) + (values.otHours || 0);
+    // Dummy rate calculation for now
+    const rate = values.vehicleType === 'Rented' ? 60 : 0; 
+    const baseAmount = totalWorkingHours * rate;
+    const gstAmount = baseAmount * ((values.gstPercentage || 0) / 100);
+    const totalAmount = baseAmount + gstAmount;
+
+    const generatedBill: VehicleBillValues = {
+        ...values,
+        billId: `VEH-BILL-${format(new Date(), 'yyyyMMdd-HHmmss')}`,
+        totalWorkingHours,
+        totalAmount,
+    }
+
+    setLastGeneratedBill(generatedBill);
+    console.log(generatedBill);
     toast({
-      title: 'Vehicle Entry Logged',
-      description: `Entry for vehicle ${values.vehicleNumber} has been successfully saved.`,
+      title: 'Vehicle Bill Generated',
+      description: `Bill ${generatedBill.billId} for vehicle ${values.vehicleNumber} has been successfully created.`,
     });
     // form.reset(); // Optionally reset form after submission
   }
+  
+  const handleDownload = (billId: string) => {
+    if (billContentRef.current) {
+      const billHtml = billContentRef.current.innerHTML;
+      const blob = new Blob([`<html><head><title>${billId}</title><style>body{font-family:sans-serif;padding:20px;}h1,h2,h3{margin:0;}.font-bold{font-weight:700;} .text-lg{font-size:1.125rem;} .grid{display:grid;} .grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr));} .gap-2{gap:0.5rem;} .p-4{padding:1rem;} .border{border:1px solid #e2e8f0;} .rounded-lg{border-radius:0.5rem;} .space-y-2 > :not([hidden]) ~ :not([hidden]){margin-top:0.5rem;margin-bottom:0;} .text-right{text-align:right;} .mt-4{margin-top:1rem;}</style></head><body>${billHtml}</body></html>`], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${billId}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({
+        title: "Download Started",
+        description: `Bill ${billId} is downloading.`,
+      });
+    }
+  };
+
 
   const isPrivilegedUser = role === 'director' || role === 'coordinator';
 
@@ -102,8 +149,8 @@ export default function VehicleEntryPage() {
         <div className="lg:col-span-3">
           <Card>
             <CardHeader>
-              <CardTitle>Log Vehicle Details</CardTitle>
-              <CardDescription>Record all vehicle-related usage, fuel, and payment details for your site.</CardDescription>
+              <CardTitle>Log Vehicle & Generate Bill</CardTitle>
+              <CardDescription>Record vehicle usage to generate a bill. For rentals, upload vendor invoices separately.</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...form}>
@@ -112,9 +159,14 @@ export default function VehicleEntryPage() {
                   <div className="space-y-4 rounded-lg border p-4">
                     <h3 className="text-lg font-medium">Vehicle Information</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField name="vehicleNumber" control={form.control} render={({ field }) => (
-                        <FormItem><FormLabel>Vehicle Number</FormLabel><FormControl><Input placeholder="e.g., MH-12-AB-1234" {...field} /></FormControl><FormMessage /></FormItem>
-                      )} />
+                        <FormField name="billDate" control={form.control} render={({ field }) => (
+                            <FormItem className="flex flex-col"><FormLabel>Bill Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'} className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>
+                        )} />
+                        <FormField name="vehicleNumber" control={form.control} render={({ field }) => (
+                            <FormItem><FormLabel>Vehicle Number</FormLabel><FormControl><Input placeholder="e.g., MH-12-AB-1234" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                    </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <FormField name="vehicleName" control={form.control} render={({ field }) => (
                         <FormItem><FormLabel>Vehicle Name</FormLabel><FormControl><Input placeholder="e.g., JCB, Dumper" {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
@@ -160,7 +212,7 @@ export default function VehicleEntryPage() {
                         )} />
                         {fuelFilledBy === 'Owner' && (
                             <FormField name="fuelType" control={form.control} render={({ field }) => (
-                                <FormItem><FormLabel>Fuel Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select fuel type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Petrol">Petrol</SelectItem><SelectItem value="Diesel">Diesel</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Fuel Type</FormLabel><Select onValuechange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select fuel type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Petrol">Petrol</SelectItem><SelectItem value="Diesel">Diesel</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                             )} />
                         )}
                          {fuelFilledBy === 'Site' && (
@@ -183,11 +235,20 @@ export default function VehicleEntryPage() {
                         <FormItem><FormLabel>Remarks (Mandatory)</FormLabel><FormControl><Textarea placeholder="e.g., Fuel filled at local station, 20 liters of diesel." {...field} /></FormControl><FormMessage /></FormItem>
                      )} />
                   </div>
+                  
+                  {/* GST */}
+                  <div className="space-y-4 rounded-lg border p-4">
+                     <h3 className="text-lg font-medium">Billing Details</h3>
+                     <FormField name="gstPercentage" control={form.control} render={({ field }) => (
+                        <FormItem><FormLabel>GST (%)</FormLabel><FormControl><Input type="number" placeholder="e.g., 18" {...field} /></FormControl><FormMessage /></FormItem>
+                     )} />
+                  </div>
+
 
                   {/* Payment and Bill Upload */}
                   {vehicleType === 'Rented' && (
                     <div className="space-y-4 rounded-lg border p-4">
-                        <h3 className="text-lg font-medium">Payment & Bill Upload</h3>
+                        <h3 className="text-lg font-medium">Vendor Invoice Upload (Optional)</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormField name="invoiceNumber" control={form.control} render={({ field }) => (
                                 <FormItem><FormLabel>Invoice Number</FormLabel><FormControl><Input placeholder="e.g., RENT-2024-55" {...field} /></FormControl><FormMessage /></FormItem>
@@ -228,7 +289,7 @@ export default function VehicleEntryPage() {
                   )}
 
                   <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? 'Saving...' : 'Save Vehicle Entry'}
+                    {form.formState.isSubmitting ? 'Generating...' : 'Generate Bill'}
                   </Button>
                 </form>
               </Form>
@@ -237,59 +298,50 @@ export default function VehicleEntryPage() {
         </div>
 
         <div className="lg:col-span-2 space-y-6">
-          {isPrivilegedUser && <RateConfiguration />}
+          {isPrivilegedUser && (
+            <>
+                <RateConfiguration />
+                {/* Bill Comparison Component will go here for Director/Coordinator */}
+            </>
+          )}
 
-          {lastEntry && !isPrivilegedUser && (
+          {lastGeneratedBill && (
             <Card>
               <CardHeader className="flex flex-row items-start justify-between">
                  <div>
-                    <CardTitle className="flex items-center gap-2"><FileText /> Last Entry Details</CardTitle>
-                    <CardDescription>A summary of the last vehicle entry you logged.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><FileText /> Generated Vehicle Bill</CardTitle>
+                    <CardDescription>Bill ID: {lastGeneratedBill.billId}</CardDescription>
                  </div>
-                 <Button variant="outline" size="sm"><Download className="mr-2 h-4 w-4" /> Download</Button>
+                 <Button variant="outline" size="sm" onClick={() => handleDownload(lastGeneratedBill.billId)}><Download className="mr-2 h-4 w-4" /> Download</Button>
               </CardHeader>
-              <CardContent className="space-y-4 text-sm">
+              <CardContent ref={billContentRef} className="space-y-4 text-sm">
                 <div className="space-y-2 rounded-lg border p-4">
-                    <h3 className="font-semibold">Vehicle: {lastEntry.vehicleName} ({lastEntry.vehicleNumber} - {lastEntry.vehicleType})</h3>
-                    {lastEntry.vehicleType === 'Rented' && <p><strong>Vendor:</strong> {lastEntry.vendorName}</p>}
+                    <h3 className="font-semibold">Vehicle: {lastGeneratedBill.vehicleName} ({lastGeneratedBill.vehicleNumber} - {lastGeneratedBill.vehicleType})</h3>
+                    {lastGeneratedBill.vehicleType === 'Rented' && <p><strong>Vendor:</strong> {lastGeneratedBill.vendorName}</p>}
+                    <p><strong>Bill Date:</strong> {format(lastGeneratedBill.billDate, 'PPP')}</p>
                 </div>
                  <div className="space-y-2 rounded-lg border p-4">
                     <h3 className="font-semibold">Usage</h3>
                     <div className="grid grid-cols-2 gap-2">
-                        <p><strong>Engineer:</strong> {lastEntry.engineerName}</p>
-                        <p><strong>Building:</strong> {lastEntry.buildingName}</p>
-                        <p><strong>Daily Hours:</strong> {lastEntry.dailyWorkingHours}</p>
-                        <p><strong>OT Hours:</strong> {lastEntry.otHours}</p>
-                        <p><strong>BOQ Item:</strong> {lastEntry.boqItem}</p>
+                        <p><strong>Engineer:</strong> {lastGeneratedBill.engineerName}</p>
+                        <p><strong>Building:</strong> {lastGeneratedBill.buildingName}</p>
+                        <p><strong>Daily Hours:</strong> {lastGeneratedBill.dailyWorkingHours}</p>
+                        <p><strong>OT Hours:</strong> {lastGeneratedBill.otHours}</p>
+                        <p><strong>Total Hours:</strong> {lastGeneratedBill.totalWorkingHours}</p>
+                        <p><strong>BOQ Item:</strong> {lastGeneratedBill.boqItem}</p>
                     </div>
                 </div>
-                 <div className="space-y-2 rounded-lg border p-4">
-                    <h3 className="font-semibold">Fuel</h3>
-                    <p><strong>Filled By:</strong> {lastEntry.fuelFilledBy}</p>
-                    {lastEntry.fuelFilledBy === 'Owner' && <p><strong>Fuel Type:</strong> {lastEntry.fuelType}</p>}
-                    {lastEntry.fuelFilledBy === 'Site' && (
-                        <div className="grid grid-cols-2 gap-2">
-                             <p><strong>Initial km:</strong> {lastEntry.initialSpeedometer}</p>
-                             <p><strong>Final km:</strong> {lastEntry.finalSpeedometer}</p>
-                             <p><strong>Usage:</strong> {lastEntry.finalSpeedometer! - lastEntry.initialSpeedometer!} km</p>
-                             <p><strong>Liters Filled:</strong> {lastEntry.litersFilled} L</p>
-                        </div>
-                    )}
-                    <p><strong>Remarks:</strong> {lastEntry.remarks}</p>
-                </div>
-                {lastEntry.vehicleType === 'Rented' && (
-                    <div className="space-y-2 rounded-lg border p-4">
-                        <h3 className="font-semibold">Payment Details</h3>
-                        <div className="grid grid-cols-2 gap-2">
-                            <p><strong>Invoice #:</strong> {lastEntry.invoiceNumber}</p>
-                            <p><strong>Amount:</strong> ${lastEntry.totalInvoiceAmount?.toFixed(2)}</p>
-                            <p><strong>Invoice Date:</strong> {lastEntry.invoiceDate ? format(lastEntry.invoiceDate, 'PPP') : 'N/A'}</p>
-                            <p><strong>Received Date:</strong> {lastEntry.invoiceReceivedDate ? format(lastEntry.invoiceReceivedDate, 'PPP') : 'N/A'}</p>
-                            <p><strong>Rent Period:</strong> {lastEntry.rentPeriodFrom ? format(lastEntry.rentPeriodFrom, 'PPP') : 'N/A'} - {lastEntry.rentPeriodTo ? format(lastEntry.rentPeriodTo, 'PPP') : 'N/A'}</p>
-                            <p><strong>Total Hours:</strong> {lastEntry.totalWorkingHoursRent}</p>
-                        </div>
+                <div className="space-y-2 rounded-lg border p-4">
+                    <h3 className="font-semibold">Billing Summary</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                         {/* This assumes a dummy rate. In a real app, this would come from the rate config */}
+                         <p><strong>Rate:</strong> ${lastGeneratedBill.vehicleType === 'Rented' ? '60.00/hr' : 'N/A'}</p>
+                         <p><strong>Base Amount:</strong> ${((lastGeneratedBill.totalAmount) / (1 + (lastGeneratedBill.gstPercentage || 0) / 100)).toFixed(2)}</p>
+                         <p><strong>GST:</strong> {lastGeneratedBill.gstPercentage || 0}%</p>
+                         <p className="font-bold text-lg">Total Amount:</p>
+                         <p className="font-bold text-lg text-right">${lastGeneratedBill.totalAmount.toFixed(2)}</p>
                     </div>
-                )}
+                </div>
               </CardContent>
             </Card>
           )}
@@ -298,3 +350,5 @@ export default function VehicleEntryPage() {
     </div>
   );
 }
+
+    
