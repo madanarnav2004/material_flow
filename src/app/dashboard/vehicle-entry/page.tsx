@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { CalendarIcon, Car, Fuel, HardHat, Building, Wrench, Upload, Download, FileText, Save } from 'lucide-react';
 import { format } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,7 @@ import { useUser } from '@/hooks/use-user';
 import BillComparison from '@/components/vehicle/bill-comparison';
 
 const vehicleEntrySchema = z.object({
-  billDate: z.date(),
+  billDateRange: z.object({ from: z.date(), to: z.date().optional() }).optional(),
   vehicleNumber: z.string().min(1, 'Vehicle number is required.'),
   vehicleName: z.string().min(1, 'Vehicle name is required.'),
   vehicleType: z.enum(['Owned', 'Rented'], { required_error: 'Vehicle type is required.' }),
@@ -51,6 +52,8 @@ const vehicleEntrySchema = z.object({
   
   // Billing
   gstPercentage: z.coerce.number().min(0).optional(),
+  billDate: z.date(),
+
 
 }).refine(data => data.vehicleType !== 'Rented' || (data.vendorName && data.vendorName.length > 0), {
   message: 'Vendor name is required for rented vehicles.',
@@ -162,7 +165,7 @@ export default function VehicleEntryPage() {
           <Card>
             <CardHeader>
               <CardTitle>Log Vehicle Usage & Generate Bill</CardTitle>
-              <CardDescription>Select a date and vehicle to generate a bill based on site entries.</CardDescription>
+              <CardDescription>Select a date range and vehicle to generate a bill based on site entries.</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...form}>
@@ -171,9 +174,47 @@ export default function VehicleEntryPage() {
                   <div className="space-y-4 rounded-lg border p-4">
                     <h3 className="text-lg font-medium">Vehicle Information</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField name="billDate" control={form.control} render={({ field }) => (
-                            <FormItem className="flex flex-col"><FormLabel>Bill Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'} className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>
-                        )} />
+                        <FormField
+                            name="billDateRange"
+                            control={form.control}
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                <FormLabel>Bill Date Range</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button
+                                        variant={'outline'}
+                                        className={cn('pl-3 text-left font-normal', !field.value?.from && 'text-muted-foreground')}
+                                        >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {field.value?.from ? (
+                                            field.value.to ? (
+                                            <>
+                                                {format(field.value.from, 'LLL dd, y')} - {format(field.value.to, 'LLL dd, y')}
+                                            </>
+                                            ) : (
+                                            format(field.value.from, 'LLL dd, y')
+                                            )
+                                        ) : (
+                                            <span>Pick a date range</span>
+                                        )}
+                                        </Button>
+                                    </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="range"
+                                        selected={field.value as DateRange}
+                                        onSelect={field.onChange}
+                                        initialFocus
+                                    />
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                         <FormField name="vehicleNumber" control={form.control} render={({ field }) => (
                             <FormItem><FormLabel>Vehicle Number</FormLabel><FormControl><Input placeholder="e.g., MH-12-AB-1234" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
@@ -256,9 +297,14 @@ export default function VehicleEntryPage() {
                   {/* GST */}
                   <div className="space-y-4 rounded-lg border p-4">
                      <h3 className="text-lg font-medium">Billing Details</h3>
-                     <FormField name="gstPercentage" control={form.control} render={({ field }) => (
-                        <FormItem><FormLabel>GST (%)</FormLabel><FormControl><Input type="number" placeholder="e.g., 18" {...field} /></FormControl><FormMessage /></FormItem>
-                     )} />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField name="billDate" control={form.control} render={({ field }) => (
+                            <FormItem className="flex flex-col"><FormLabel>Bill Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'} className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>
+                        )} />
+                        <FormField name="gstPercentage" control={form.control} render={({ field }) => (
+                            <FormItem><FormLabel>GST (%)</FormLabel><FormControl><Input type="number" placeholder="e.g., 18" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                    </div>
                   </div>
 
 
