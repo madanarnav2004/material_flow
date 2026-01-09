@@ -15,6 +15,7 @@ import {
   Warehouse,
   Archive,
   Truck,
+  Car,
 } from 'lucide-react';
 
 import { 
@@ -41,6 +42,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard/requests', icon: Package, label: 'Requests', roles: ['director', 'site-manager', 'coordinator', 'store-manager'] },
   { href: '/dashboard/materials-issued', icon: Truck, label: 'Materials Issued', roles: ['director', 'site-manager', 'coordinator'] },
   { href: '/dashboard/receipts', icon: PackageCheck, label: 'Receipts', roles: ['director', 'site-manager', 'store-manager'] },
+  { href: '/dashboard/vehicle-entry', icon: Car, label: 'Vehicle Entry', roles: ['director', 'site-manager', 'coordinator'] },
   { href: '/dashboard/reports', icon: AreaChart, label: 'Reports', roles: ['director', 'coordinator'] },
   { href: '/dashboard/ai-review', icon: BrainCircuit, label: 'AI Bill Review', roles: ['director', 'coordinator', 'site-manager', 'store-manager'] },
 ];
