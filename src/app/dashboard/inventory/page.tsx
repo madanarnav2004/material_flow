@@ -332,6 +332,8 @@ export default function InventoryPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Unit</TableHead>
                   <TableHead>Description</TableHead>
+                  <TableHead className="text-right">Current Stock</TableHead>
+                  <TableHead className="text-right">Avg. Rate</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -340,6 +342,8 @@ export default function InventoryPage() {
                     <TableCell className="font-medium">{material.name}</TableCell>
                     <TableCell>{material.unit}</TableCell>
                     <TableCell>{material.description}</TableCell>
+                    <TableCell className="text-right">{material.quantity}</TableCell>
+                    <TableCell className="text-right">${material.rate.toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

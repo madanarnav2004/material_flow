@@ -34,9 +34,9 @@ export const allMaterials = [
 ];
 
 export const lowStockMaterials = [
-    { id: 'ls-1', material: 'Steel Rebar', site: 'North Site', quantity: '5 tons' },
-    { id: 'ls-2', material: 'Paint', site: 'West Site', quantity: '20 liters' },
-    { id: 'ls-3', material: 'Cement', site: 'North Site', quantity: '50 bags' },
+    { id: 'ls-1', material: 'Steel Rebar', site: 'North Site', quantity: 5, unit: 'tons', threshold: 10 },
+    { id: 'ls-2', material: 'Paint', site: 'West Site', quantity: 20, unit: 'liters', threshold: 50 },
+    { id: 'ls-3', material: 'Cement', site: 'MAPI Store', quantity: 45, unit: 'bags', threshold: 100 },
 ];
 
 export const pendingRequests = [

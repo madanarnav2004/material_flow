@@ -29,7 +29,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { pendingRequests as initialPendingRequests, lowStockMaterials, materialReturnReminders as initialRequests } from '@/lib/mock-data';
+import { pendingRequests as initialPendingRequests, lowStockMaterials as initialLowStockMaterials, materialReturnReminders as initialRequests } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -78,6 +78,7 @@ export default function StoreManagerDashboard() {
   const [requests, setRequests] = React.useState(initialRequests);
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialRequestBill | null>(null);
   const [pendingRequests, setPendingRequests] = React.useState(initialPendingRequests);
+  const [lowStockMaterials, setLowStockMaterials] = React.useState(initialLowStockMaterials);
 
   const handleStatusChange = (reqId: string, newStatus: RequestStatus) => {
     setRequests(requests.map(req => req.id === reqId ? { ...req, status: newStatus } : req));
@@ -194,7 +195,42 @@ export default function StoreManagerDashboard() {
                 </Button>
             </div>
           </DialogContent>
-
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Low Stock Material Alerts</DialogTitle>
+              <DialogDescription>
+                Materials that have fallen below the minimum required quantity in the store or across sites.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[60vh] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Material</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead className="text-right">Current Qty</TableHead>
+                    <TableHead className="text-right">Min. Threshold</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lowStockMaterials.map((item) => (
+                    <TableRow key={item.id} className="text-destructive">
+                      <TableCell className="font-medium">{item.material}</TableCell>
+                      <TableCell>{item.site}</TableCell>
+                      <TableCell className="text-right font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
+                      <TableCell className="text-right">{`${item.threshold} ${item.unit}`}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="flex justify-end mt-4">
+              <Button onClick={handleDownloadExcel}>
+                <Download className="mr-2 h-4 w-4" />
+                Export Alert List
+              </Button>
+            </div>
+          </DialogContent>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
               <div className="lg:col-span-3 space-y-6">
                   <Card>
@@ -242,7 +278,7 @@ export default function StoreManagerDashboard() {
                                   {lowStockMaterials.map(item => (
                                       <TableRow key={item.id} className="text-destructive">
                                           <TableCell className="font-medium">{item.material}</TableCell>
-                                          <TableCell className="font-bold">{item.quantity}</TableCell>
+                                          <TableCell className="font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
                                           <TableCell>{item.site}</TableCell>
                                       </TableRow>
                                   ))}

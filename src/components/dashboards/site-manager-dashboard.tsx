@@ -37,6 +37,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { lowStockMaterials as initialLowStockMaterials } from '@/lib/mock-data';
 
 
 const siteStock = [
@@ -57,9 +58,8 @@ const pendingSiteRequests = [
     { id: 'pr-2', material: 'Gravel', quantity: '10 m³', requestedFrom: 'West Site'},
 ];
 
-const lowStockSite = [
-    { id: 'ls-1', name: 'Bricks', quantity: '5000 pcs' }
-]
+const lowStockSite = initialLowStockMaterials.filter(m => m.site === 'North Site' || m.site === 'West Site');
+
 
 type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended';
 type RequestFormValues = {
@@ -161,7 +161,7 @@ export default function SiteManagerDashboard() {
             <DialogTrigger asChild>
               <StatCard
                 title="Low Stock"
-                value={`${lowStockSite.length} material`}
+                value={`${lowStockSite.length} material(s)`}
                 icon={AlertTriangle}
                 className="text-destructive border-destructive/50"
                 description="Needs immediate re-ordering"
@@ -200,7 +200,41 @@ export default function SiteManagerDashboard() {
                     Download Excel
                 </Button>
             </div>
-        </DialogContent>
+          </DialogContent>
+           <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Low Stock Material Alerts</DialogTitle>
+              <DialogDescription>
+                Materials on this site that have fallen below the minimum required quantity.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[60vh] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Material</TableHead>
+                    <TableHead className="text-right">Current Qty</TableHead>
+                    <TableHead className="text-right">Min. Threshold</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lowStockSite.map((item) => (
+                    <TableRow key={item.id} className="text-destructive">
+                      <TableCell className="font-medium">{item.material}</TableCell>
+                      <TableCell className="text-right font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
+                      <TableCell className="text-right">{`${item.threshold} ${item.unit}`}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="flex justify-end mt-4">
+              <Button onClick={handleDownloadExcel}>
+                <Download className="mr-2 h-4 w-4" />
+                Export Alert List
+              </Button>
+            </div>
+          </DialogContent>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
               <div className="lg:col-span-3 space-y-6">
                   <Card>
@@ -245,8 +279,8 @@ export default function SiteManagerDashboard() {
                               <TableBody>
                                   {lowStockSite.map(item => (
                                       <TableRow key={item.id} className="text-destructive">
-                                          <TableCell className="font-medium">{item.name}</TableCell>
-                                          <TableCell className="font-bold">{item.quantity}</TableCell>
+                                          <TableCell className="font-medium">{item.material}</TableCell>
+                                          <TableCell className="font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
                                       </TableRow>
                                   ))}
                               </TableBody>
@@ -498,7 +532,8 @@ export default function SiteManagerDashboard() {
                   {recentSiteActivity.map(activity => (
                     <TableRow key={activity.id}>
                       <TableCell className="font-medium">{activity.type}</TableCell>
-                      <TableCell>{activity.details}</TableCell><TableCell>{activity.to || activity.from}</TableCell>
+                      <TableCell>{activity.details}</TableCell>
+                      <TableCell>{activity.to || activity.from}</TableCell>
                       <TableCell>
                         <Badge variant={activity.status === 'Completed' ? 'default' : activity.status === 'In Transit' ? 'destructive' : 'secondary'} className={cn(activity.status === 'Completed' && 'bg-green-600/80')}>
                           {activity.status}

@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import StatCard from "@/components/dashboard/stat-card";
 import { DollarSign, Package, AlertTriangle, PackageSearch, Eye, ChevronDown, FileText, Download, BarChart as BarChartIcon } from "lucide-react";
-import { monthlyConsumption, materialStock, recentActivities, lowStockMaterials, pendingRequests as initialPendingRequests, materialReturnReminders as initialRequests } from "@/lib/mock-data";
+import { monthlyConsumption, materialStock, recentActivities, lowStockMaterials as initialLowStockMaterials, pendingRequests as initialPendingRequests, materialReturnReminders as initialRequests } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import * as React from 'react';
 import { useToast } from "@/hooks/use-toast";
@@ -66,6 +66,7 @@ export default function DirectorDashboard() {
   const [requests, setRequests] = React.useState(initialRequests);
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialRequestBill | null>(null);
   const [pendingRequests, setPendingRequests] = React.useState(initialPendingRequests);
+  const [lowStockMaterials, setLowStockMaterials] = React.useState(initialLowStockMaterials);
 
   const handleStatusChange = (reqId: string, newStatus: RequestStatus) => {
     setRequests(requests.map(req => req.id === reqId ? { ...req, status: newStatus } : req));
@@ -162,6 +163,42 @@ export default function DirectorDashboard() {
                     Download Excel
                 </Button>
             </div>
+        </DialogContent>
+         <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Low Stock Material Alerts</DialogTitle>
+            <DialogDescription>
+              Materials that have fallen below the minimum required quantity.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Material</TableHead>
+                  <TableHead>Site</TableHead>
+                  <TableHead className="text-right">Current Qty</TableHead>
+                  <TableHead className="text-right">Min. Threshold</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {lowStockMaterials.map((item) => (
+                  <TableRow key={item.id} className="text-destructive">
+                    <TableCell className="font-medium">{item.material}</TableCell>
+                    <TableCell>{item.site}</TableCell>
+                    <TableCell className="text-right font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
+                    <TableCell className="text-right">{`${item.threshold} ${item.unit}`}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex justify-end mt-4">
+            <Button onClick={handleDownloadExcel}>
+              <Download className="mr-2 h-4 w-4" />
+              Export Alert List
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
       <div className="grid gap-6 lg:grid-cols-5">
@@ -285,7 +322,7 @@ export default function DirectorDashboard() {
                             <TableRow key={item.id} className="text-sm text-destructive">
                                 <TableCell className="font-medium">{item.material}</TableCell>
                                 <TableCell>{item.site}</TableCell>
-                                <TableCell className="font-bold">{item.quantity}</TableCell>
+                                <TableCell className="font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
