@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -9,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
+import { engineerUsage, boqUsage, recentActivities } from '@/lib/mock-data';
 
 
 type SearchCategory = {
@@ -38,11 +40,17 @@ const searchCategories: SearchCategory[] = [
     { value: 'request-search-site', label: 'Request Search (by Site)', placeholder: 'Search site name...', roles: ['store-manager', 'director', 'coordinator'] },
 ];
 
-// Mock Data for Search Results - CLEARED
-const mockEngineerUsage: any[] = [];
-const mockBoqUsage: any[] = [];
-const mockBuildingUsage: any[] = [];
-const mockMonthUsage: any[] = [];
+const mockBuildingUsage = [
+  { building: 'Tower A', material: 'Cement', quantity: '100 bags', engineer: 'John Smith'},
+  { building: 'Tower A', material: 'Sand', quantity: '20 cu.m.', engineer: 'John Smith'},
+  { building: 'Tower B', material: 'Steel Rebar', quantity: '5 tons', engineer: 'Maria Garcia'},
+];
+
+const mockMonthUsage = [
+    { month: 'July', material: 'Cement', quantity: '300 bags', site: 'North Site'},
+    { month: 'July', material: 'Steel Rebar', quantity: '15 tons', site: 'North Site'},
+    { month: 'June', material: 'Bricks', quantity: '5000 pcs', site: 'West Site'},
+];
 
 
 export default function DashboardSearch({ role }: { role: UserRole }) {
@@ -79,11 +87,11 @@ export default function DashboardSearch({ role }: { role: UserRole }) {
         let title = '';
         switch(searchCategory) {
             case 'engineer-usage':
-                results = mockEngineerUsage.filter(u => u.engineer.toLowerCase().includes(searchTerm.toLowerCase()));
+                results = engineerUsage.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()));
                 title = `Engineer-wise Usage for "${searchTerm}"`;
                 break;
             case 'boq-usage-engineer':
-                results = mockBoqUsage.filter(u => u.boqItem.toLowerCase().includes(searchTerm.toLowerCase()) || u.engineer.toLowerCase().includes(searchTerm.toLowerCase()));
+                results = boqUsage.filter(u => u.item.toLowerCase().includes(searchTerm.toLowerCase()));
                 title = `BOQ Item-wise Usage for "${searchTerm}"`;
                 break;
             case 'building-usage':
@@ -118,15 +126,15 @@ export default function DashboardSearch({ role }: { role: UserRole }) {
             case 'engineer-usage':
                 return (
                     <Table>
-                        <TableHeader><TableRow><TableHead>Engineer</TableHead><TableHead>Material</TableHead><TableHead>Quantity</TableHead><TableHead>BOQ Item</TableHead><TableHead>Site</TableHead></TableRow></TableHeader>
-                        <TableBody>{searchResults.map((r, i) => <TableRow key={i}><TableCell>{r.engineer}</TableCell><TableCell>{r.material}</TableCell><TableCell>{r.quantity}</TableCell><TableCell>{r.boqItem}</TableCell><TableCell>{r.site}</TableCell></TableRow>)}</TableBody>
+                        <TableHeader><TableRow><TableHead>Engineer</TableHead><TableHead>Materials</TableHead><TableHead>Site</TableHead></TableRow></TableHeader>
+                        <TableBody>{searchResults.map((r, i) => <TableRow key={i}><TableCell>{r.name}</TableCell><TableCell>{r.materials}</TableCell><TableCell>{r.site}</TableCell></TableRow>)}</TableBody>
                     </Table>
                 );
             case 'boq-usage-engineer':
                  return (
                     <Table>
-                        <TableHeader><TableRow><TableHead>BOQ Item</TableHead><TableHead>Engineer</TableHead><TableHead>Material</TableHead><TableHead>Quantity</TableHead><TableHead>Building</TableHead></TableRow></TableHeader>
-                        <TableBody>{searchResults.map((r, i) => <TableRow key={i}><TableCell>{r.boqItem}</TableCell><TableCell>{r.engineer}</TableCell><TableCell>{r.material}</TableCell><TableCell>{r.quantity}</TableCell><TableCell>{r.building}</TableCell></TableRow>)}</TableBody>
+                        <TableHeader><TableRow><TableHead>BOQ Item</TableHead><TableHead>Consumed</TableHead><TableHead>Budget</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                        <TableBody>{searchResults.map((r, i) => <TableRow key={i}><TableCell>{r.item}</TableCell><TableCell>{r.consumed}</TableCell><TableCell>{r.budget}</TableCell><TableCell>{r.status}</TableCell></TableRow>)}</TableBody>
                     </Table>
                 );
              case 'building-usage':

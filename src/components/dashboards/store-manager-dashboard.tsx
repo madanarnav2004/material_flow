@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -38,9 +39,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { useMaterialContext } from '@/context/material-context';
+import { storeInventory, recentStoreActivity } from '@/lib/mock-data';
 
-const storeInventory: any[] = [];
-const recentStoreActivity: any[] = [];
 
 type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended';
 type RequestFormValues = {
@@ -64,6 +64,8 @@ export default function StoreManagerDashboard() {
   const { toast } = useToast();
   const { requests, setRequests, pendingRequests, lowStockMaterials } = useMaterialContext();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialRequestBill | null>(null);
+
+  const materialsIssuedCount = recentStoreActivity.filter(a => a.type === 'Issue' && a.date === format(new Date(), 'yyyy-MM-dd')).length;
 
   const handleStatusChange = (reqId: string, newStatus: RequestStatus) => {
     setRequests(requests.map(req => req.id === reqId ? { ...req, status: newStatus } : req));
@@ -118,7 +120,7 @@ export default function StoreManagerDashboard() {
               <DialogTrigger asChild>
                   <StatCard
                       title="Total Inventory"
-                      value="0+ items"
+                      value={`${storeInventory.length}+ items`}
                       icon={PackageSearch}
                       description="Total distinct material types"
                       onClick={() => {}}
@@ -206,7 +208,7 @@ export default function StoreManagerDashboard() {
           </Dialog>
           <StatCard
             title="Materials Issued"
-            value="0 items"
+            value={`${materialsIssuedCount} items`}
             icon={Truck}
             description="In the last 24 hours"
           />

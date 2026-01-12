@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Bar, BarChart, CartesianGrid, XAxis, Pie, PieChart, Cell } from 'recharts';
@@ -29,12 +30,10 @@ import {
   monthlyConsumption,
   materialStock,
   recentActivities,
-  lowStockMaterials as initialLowStockMaterials,
-  pendingRequests as initialPendingRequests,
-  materialReturnReminders as initialRequests,
   detailedMonthlyConsumption,
   detailedStock,
   stockUpdates,
+  detailedMaterialValue
 } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
@@ -51,7 +50,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { allMaterials } from '@/lib/mock-data';
+import { useMaterialContext } from '@/context/material-context';
+
 
 const chartConfig: ChartConfig = {
   consumption: {
@@ -89,9 +89,6 @@ type MaterialRequestBill = RequestFormValues & {
   totalValue: number;
 };
 
-const sites: string[] = [];
-const detailedMaterialValue: any[] = [];
-
 const totalValue = detailedMaterialValue.reduce((acc, item) => acc + item.quantity * item.rate, 0);
 
 const siteWiseTotal = detailedMaterialValue.reduce((acc, item) => {
@@ -105,13 +102,12 @@ const siteWiseTotal = detailedMaterialValue.reduce((acc, item) => {
 
 export default function DirectorDashboard() {
   const { toast } = useToast();
-  const [requests, setRequests] = React.useState(initialRequests);
+  const { requests, setRequests, pendingRequests, lowStockMaterials } = useMaterialContext();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialRequestBill | null>(null);
-  const [pendingRequests, setPendingRequests] = React.useState(initialPendingRequests);
-  const [lowStockMaterials, setLowStockMaterials] = React.useState(initialLowStockMaterials);
   const [selectedMonth, setSelectedMonth] = React.useState<string | null>(null);
   const [isConsumptionDialogOpen, setIsConsumptionDialogOpen] = React.useState(false);
 
+  const totalMaterials = materialStock.reduce((acc, item) => acc + item.value, 0);
 
   const handleStatusChange = (reqId: string, newStatus: RequestStatus) => {
     setRequests(requests.map(req => (req.id === reqId ? { ...req, status: newStatus } : req)));
@@ -258,7 +254,7 @@ export default function DirectorDashboard() {
           <Dialog>
             <DialogTrigger asChild>
                 <div className="cursor-pointer">
-                    <StatCard title="Total Materials" value="0 units" icon={PackageSearch} description="Across 0 sites" />
+                    <StatCard title="Total Materials" value={`${totalMaterials} units`} icon={PackageSearch} description={`Across ${Object.keys(siteWiseTotal).length} sites`} />
                 </div>
             </DialogTrigger>
             <DialogContent className="max-w-4xl">
@@ -465,7 +461,7 @@ export default function DirectorDashboard() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {selectedMonthData.organizationWise.map(item => (
+                            {selectedMonthData.organizationWise.map((item:any) => (
                               <TableRow key={item.name}>
                                 <TableCell>{item.name}</TableCell>
                                 <TableCell className="text-right">{item.quantity} {item.unit}</TableCell>
@@ -476,7 +472,7 @@ export default function DirectorDashboard() {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold mb-2">Site-wise Consumption</h3>
-                       {selectedMonthData.siteWise.map(siteData => (
+                       {selectedMonthData.siteWise.map((siteData:any) => (
                          <div key={siteData.site} className="mb-4">
                            <h4 className="font-medium text-md mb-1">{siteData.site}</h4>
                             <Table>
@@ -487,7 +483,7 @@ export default function DirectorDashboard() {
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {siteData.materials.map(material => (
+                                {siteData.materials.map((material:any) => (
                                   <TableRow key={material.name}>
                                     <TableCell>{material.name}</TableCell>
                                     <TableCell className="text-right">{material.quantity} {material.unit}</TableCell>

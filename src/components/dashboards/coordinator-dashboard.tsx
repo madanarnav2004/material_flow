@@ -1,3 +1,4 @@
+
 'use client';
 
 import { BarChart, Users, Building, FileText, Eye, ChevronDown, Download } from 'lucide-react';
@@ -14,9 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { useMaterialContext } from '@/context/material-context';
-
-const boqUsage: any[] = [];
-const engineerUsage: any[] = [];
+import { boqUsage, engineerUsage } from '@/lib/mock-data';
 
 
 type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended' | 'Partially Issued';
@@ -98,10 +97,11 @@ export default function CoordinatorDashboard() {
             <DialogTrigger asChild>
                 <StatCard
                     title="Total Usage (BOQ)"
-                    value="0%"
+                    value={`${boqUsage.filter(b => b.status === 'Over Budget').length} Over Budget`}
                     icon={BarChart}
                     description="Across active projects"
                     onClick={() => {}}
+                    className="text-destructive border-destructive/50"
                 />
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
@@ -148,9 +148,9 @@ export default function CoordinatorDashboard() {
             <DialogTrigger asChild>
               <StatCard
                 title="Engineers Monitored"
-                value="0"
+                value={engineerUsage.length.toString()}
                 icon={Users}
-                description="Active on 0 sites"
+                description={`Active on ${new Set(engineerUsage.map(e=>e.site)).size} sites`}
                 onClick={() => {}}
               />
             </DialogTrigger>
@@ -188,7 +188,7 @@ export default function CoordinatorDashboard() {
 
           <StatCard
             title="Sites Overview"
-            value="0 Sites"
+            value={`${new Set(requests.map(r => r.site)).size} Sites`}
             icon={Building}
             description=""
           />

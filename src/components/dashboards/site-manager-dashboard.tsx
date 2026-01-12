@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -28,7 +29,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { allMaterials } from '@/lib/mock-data';
+import { 
+  siteStock, 
+  recentSiteActivity, 
+  pendingSiteRequests,
+  lowStockSite,
+} from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -38,12 +44,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { useMaterialContext } from '@/context/material-context';
-
-
-const siteStock: any[] = [];
-const recentSiteActivity: any[] = [];
-const pendingSiteRequests: any[] = [];
-const lowStockSite: any[] = [];
 
 
 type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended';
@@ -124,7 +124,7 @@ export default function SiteManagerDashboard() {
             <DialogTrigger asChild>
               <StatCard
                 title="Available Materials"
-                value="0 items"
+                value={`${siteStock.length} items`}
                 icon={PackageSearch}
                 description="Total distinct materials on site"
                 onClick={() => {}}
@@ -136,21 +136,19 @@ export default function SiteManagerDashboard() {
                   <DialogDescription>A detailed breakdown of all materials available on this site.</DialogDescription>
               </DialogHeader>
               <div className="max-h-[60vh] overflow-y-auto">
-                  {allMaterials.slice(0,5).length > 0 ? (
+                  {siteStock.length > 0 ? (
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Material</TableHead>
-                                <TableHead>Unit</TableHead>
                                 <TableHead className="text-right">Quantity</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {allMaterials.slice(0,5).map(item => (
+                            {siteStock.map(item => (
                                 <TableRow key={item.id}>
                                     <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell>{item.unit}</TableCell>
-                                    <TableCell className="text-right">{Math.floor(Math.random() * 200)}</TableCell>
+                                    <TableCell className="text-right">{item.quantity}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -210,7 +208,7 @@ export default function SiteManagerDashboard() {
           </Dialog>
           <StatCard
             title="Pending Receipts"
-            value="0"
+            value="1"
             icon={PackageCheck}
             description="Materials in transit to your site"
           />
