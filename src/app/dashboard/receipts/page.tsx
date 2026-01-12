@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { PackageCheck, FileText, Download, Eye, AlertTriangle, CheckCircle, HelpCircle, ChevronDown, CalendarIcon } from 'lucide-react';
+import { PackageCheck, FileText, Download, Eye, AlertTriangle, CheckCircle, HelpCircle, ChevronDown, CalendarIcon, FileDiff } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { useMaterialContext } from '@/context/material-context';
+import { Separator } from '@/components/ui/separator';
 
 const materialReceiptSchema = z.object({
   issuedId: z.string().min(1, 'An Issued Material ID must be selected.'),
@@ -48,15 +49,31 @@ type MaterialReceivedBill = ReceiptFormValues & {
   status: ReceiptStatus;
 };
 
+type FullBillDetails = {
+    request: {
+        id: string;
+        material: string;
+        quantity: number;
+        site: string;
+        returnDate: string;
+    } | null;
+    issue: {
+        issuedId: string;
+        materialName: string;
+        issuedQuantity: number;
+        issuingSite: string;
+    } | null;
+    receipt: MaterialReceivedBill | null;
+}
 
 // Mock data - CLEARED
 const initialPastReceipts: MaterialReceivedBill[] = [];
 
 export default function ReceiptsPage() {
   const { toast } = useToast();
-  const { issuedMaterials } = useMaterialContext();
+  const { issuedMaterials, requests } = useMaterialContext();
   const [pastReceipts, setPastReceipts] = React.useState<MaterialReceivedBill[]>(initialPastReceipts);
-  const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialReceivedBill | null>(null);
+  const [activeBillDetails, setActiveBillDetails] = React.useState<FullBillDetails | null>(null);
   const billContentRef = React.useRef<HTMLDivElement>(null);
 
   const form = useForm<ReceiptFormValues>({
@@ -112,8 +129,12 @@ export default function ReceiptsPage() {
       status: status,
     };
     
-    setLastGeneratedBill(bill);
     setPastReceipts(prev => [bill, ...prev]);
+
+    const requestDetails = requests.find(r => r.id === bill.requestId) || null;
+    const issueDetails = issuedMaterials.find(i => i.issuedId === bill.issuedId) || null;
+    setActiveBillDetails({ request: requestDetails, issue: issueDetails, receipt: bill });
+
 
     let toastDescription = `Receipt for ${values.receivedQuantity} units of ${values.materialName} logged.`;
     if (status === 'Mismatch') {
@@ -127,14 +148,21 @@ export default function ReceiptsPage() {
   }
 
   const handleViewBill = (receiptId: string) => {
-    const bill = pastReceipts.find(r => r.receivedBillId === receiptId);
-    if (bill) {
-      setLastGeneratedBill(bill);
+    const receipt = pastReceipts.find(r => r.receivedBillId === receiptId);
+    if (receipt) {
+      const requestDetails = requests.find(r => r.id === receipt.requestId) || null;
+      const issueDetails = issuedMaterials.find(i => i.issuedId === receipt.issuedId) || null;
+      setActiveBillDetails({ request: requestDetails, issue: issueDetails, receipt: receipt });
     }
   };
 
   const handleStatusChange = (receiptId: string, newStatus: ReceiptStatus) => {
     setPastReceipts(receipts => receipts.map(r => r.receivedBillId === receiptId ? { ...r, status: newStatus } : r));
+    
+    if (activeBillDetails?.receipt?.receivedBillId === receiptId) {
+        setActiveBillDetails(prev => prev ? { ...prev, receipt: prev.receipt ? { ...prev.receipt, status: newStatus } : null } : null);
+    }
+
     toast({
       title: 'Status Updated',
       description: `Receipt ${receiptId} has been marked as ${newStatus}.`,
@@ -147,7 +175,7 @@ export default function ReceiptsPage() {
       const blob = new Blob([`<html><head><title>${billId}</title></head><body>${billHtml}</body></html>`], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
+a.href = url;
       a.download = `${billId}.html`;
       document.body.appendChild(a);
       a.click();
@@ -407,79 +435,89 @@ export default function ReceiptsPage() {
             </CardContent>
             </Card>
         </div>
-        {lastGeneratedBill && (
+        {activeBillDetails && (
             <div className="lg:col-span-2">
                 <Card>
                     <CardHeader className="flex flex-row items-start justify-between">
                         <div>
                         <CardTitle className="flex items-center gap-2">
-                            <FileText /> Material Received Bill
+                            <FileDiff /> Bill Checking Process
                         </CardTitle>
                         <CardDescription>
-                            This is the generated bill for the received material.
+                            Comparing Request, Issued, and Received bills.
                         </CardDescription>
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => handleDownload(lastGeneratedBill.receivedBillId)}>
+                         <Button variant="outline" size="sm" onClick={() => handleDownload(activeBillDetails.receipt?.receivedBillId ?? 'bill')}>
                             <Download className="mr-2 h-4 w-4" />
                             Download
                         </Button>
                     </CardHeader>
-                    <CardContent ref={billContentRef} className="space-y-4 text-sm">
-                        <div className="space-y-2 rounded-lg border p-4">
-                            <h3 className="font-semibold">Basic Details</h3>
-                            <div className="grid grid-cols-2 gap-2">
-                                <p><strong>Receipt ID:</strong> {lastGeneratedBill.receivedBillId}</p>
-                                <p><strong>Received Date:</strong> {lastGeneratedBill.receivedDate ? format(lastGeneratedBill.receivedDate, 'PPP') : 'N/A'}</p>
-                                <p><strong>Receiving Site:</strong> {lastGeneratedBill.receivingSite}</p>
-                                <p><strong>Receiver:</strong> {lastGeneratedBill.receiver?.name}</p>
+                    <CardContent ref={billContentRef} className="space-y-6 text-sm">
+                        
+                        {/* Status Summary */}
+                        <div className="rounded-lg border p-4 space-y-2">
+                            <h3 className="font-semibold text-base">Verification Status</h3>
+                            {activeBillDetails.receipt?.status === 'Mismatch' ? (
+                                <div className="flex items-center gap-2 text-destructive">
+                                    <AlertTriangle className="h-5 w-5" />
+                                    <p className="font-semibold">Query: Mismatch in quantities.</p>
+                                </div>
+                            ) : activeBillDetails.receipt?.status === 'Completed' ? (
+                                <div className="flex items-center gap-2 text-green-600">
+                                    <CheckCircle className="h-5 w-5" />
+                                    <p className="font-semibold">Process Completed: All bills match.</p>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2 text-blue-600">
+                                    <HelpCircle className="h-5 w-5" />
+                                    <p className="font-semibold">Process Pending: Verification required.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Request Bill */}
+                        <div className="space-y-2">
+                            <h3 className="font-semibold text-base text-muted-foreground">1. Material Request Bill</h3>
+                            <div className="rounded-lg border p-4 space-y-2">
+                                <p><strong>Request ID:</strong> {activeBillDetails.request?.id}</p>
+                                <p><strong>Requesting Site:</strong> {activeBillDetails.request?.site}</p>
+                                <Separator />
+                                <div className="flex justify-between items-center">
+                                    <span>{activeBillDetails.request?.material}</span>
+                                    <span className="font-bold text-lg">{activeBillDetails.request?.quantity} units</span>
+                                </div>
                             </div>
                         </div>
-                         <div className="space-y-2 rounded-lg border p-4">
-                            <h3 className="font-semibold">Reference Details</h3>
-                            <div className="grid grid-cols-2 gap-2">
-                                <p><strong>Linked Request ID:</strong> {lastGeneratedBill.requestId}</p>
-                                <p><strong>Linked Issued ID:</strong> {lastGeneratedBill.issuedId}</p>
+
+                        {/* Issued Bill */}
+                        <div className="space-y-2">
+                             <h3 className="font-semibold text-base text-muted-foreground">2. Material Issued Bill</h3>
+                            <div className="rounded-lg border p-4 space-y-2">
+                                <p><strong>Issued ID:</strong> {activeBillDetails.issue?.issuedId}</p>
+                                <p><strong>Issuing Site:</strong> {activeBillDetails.issue?.issuingSite}</p>
+                                <Separator />
+                                <div className="flex justify-between items-center">
+                                    <span>{activeBillDetails.issue?.materialName}</span>
+                                    <span className="font-bold text-lg">{activeBillDetails.issue?.issuedQuantity} units</span>
+                                </div>
                             </div>
                         </div>
-                        <div className="space-y-2 rounded-lg border p-4">
-                            <h3 className="font-semibold">Material Verification</h3>
-                             <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Material</TableHead>
-                                        <TableHead>Issued</TableHead>
-                                        <TableHead>Received</TableHead>
-                                        <TableHead>Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    <TableRow>
-                                        <TableCell>{lastGeneratedBill.materialName}</TableCell>
-                                        <TableCell>{lastGeneratedBill.issuedQuantity}</TableCell>
-                                        <TableCell>{lastGeneratedBill.receivedQuantity}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={lastGeneratedBill.status === 'Accepted' ? 'default' : 'destructive'} className={lastGeneratedBill.status === 'Accepted' ? 'bg-green-600/80' : ''}>
-                                                {lastGeneratedBill.status}
-                                            </Badge>
-                                        </TableCell>
-                                    </TableRow>
-                                </TableBody>
-                            </Table>
+
+                        {/* Received Bill */}
+                         <div className="space-y-2">
+                             <h3 className="font-semibold text-base text-muted-foreground">3. Final Material Received Bill</h3>
+                            <div className="rounded-lg border p-4 space-y-2 bg-secondary/30">
+                                <p><strong>Receipt ID:</strong> {activeBillDetails.receipt?.receivedBillId}</p>
+                                <p><strong>Receiver:</strong> {activeBillDetails.receipt?.receiver?.name}</p>
+                                <Separator />
+                                <div className="flex justify-between items-center">
+                                    <span>{activeBillDetails.receipt?.materialName}</span>
+                                    <span className={cn("font-bold text-xl", activeBillDetails.receipt?.status === 'Mismatch' && 'text-destructive')}>{activeBillDetails.receipt?.receivedQuantity} units</span>
+                                </div>
+                                 {activeBillDetails.receipt?.remarks && <p className="text-xs text-muted-foreground pt-2"><strong>Remarks:</strong> {activeBillDetails.receipt.remarks}</p>}
+                            </div>
                         </div>
                         
-                        {lastGeneratedBill.isDamaged && (
-                             <div className="space-y-2 rounded-lg border border-destructive/50 p-4">
-                                <h3 className="font-semibold text-destructive">Damage Report</h3>
-                                <p>{lastGeneratedBill.damageDescription}</p>
-                             </div>
-                        )}
-
-                        {lastGeneratedBill.remarks && (
-                            <div className="space-y-2">
-                                <h3 className="font-semibold">Remarks</h3>
-                                <p className="text-muted-foreground">{lastGeneratedBill.remarks}</p>
-                            </div>
-                        )}
                     </CardContent>
                 </Card>
             </div>
@@ -518,7 +556,10 @@ export default function ReceiptsPage() {
                                 <TableCell>
                                     <Badge 
                                         variant={rec.status === 'Accepted' ? 'default' : rec.status === 'Completed' ? 'outline' : 'destructive'}
-                                        className={rec.status === 'Accepted' ? 'bg-green-600/80' : ''}
+                                        className={cn(
+                                            rec.status === 'Accepted' && 'bg-green-600/80',
+                                            rec.status === 'Completed' && 'border-green-600 text-green-600'
+                                            )}
                                     >
                                         {rec.status === 'Accepted' ? <CheckCircle className="mr-1 h-3 w-3" /> : rec.status === 'Mismatch' ? <AlertTriangle className="mr-1 h-3 w-3" /> : null}
                                         {rec.status}
@@ -527,7 +568,7 @@ export default function ReceiptsPage() {
                                 <TableCell className="text-right space-x-2">
                                     <Button variant="outline" size="sm" onClick={() => handleViewBill(rec.receivedBillId)}>
                                         <Eye className="mr-2 h-4 w-4" />
-                                        View Bill
+                                        Check Bill
                                     </Button>
                                     <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
@@ -538,7 +579,7 @@ export default function ReceiptsPage() {
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Accepted')}>Accepted</DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Mismatch')}>Mismatch</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Completed')}>Completed</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Completed')}>Mark as Completed</DropdownMenuItem>
                                     </DropdownMenuContent>
                                     </DropdownMenu>
                                 </TableCell>
