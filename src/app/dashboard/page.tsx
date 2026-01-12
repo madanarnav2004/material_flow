@@ -5,6 +5,7 @@ import DirectorDashboard from "@/components/dashboards/director-dashboard";
 import SiteManagerDashboard from "@/components/dashboards/site-manager-dashboard";
 import CoordinatorDashboard from "@/components/dashboards/coordinator-dashboard";
 import StoreManagerDashboard from "@/components/dashboards/store-manager-dashboard";
+import PurchaseDepartmentDashboard from "@/components/dashboards/purchase-department-dashboard";
 
 export default function DashboardPage() {
   const { role } = useUser();
@@ -19,6 +20,8 @@ export default function DashboardPage() {
         return <CoordinatorDashboard />;
       case 'store-manager':
         return <StoreManagerDashboard />;
+      case 'purchase-department':
+        return <PurchaseDepartmentDashboard />;
       default:
         return <div>Loading dashboard...</div>;
     }

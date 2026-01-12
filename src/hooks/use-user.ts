@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 
-export type UserRole = 'director' | 'site-manager' | 'coordinator' | 'store-manager' | null;
+export type UserRole = 'director' | 'site-manager' | 'coordinator' | 'store-manager' | 'purchase-department' | null;
 
 const MOCK_USERS = {
   director: { name: 'Dr. Evelyn Reed', email: 'e.reed@materialflow.com' },
   'site-manager': { name: 'Marcus Kane', email: 'm.kane@materialflow.com' },
   coordinator: { name: 'Aria Chen', email: 'a.chen@materialflow.com' },
   'store-manager': { name: 'Leo Gomez', email: 'l.gomez@materialflow.com' },
+  'purchase-department': { name: 'Samira Khan', email: 's.khan@materialflow.com' },
 };
 
 export function useUser() {
