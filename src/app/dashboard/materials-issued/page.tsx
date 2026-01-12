@@ -17,6 +17,8 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
+import { useMaterialContext } from '@/context/material-context';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Schemas
 const materialIssueItemSchema = z.object({
@@ -30,7 +32,7 @@ const materialIssueItemSchema = z.object({
 });
 
 const issueBillSchema = z.object({
-  materialRequestBillNumber: z.string().min(1, 'Material Request Bill Number is required.'),
+  requestId: z.string().min(1, 'A Material Request must be selected.'),
   issuedDate: z.date({ required_error: 'Issued date is required.' }),
   materials: z.array(materialIssueItemSchema).min(1, 'Please add at least one material.'),
 });
@@ -45,23 +47,53 @@ export default function MaterialsIssuedPage() {
   const { toast } = useToast();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<GeneratedBill | null>(null);
   const billContentRef = React.useRef<HTMLDivElement>(null);
+  const { requests, setIssuedMaterials } = useMaterialContext();
 
   // Form
   const form = useForm<IssueBillFormValues>({
     resolver: zodResolver(issueBillSchema),
     defaultValues: {
-      materialRequestBillNumber: '',
+      requestId: '',
       issuedDate: new Date(),
-      materials: [{ boqItem: '', materialName: '', materialUnit: '', issuedQuantity: 0, engineerName: '', buildingName: '', remarks: '' }],
+      materials: [],
     },
   });
-
+  
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'materials',
   });
 
+  const handleRequestChange = (requestId: string) => {
+    const selectedRequest = requests.find(r => r.id === requestId);
+    if (selectedRequest) {
+        form.setValue('requestId', requestId);
+        // Clear previous materials and add the new one
+        form.setValue('materials', []);
+        append({
+            materialName: selectedRequest.material,
+            issuedQuantity: selectedRequest.quantity,
+            materialUnit: 'unit', // Mock unit, replace with actual if available
+            boqItem: 'Default BOQ', // Mock data
+            engineerName: 'Site Engineer', // Mock data
+            buildingName: 'Main Building', // Mock data
+            remarks: '',
+        });
+        toast({
+            title: "Request selected",
+            description: "Material details have been auto-filled."
+        });
+    }
+  };
+
+
   function onSubmit(values: IssueBillFormValues) {
+    const selectedRequest = requests.find(r => r.id === values.requestId);
+    if (!selectedRequest) {
+        toast({variant: 'destructive', title: 'Error', description: 'Selected request not found.'});
+        return;
+    }
+
     const today = new Date();
     const datePart = format(today, 'yyyyMMdd');
     const countPart = (Date.now() % 1000).toString().padStart(3, '0');
@@ -73,6 +105,19 @@ export default function MaterialsIssuedPage() {
     };
     
     setLastGeneratedBill(bill);
+
+    // Add to shared context for the receipt page
+    values.materials.forEach(material => {
+        const issuedMaterial = {
+            requestId: values.requestId,
+            issuedId: newBillId,
+            materialName: material.materialName,
+            issuedQuantity: material.issuedQuantity,
+            issuingSite: 'MAPI Store', // Assuming store issues it
+            receivingSite: selectedRequest.site,
+        };
+        setIssuedMaterials(prev => [...prev, issuedMaterial]);
+    });
 
     toast({
       title: 'Material Issue Bill Generated!',
@@ -110,7 +155,7 @@ export default function MaterialsIssuedPage() {
           <Card>
             <CardHeader>
               <CardTitle>Generate Material Issue Bill</CardTitle>
-              <CardDescription>Fill in the details to generate a single bill for materials issued at a specific site.</CardDescription>
+              <CardDescription>Select a Material Request to auto-fill details and generate an issue bill.</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...form}>
@@ -118,13 +163,24 @@ export default function MaterialsIssuedPage() {
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <FormField
                       control={form.control}
-                      name="materialRequestBillNumber"
+                      name="requestId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Material Request Bill Number</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., REQ-NS-20240905-001" {...field} />
-                          </FormControl>
+                          <Select onValueChange={handleRequestChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a request to issue" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {requests.filter(r => r.status === 'Approved').map(req => (
+                                <SelectItem key={req.id} value={req.id}>
+                                  {req.id} - {req.material}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -181,7 +237,7 @@ export default function MaterialsIssuedPage() {
                                   control={form.control}
                                   name={`materials.${index}.materialName`}
                                   render={({ field }) => (
-                                    <FormItem><FormControl><Input placeholder="e.g., Cement" {...field} /></FormControl><FormMessage /></FormItem>
+                                    <FormItem><FormControl><Input placeholder="e.g., Cement" {...field} readOnly /></FormControl><FormMessage /></FormItem>
                                   )}
                                 />
                               </TableCell>
@@ -208,7 +264,7 @@ export default function MaterialsIssuedPage() {
                                   control={form.control}
                                   name={`materials.${index}.engineerName`}
                                   render={({ field }) => (
-                                    <FormItem><FormControl><Input placeholder="Engineer" {...field} /></FormControl><FormMessage /></FormItem>
+                                    <FormItem><FormControl><Input placeholder="Engineer" {...field} readOnly/></FormControl><FormMessage /></FormItem>
                                   )}
                                 />
                               </TableCell>
@@ -217,7 +273,7 @@ export default function MaterialsIssuedPage() {
                                   control={form.control}
                                   name={`materials.${index}.buildingName`}
                                   render={({ field }) => (
-                                    <FormItem><FormControl><Input placeholder="Building" {...field} /></FormControl><FormMessage /></FormItem>
+                                    <FormItem><FormControl><Input placeholder="Building" {...field} readOnly/></FormControl><FormMessage /></FormItem>
                                   )}
                                 />
                               </TableCell>
@@ -226,7 +282,7 @@ export default function MaterialsIssuedPage() {
                                   control={form.control}
                                   name={`materials.${index}.boqItem`}
                                   render={({ field }) => (
-                                    <FormItem><FormControl><Input placeholder="BOQ Item" {...field} /></FormControl><FormMessage /></FormItem>
+                                    <FormItem><FormControl><Input placeholder="BOQ Item" {...field} readOnly/></FormControl><FormMessage /></FormItem>
                                   )}
                                 />
                               </TableCell>
@@ -240,7 +296,7 @@ export default function MaterialsIssuedPage() {
                                 />
                               </TableCell>
                               <TableCell>
-                                <Button variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
+                                <Button variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length < 1}>
                                   <Trash className="h-4 w-4" />
                                 </Button>
                               </TableCell>
@@ -249,17 +305,7 @@ export default function MaterialsIssuedPage() {
                         </TableBody>
                       </Table>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => append({ boqItem: '', materialName: '', materialUnit: '', issuedQuantity: 0, engineerName: '', buildingName: '', remarks: '' })}
-                      className="mt-4"
-                    >
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Add Material
-                    </Button>
-                    <FormMessage>{form.formState.errors.materials?.message}</FormMessage>
+                     <FormMessage>{form.formState.errors.materials?.message || form.formState.errors.materials?.root?.message}</FormMessage>
                   </div>
 
                   <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
@@ -294,7 +340,7 @@ export default function MaterialsIssuedPage() {
                   <div className="grid grid-cols-2 gap-2">
                     <p><strong>Issue Bill ID:</strong> {lastGeneratedBill.issueBillId}</p>
                     <p><strong>Issued Date:</strong> {format(lastGeneratedBill.issuedDate, 'PPP')}</p>
-                    <p><strong>Request Bill #:</strong> {lastGeneratedBill.materialRequestBillNumber}</p>
+                    <p><strong>Request Bill #:</strong> {lastGeneratedBill.requestId}</p>
                   </div>
                 </div>
 

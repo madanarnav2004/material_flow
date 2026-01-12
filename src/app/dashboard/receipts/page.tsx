@@ -24,13 +24,13 @@ import { cn } from '@/lib/utils';
 import { useMaterialContext } from '@/context/material-context';
 
 const materialReceiptSchema = z.object({
-  requestId: z.string().min(1, 'Request ID is required.'),
+  issuedId: z.string().min(1, 'An Issued Material ID must be selected.'),
   receiverName: z.string().min(2, "Receiver name is required."),
-  issuedId: z.string().min(1, 'Issued ID is required.'),
-  issuingSite: z.string().min(1, 'Issuing site is required.'),
-  receivingSite: z.string().min(1, 'Receiving site is required.'),
-  materialName: z.string().min(1, 'Material name is required.'),
-  issuedQuantity: z.coerce.number().min(0.1, 'Issued quantity must be > 0.'),
+  requestId: z.string(),
+  issuingSite: z.string(),
+  receivingSite: z.string(),
+  materialName: z.string(),
+  issuedQuantity: z.coerce.number(),
   receivedQuantity: z.coerce.number().min(0.1, 'Received quantity must be > 0.'),
   isDamaged: z.boolean().default(false),
   damageDescription: z.string().optional(),
@@ -62,13 +62,8 @@ export default function ReceiptsPage() {
   const form = useForm<ReceiptFormValues>({
     resolver: zodResolver(materialReceiptSchema),
     defaultValues: {
-      requestId: '',
-      receiverName: '',
       issuedId: '',
-      issuingSite: '',
-      receivingSite: '',
-      materialName: '',
-      issuedQuantity: 0,
+      receiverName: '',
       receivedQuantity: 0,
       isDamaged: false,
       damageDescription: '',
@@ -77,23 +72,24 @@ export default function ReceiptsPage() {
     },
   });
 
-  const handleRequestIdChange = (reqId: string) => {
-    form.setValue('requestId', reqId);
-    const issuedItem = issuedMaterials.find(item => item.requestId === reqId);
+  const handleIssuedIdChange = (issuedId: string) => {
+    form.setValue('issuedId', issuedId);
+    const issuedItem = issuedMaterials.find(item => item.issuedId === issuedId);
     
     if (issuedItem) {
-        form.setValue('issuedId', issuedItem.issuedId);
+        form.setValue('requestId', issuedItem.requestId);
         form.setValue('materialName', issuedItem.materialName);
         form.setValue('issuedQuantity', issuedItem.issuedQuantity);
         form.setValue('issuingSite', issuedItem.issuingSite);
         form.setValue('receivingSite', issuedItem.receivingSite);
+        form.setValue('receivedQuantity', issuedItem.issuedQuantity); // Pre-fill received with issued
         toast({
             title: 'Auto-filled!',
-            description: 'Material details have been auto-filled from the Request ID.',
+            description: 'Material details have been auto-filled from the Issued ID.',
         });
     } else {
         // Optionally clear fields if no match is found
-        form.setValue('issuedId', '');
+        form.setValue('requestId', '');
         form.setValue('materialName', '');
         form.setValue('issuedQuantity', 0);
         form.setValue('issuingSite', '');
@@ -174,7 +170,7 @@ export default function ReceiptsPage() {
             <Card>
             <CardHeader>
                 <CardTitle>Log Material Receipt</CardTitle>
-                <CardDescription>Accept material deliveries and verify quantities. Enter a Request ID to autofill details.</CardDescription>
+                <CardDescription>Select a Material Issue ID to auto-fill details and log the received quantity.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Form {...form}>
@@ -183,20 +179,20 @@ export default function ReceiptsPage() {
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <FormField
                             control={form.control}
-                            name="requestId"
+                            name="issuedId"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Request ID</FormLabel>
-                                 <Select onValueChange={(value) => handleRequestIdChange(value)} defaultValue={field.value}>
+                                <FormLabel>Issued ID</FormLabel>
+                                 <Select onValueChange={(value) => handleIssuedIdChange(value)} defaultValue={field.value}>
                                     <FormControl>
                                       <SelectTrigger>
-                                        <SelectValue placeholder="Select a Request ID" />
+                                        <SelectValue placeholder="Select an Issued ID" />
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
                                       {issuedMaterials.map(item => (
-                                        <SelectItem key={item.requestId} value={item.requestId}>
-                                          {item.requestId}
+                                        <SelectItem key={item.issuedId} value={item.issuedId}>
+                                          {item.issuedId} ({item.materialName})
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -205,14 +201,14 @@ export default function ReceiptsPage() {
                                 </FormItem>
                             )}
                         />
-                        <FormField
+                         <FormField
                             control={form.control}
-                            name="issuedId"
+                            name="requestId"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Issued ID</FormLabel>
+                                <FormLabel>Original Request ID</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="e.g., ISS-20240810-004" {...field} readOnly />
+                                    <Input {...field} readOnly />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -404,7 +400,7 @@ export default function ReceiptsPage() {
 
                     <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
                     <PackageCheck className="mr-2 h-4 w-4" />
-                    {form.formState.isSubmitting ? 'Logging...' : 'Log Receipt & Generate Bill'}
+                    {form.formState.isSubmitting ? 'Logging...' : 'Log Receipt & Generate Final Bill'}
                     </Button>
                 </form>
                 </Form>
