@@ -17,6 +17,26 @@ import { useUser } from '@/hooks/use-user';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { mockBoqData } from '@/lib/mock-data';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
+const materialSchema = z.object({
+  type: z.string().min(1, 'Material type is required.'),
+  quantity: z.coerce.number().min(0.1, 'Quantity is required.'),
+  unit: z.string(),
+});
+
+const equipmentSchema = z.object({
+  source: z.string().min(1, 'Source is required.'),
+  name: z.string().min(1, 'Equipment name is required.'),
+  usage: z.coerce.number().min(0.1, 'Usage is required.'),
+  unit: z.string(),
+});
+
+const workforceSchema = z.object({
+  skill: z.string().min(1, 'Skill is required.'),
+  designation: z.string().min(1, 'Designation is required.'),
+  count: z.coerce.number().min(1, 'Count is required.'),
+});
 
 const workDoneSchema = z.object({
   siteName: z.string(),
@@ -27,6 +47,9 @@ const workDoneSchema = z.object({
   itemNumber: z.string(),
   subItemOfWork: z.string().optional(),
   quantityOfWork: z.coerce.number().min(0.1, 'Quantity must be greater than 0.'),
+  materials: z.array(materialSchema).optional(),
+  equipment: z.array(equipmentSchema).optional(),
+  workforce: z.array(workforceSchema).optional(),
 });
 
 type WorkDoneFormValues = z.infer<typeof workDoneSchema>;
@@ -45,14 +68,29 @@ export default function WorkDoneReportPage() {
       itemOfWork: '',
       itemNumber: '',
       quantityOfWork: 0,
+      materials: [{ type: '', quantity: 0, unit: '' }],
+      equipment: [{ source: '', name: '', usage: 0, unit: '' }],
+      workforce: [{ skill: '', designation: '', count: 0 }],
     },
   });
 
+  const { fields: materialFields, append: appendMaterial, remove: removeMaterial } = useFieldArray({
+    control: form.control,
+    name: 'materials',
+  });
+  const { fields: equipmentFields, append: appendEquipment, remove: removeEquipment } = useFieldArray({
+    control: form.control,
+    name: 'equipment',
+  });
+  const { fields: workforceFields, append: appendWorkforce, remove: removeWorkforce } = useFieldArray({
+    control: form.control,
+    name: 'workforce',
+  });
+  
   const handleDescriptionChange = (value: string) => {
     form.setValue('descriptionOfWork', value);
     const selectedDesc = mockBoqData.descriptions.find(d => d.description === value);
     form.setValue('categoryNumber', selectedDesc?.categoryNumber || '');
-    // Reset item of work when description changes
     form.setValue('itemOfWork', '');
     form.setValue('itemNumber', '');
   };
@@ -69,6 +107,30 @@ export default function WorkDoneReportPage() {
     return mockBoqData.items.filter(i => i.description === selectedDescription);
   }, [selectedDescription]);
 
+  const selectedEquipmentSource = form.watch('equipment');
+  const availableEquipment = (index: number) => {
+    const source = selectedEquipmentSource?.[index]?.source;
+    if (!source) return [];
+    return mockBoqData.equipment.filter(e => e.source.toLowerCase() === source.toLowerCase());
+  }
+  
+  const handleMaterialTypeChange = (value: string, index: number) => {
+    form.setValue(`materials.${index}.type`, value);
+    const selectedMaterial = mockBoqData.materials.find(m => m.type === value);
+    form.setValue(`materials.${index}.unit`, selectedMaterial?.unit || '');
+  };
+  
+  const handleEquipmentSourceChange = (value: string, index: number) => {
+    form.setValue(`equipment.${index}.source`, value);
+    form.setValue(`equipment.${index}.name`, '');
+    form.setValue(`equipment.${index}.unit`, '');
+  };
+  
+  const handleEquipmentNameChange = (value: string, index: number) => {
+    form.setValue(`equipment.${index}.name`, value);
+    const selectedEquipment = mockBoqData.equipment.find(e => e.name === value);
+    form.setValue(`equipment.${index}.unit`, selectedEquipment?.unit || '');
+  };
 
   function onSubmit(values: WorkDoneFormValues) {
     console.log(values);
@@ -76,7 +138,6 @@ export default function WorkDoneReportPage() {
       title: 'Report Submitted',
       description: 'Your Daily Work Done Report has been successfully submitted.',
     });
-    // In a real app, this would also lock the form for editing.
   }
 
   return (
@@ -210,18 +271,247 @@ export default function WorkDoneReportPage() {
                 />
               </div>
 
-              {/* Placeholder sections for Material, Equipment, and Workforce */}
+              {/* Material Consumption */}
               <Card>
-                <CardHeader><CardTitle>Material Consumption</CardTitle></CardHeader>
-                <CardContent><p className="text-muted-foreground">Material details will be added here.</p></CardContent>
+                <CardHeader>
+                    <CardTitle>Material Consumption</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="rounded-md border">
+                    <Table>
+                        <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-2/5">Material Type</TableHead>
+                            <TableHead>Quantity</TableHead>
+                            <TableHead>Unit</TableHead>
+                            <TableHead className="w-12"></TableHead>
+                        </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {materialFields.map((field, index) => (
+                            <TableRow key={field.id}>
+                            <TableCell>
+                                <FormField
+                                control={form.control}
+                                name={`materials.${index}.type`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <Select onValueChange={(value) => handleMaterialTypeChange(value, index)} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Select material" /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                        {mockBoqData.materials.map(mat => (
+                                            <SelectItem key={mat.type} value={mat.type}>{mat.type}</SelectItem>
+                                        ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                            </TableCell>
+                            <TableCell>
+                                <FormField
+                                control={form.control}
+                                name={`materials.${index}.quantity`}
+                                render={({ field }) => (
+                                    <FormItem><FormControl><Input type="number" placeholder="e.g., 50" {...field} /></FormControl><FormMessage /></FormItem>
+                                )}
+                                />
+                            </TableCell>
+                            <TableCell>
+                                <FormField
+                                control={form.control}
+                                name={`materials.${index}.unit`}
+                                render={({ field }) => (
+                                    <FormItem><FormControl><Input readOnly disabled {...field} /></FormControl><FormMessage /></FormItem>
+                                )}
+                                />
+                            </TableCell>
+                            <TableCell>
+                                <Button variant="ghost" size="icon" onClick={() => removeMaterial(index)} disabled={materialFields.length <= 1}>
+                                <Trash className="h-4 w-4" />
+                                </Button>
+                            </TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={() => appendMaterial({ type: '', quantity: 0, unit: '' })} className="mt-4">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Material
+                    </Button>
+                </CardContent>
               </Card>
+
+              {/* Equipment Usage */}
               <Card>
                 <CardHeader><CardTitle>Equipment Usage</CardTitle></CardHeader>
-                <CardContent><p className="text-muted-foreground">Equipment details will be added here.</p></CardContent>
+                <CardContent>
+                    <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                            <TableRow>
+                                <TableHead>Source</TableHead>
+                                <TableHead>Equipment Name</TableHead>
+                                <TableHead>Usage</TableHead>
+                                <TableHead>Unit</TableHead>
+                                <TableHead className="w-12"></TableHead>
+                            </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {equipmentFields.map((field, index) => (
+                                <TableRow key={field.id}>
+                                <TableCell>
+                                    <FormField
+                                        control={form.control}
+                                        name={`equipment.${index}.source`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <Select onValueChange={(value) => handleEquipmentSourceChange(value, index)} defaultValue={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    {/* Unique sources from mock data */}
+                                                    {[...new Set(mockBoqData.equipment.map(e => e.source))].map(source => (
+                                                        <SelectItem key={source} value={source}>{source}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <FormField
+                                        control={form.control}
+                                        name={`equipment.${index}.name`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <Select onValueChange={(value) => handleEquipmentNameChange(value, index)} value={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Select equipment" /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    {availableEquipment(index).map(eq => (
+                                                        <SelectItem key={eq.name} value={eq.name}>{eq.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <FormField
+                                        control={form.control}
+                                        name={`equipment.${index}.usage`}
+                                        render={({ field }) => (
+                                            <FormItem><FormControl><Input type="number" placeholder="e.g., 8" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <FormField
+                                        control={form.control}
+                                        name={`equipment.${index}.unit`}
+                                        render={({ field }) => (
+                                            <FormItem><FormControl><Input readOnly disabled {...field} /></FormControl><FormMessage /></FormItem>
+                                        )}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <Button variant="ghost" size="icon" onClick={() => removeEquipment(index)} disabled={equipmentFields.length <= 1}>
+                                    <Trash className="h-4 w-4" />
+                                    </Button>
+                                </TableCell>
+                                </TableRow>
+                            ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={() => appendEquipment({ source: '', name: '', usage: 0, unit: '' })} className="mt-4">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Equipment
+                    </Button>
+                </CardContent>
               </Card>
+
+              {/* Workforce Details */}
               <Card>
                 <CardHeader><CardTitle>Workforce Details</CardTitle></CardHeader>
-                <CardContent><p className="text-muted-foreground">Workforce details will be added here.</p></CardContent>
+                <CardContent>
+                   <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                            <TableRow>
+                                <TableHead>Skill Type</TableHead>
+                                <TableHead>Designation</TableHead>
+                                <TableHead>No. of Workers</TableHead>
+                                <TableHead className="w-12"></TableHead>
+                            </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {workforceFields.map((field, index) => (
+                                <TableRow key={field.id}>
+                                <TableCell>
+                                     <FormField
+                                        control={form.control}
+                                        name={`workforce.${index}.skill`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Select skill" /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                   {[...new Set(mockBoqData.workforce.map(w => w.skill))].map(skill => (
+                                                        <SelectItem key={skill} value={skill}>{skill}</SelectItem>
+                                                   ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                     <FormField
+                                        control={form.control}
+                                        name={`workforce.${index}.designation`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Select designation" /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    {[...new Set(mockBoqData.workforce.map(w => w.designation))].map(des => (
+                                                        <SelectItem key={des} value={des}>{des}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <FormField
+                                        control={form.control}
+                                        name={`workforce.${index}.count`}
+                                        render={({ field }) => (
+                                            <FormItem><FormControl><Input type="number" placeholder="e.g., 10" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <Button variant="ghost" size="icon" onClick={() => removeWorkforce(index)} disabled={workforceFields.length <= 1}>
+                                    <Trash className="h-4 w-4" />
+                                    </Button>
+                                </TableCell>
+                                </TableRow>
+                            ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={() => appendWorkforce({ skill: '', designation: '', count: 0 })} className="mt-4">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Workforce
+                    </Button>
+                </CardContent>
               </Card>
 
               <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
