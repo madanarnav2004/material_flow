@@ -71,7 +71,7 @@ const pieChartConfig = {
 
 const COLORS = Object.values(pieChartConfig).map(c => c.color);
 
-type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended';
+type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended' | 'Partially Issued';
 type RequestFormValues = {
   requesterName: string;
   requestingSite: string;
@@ -682,21 +682,19 @@ export default function DirectorDashboard() {
                         <TableCell>
                           <Badge
                             variant={
-                              req.status === 'Pending'
-                                ? 'secondary'
-                                : req.status === 'Approved'
-                                ? 'default'
-                                : req.status === 'Issued'
-                                ? 'default'
-                                : req.status === 'Completed'
-                                ? 'outline'
-                                : 'destructive'
+                              req.status === 'Pending' ? 'secondary' :
+                              req.status === 'Approved' ? 'default' :
+                              req.status === 'Issued' ? 'default' :
+                              req.status === 'Completed' ? 'outline' :
+                              req.status === 'Partially Issued' ? 'destructive' :
+                              'destructive'
                             }
                             className={cn(
                               req.status === 'Approved' && 'bg-blue-500/80 text-white',
                               req.status === 'Issued' && 'bg-green-600/80 text-white',
                               req.status === 'Extended' && 'border-amber-500/50 text-amber-500',
-                              req.status === 'Mismatch' && 'bg-orange-500/80 text-white'
+                              req.status === 'Mismatch' && 'bg-orange-500/80 text-white',
+                              req.status === 'Partially Issued' && 'bg-orange-500/80 text-white'
                             )}
                           >
                             {req.status}
@@ -718,6 +716,7 @@ export default function DirectorDashboard() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Request ID</TableHead>
                     <TableHead>Material</TableHead>
                     <TableHead>Quantity</TableHead>
                     <TableHead>Site</TableHead>
@@ -729,28 +728,27 @@ export default function DirectorDashboard() {
                 <TableBody>
                   {requests.map(req => (
                     <TableRow key={req.id}>
-                      <TableCell className="font-medium">{req.material}</TableCell>
+                      <TableCell className="font-medium">{req.id}</TableCell>
+                      <TableCell>{req.material}</TableCell>
                       <TableCell>{req.quantity}</TableCell>
                       <TableCell>{req.site}</TableCell>
                       <TableCell>{req.returnDate}</TableCell>
                       <TableCell>
                         <Badge
                           variant={
-                            req.status === 'Pending'
-                              ? 'secondary'
-                              : req.status === 'Approved'
-                              ? 'default'
-                              : req.status === 'Issued'
-                              ? 'default'
-                              : req.status === 'Completed'
-                              ? 'outline'
-                              : 'destructive'
+                            req.status === 'Pending' ? 'secondary' :
+                            req.status === 'Approved' ? 'default' :
+                            req.status === 'Issued' ? 'default' :
+                            req.status === 'Completed' ? 'outline' :
+                            req.status === 'Partially Issued' ? 'destructive' :
+                            'destructive'
                           }
                           className={cn(
                             req.status === 'Approved' && 'bg-blue-500/80 text-white',
                             req.status === 'Issued' && 'bg-green-600/80 text-white',
                             req.status === 'Extended' && 'border-amber-500/50 text-amber-500',
-                            req.status === 'Mismatch' && 'bg-orange-500/80 text-white'
+                            req.status === 'Mismatch' && 'bg-orange-500/80 text-white',
+                            req.status === 'Partially Issued' && 'bg-orange-500/80 text-white'
                           )}
                         >
                           {req.status}
@@ -774,7 +772,8 @@ export default function DirectorDashboard() {
                             <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Rejected')}>
                               Rejected
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Issued')}>Issued</DropdownMenuItem>
+                             <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Issued')}>Issued</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Partially Issued')}>Partially Issued</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Completed')}>
                               Completed
                             </DropdownMenuItem>
