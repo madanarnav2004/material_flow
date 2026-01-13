@@ -121,10 +121,10 @@ export default function BoqManagementPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FileClock /> Download BOQ vs Actual Report
+            <FileClock /> Download Work Done Report
           </CardTitle>
           <CardDescription>
-            Generate and download a detailed comparison report between planned BOQ and actual work done for a specific site and date range.
+            Generate and download a detailed work done report for a specific site and date range.
           </CardDescription>
         </CardHeader>
         <CardContent>
