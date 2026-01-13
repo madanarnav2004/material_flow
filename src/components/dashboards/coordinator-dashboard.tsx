@@ -80,10 +80,10 @@ export default function CoordinatorDashboard() {
     }
   };
 
-  const handleDownloadExcel = () => {
+  const handleDownloadExcel = (reportName: string) => {
     toast({
       title: "Download Started",
-      description: "Your Excel file is being generated and will download shortly.",
+      description: `Your ${reportName} Excel file is being generated.`,
     });
   };
 
@@ -95,14 +95,15 @@ export default function CoordinatorDashboard() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <Dialog>
             <DialogTrigger asChild>
-                <StatCard
-                    title="Total Usage (BOQ)"
-                    value={`${boqUsage.filter(b => b.status === 'Over Budget').length} Over Budget`}
-                    icon={BarChart}
-                    description="Across active projects"
-                    onClick={() => {}}
-                    className="text-destructive border-destructive/50"
-                />
+                <div className="cursor-pointer">
+                    <StatCard
+                        title="Total Usage (BOQ)"
+                        value={`${boqUsage.filter(b => b.status === 'Over Budget').length} Over Budget`}
+                        icon={BarChart}
+                        description="Across active projects"
+                        className="text-destructive border-destructive/50"
+                    />
+                </div>
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
@@ -136,7 +137,7 @@ export default function CoordinatorDashboard() {
                   )}
               </div>
               <div className="flex justify-end gap-4 mt-4">
-                  <Button onClick={handleDownloadExcel}>
+                  <Button onClick={() => handleDownloadExcel('BOQ Usage Report')}>
                       <Download className="mr-2 h-4 w-4" />
                       Download Excel
                   </Button>
@@ -146,13 +147,14 @@ export default function CoordinatorDashboard() {
 
           <Dialog>
             <DialogTrigger asChild>
-              <StatCard
-                title="Engineers Monitored"
-                value={engineerUsage.length.toString()}
-                icon={Users}
-                description={`Active on ${new Set(engineerUsage.map(e=>e.site)).size} sites`}
-                onClick={() => {}}
-              />
+                <div className="cursor-pointer">
+                    <StatCard
+                        title="Engineers Monitored"
+                        value={engineerUsage.length.toString()}
+                        icon={Users}
+                        description={`Active on ${new Set(engineerUsage.map(e=>e.site)).size} sites`}
+                    />
+                </div>
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
@@ -190,18 +192,19 @@ export default function CoordinatorDashboard() {
             title="Sites Overview"
             value={`${new Set(requests.map(r => r.site)).size} Sites`}
             icon={Building}
-            description=""
+            description="Total active project sites"
           />
 
           <Dialog>
             <DialogTrigger asChild>
-              <StatCard
-                title="Pending Requests"
-                value={pendingRequests.length.toString()}
-                icon={FileText}
-                description="Awaiting action"
-                onClick={() => {}}
-              />
+                <div className="cursor-pointer">
+                    <StatCard
+                        title="Pending Requests"
+                        value={pendingRequests.length.toString()}
+                        icon={FileText}
+                        description="Awaiting action"
+                    />
+                </div>
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
@@ -509,7 +512,7 @@ export default function CoordinatorDashboard() {
               )}
             </div>
             <div className="flex justify-end mt-4">
-              <Button onClick={handleDownloadExcel}>
+              <Button onClick={() => handleDownloadExcel('Return Reminders Report')}>
                 <Download className="mr-2 h-4 w-4" />
                 Download Excel
               </Button>
@@ -579,7 +582,7 @@ export default function CoordinatorDashboard() {
               )}
             </div>
             <div className="flex justify-end mt-4">
-              <Button onClick={handleDownloadExcel}>
+              <Button onClick={() => handleDownloadExcel('Engineer Usage Report')}>
                 <Download className="mr-2 h-4 w-4" />
                 Download Excel
               </Button>
