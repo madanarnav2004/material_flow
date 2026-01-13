@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -258,7 +259,7 @@ export default function BoqManagementPage() {
                                 <Button
                                   id="date"
                                   variant="outline"
-                                  className={cn('w-[300px] justify-start text-left font-normal', !field.value && 'text-muted-foreground')}
+                                  className={cn('w-[300px] justify-start text-left font-normal', !field.value?.from && 'text-muted-foreground')}
                                 >
                                   <CalendarIcon className="mr-2 h-4 w-4" />
                                   {field.value?.from ? (
@@ -280,7 +281,7 @@ export default function BoqManagementPage() {
                                 initialFocus
                                 mode="range"
                                 defaultMonth={field.value?.from}
-                                selected={field.value as DateRange}
+                                selected={field.value}
                                 onSelect={field.onChange}
                                 numberOfMonths={2}
                               />
