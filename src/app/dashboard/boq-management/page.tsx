@@ -379,7 +379,7 @@ export default function BoqManagementPage() {
           <form onSubmit={uploadForm.handleSubmit(onUploadSubmit)} className="space-y-8">
           <Card>
                <CardHeader>
-                  <CardTitle>BOQ Configuration & Upload</CardTitle>
+                  <CardTitle>BOQ Configuration &amp; Upload</CardTitle>
                   <CardDescription>
                   Select a site to upload or update its BOQ. Each site's BOQ is managed separately.
                   </CardDescription>
@@ -423,11 +423,11 @@ export default function BoqManagementPage() {
                       <Separator />
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {renderUploadCard('descriptionFile', 'Description & Category', 'Excel for Description of Work and Category Number.')}
-                        {renderUploadCard('itemFile', 'Item & Sub-Item of Work', 'Excel for Item of Work, Item Number, and Sub-Item.')}
-                        {renderUploadCard('materialFile', 'Material Types, Units & Rates', 'Excel for Material Type, Unit, and Rate.')}
-                        {renderUploadCard('equipmentFile', 'Equipment, Source, Units & Rates', 'Excel for Source, Equipment Name, Unit, and Rate.')}
-                        {renderUploadCard('workforceFile', 'Workforce, Skills & Rates', 'Excel for Skill Type, Designation, and Labour Rate.')}
+                        {renderUploadCard('descriptionFile', 'Description &amp; Category', 'Excel for Description of Work and Category Number.')}
+                        {renderUploadCard('itemFile', 'Item &amp; Sub-Item of Work', 'Excel for Item of Work, Item Number, and Sub-Item.')}
+                        {renderUploadCard('materialFile', 'Material Types, Units &amp; Rates', 'Excel for Material Type, Unit, and Rate.')}
+                        {renderUploadCard('equipmentFile', 'Equipment, Source, Units &amp; Rates', 'Excel for Source, Equipment Name, Unit, and Rate.')}
+                        {renderUploadCard('workforceFile', 'Workforce, Skills &amp; Rates', 'Excel for Skill Type, Designation, and Labour Rate.')}
                       </div>
                       
                       <Separator />
