@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet } from "lucide-react";
+import { Download, FileSpreadsheet, FileClock } from "lucide-react";
 import WorkDoneDownloader from "@/components/reports/work-done-downloader";
 
 const reports = [
