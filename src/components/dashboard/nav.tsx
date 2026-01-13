@@ -20,6 +20,7 @@ import {
   ShoppingCart,
   ClipboardCheck,
   FileUp,
+  Layers,
 } from 'lucide-react';
 
 import { 
@@ -50,6 +51,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard/work-done-report', icon: ClipboardCheck, label: 'Work Done Report', roles: ['site-manager'] },
   { href: '/dashboard/reports', icon: AreaChart, label: 'Reports', roles: ['director', 'coordinator'] },
   { href: '/dashboard/boq-management', icon: FileUp, label: 'BOQ Management', roles: ['coordinator'] },
+  { href: '/dashboard/boq-comparison', icon: Layers, label: 'BOQ Comparison', roles: ['coordinator'] },
   { href: '/dashboard/ai-review', icon: BrainCircuit, label: 'AI Bill Review', roles: ['director', 'coordinator', 'site-manager', 'store-manager', 'purchase-department'] },
 ];
 

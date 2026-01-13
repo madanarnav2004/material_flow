@@ -1,7 +1,6 @@
-
 'use client';
 
-import { BarChart, Users, Building, FileText, Eye, ChevronDown, Download } from 'lucide-react';
+import { BarChart, Users, Building, FileText, Eye, ChevronDown, Download, Layers } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,7 +14,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { useMaterialContext } from '@/context/material-context';
-import { boqUsage, engineerUsage } from '@/lib/mock-data';
+import { boqUsage, engineerUsage, boqVsActual } from '@/lib/mock-data';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 
 type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended' | 'Partially Issued';
@@ -41,6 +41,11 @@ export default function CoordinatorDashboard() {
   const { toast } = useToast();
   const { requests, setRequests, pendingRequests } = useMaterialContext();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialRequestBill | null>(null);
+  const [comparisonSite, setComparisonSite] = React.useState<string>('North Site');
+
+  const filteredComparisonData = React.useMemo(() => {
+    return boqVsActual.filter(d => d.site === comparisonSite);
+  }, [comparisonSite]);
 
 
   const handleStatusChange = (reqId: string, newStatus: RequestStatus) => {
@@ -144,50 +149,81 @@ export default function CoordinatorDashboard() {
               </div>
             </DialogContent>
           </Dialog>
+           <Dialog>
+             <DialogTrigger asChild>
+                 <div className="cursor-pointer">
+                     <StatCard
+                         title="BOQ vs Actual"
+                         value="View Comparison"
+                         icon={Layers}
+                         description="Compare planned vs actual"
+                         className="border-primary/50"
+                     />
+                 </div>
+             </DialogTrigger>
+             <DialogContent className="max-w-6xl">
+                 <DialogHeader>
+                     <DialogTitle>BOQ vs. Actual Comparison</DialogTitle>
+                     <DialogDescription>
+                         Compare planned BOQ quantities and rates with actuals from daily progress reports.
+                     </DialogDescription>
+                 </DialogHeader>
+                 <div className="my-4">
+                      <Select value={comparisonSite} onValueChange={setComparisonSite}>
+                        <SelectTrigger className="w-[280px]">
+                          <SelectValue placeholder="Select a site to compare" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[...new Set(boqVsActual.map(d => d.site))].map(site => (
+                             <SelectItem key={site} value={site}>{site}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                 </div>
+                 <div className="max-h-[60vh] overflow-y-auto">
+                      <Table>
+                          <TableHeader>
+                              <TableRow>
+                                  <TableHead>BOQ Item</TableHead>
+                                  <TableHead className="text-right">BOQ Qty</TableHead>
+                                  <TableHead className="text-right">Actual Qty</TableHead>
+                                  <TableHead className="text-right">Qty Variance</TableHead>
+                                  <TableHead className="text-right">BOQ Rate</TableHead>
+                                  <TableHead className="text-right">Actual Rate</TableHead>
+                                  <TableHead className="text-right">Rate Variance</TableHead>
+                                  <TableHead className="text-right">Cost Variance</TableHead>
+                              </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                              {filteredComparisonData.map(item => {
+                                const qtyVariance = item.actualQty - item.boqQty;
+                                const rateVariance = item.actualRate - item.boqRate;
+                                const costVariance = (item.actualQty * item.actualRate) - (item.boqQty * item.boqRate);
 
-          <Dialog>
-            <DialogTrigger asChild>
-                <div className="cursor-pointer">
-                    <StatCard
-                        title="Engineers Monitored"
-                        value={engineerUsage.length.toString()}
-                        icon={Users}
-                        description={`Active on ${new Set(engineerUsage.map(e=>e.site)).size} sites`}
-                    />
-                </div>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl">
-              <DialogHeader>
-                  <DialogTitle>Engineers Monitored</DialogTitle>
-                  <DialogDescription>List of engineers and their material handling.</DialogDescription>
-              </DialogHeader>
-              <div className="max-h-[60vh] overflow-y-auto">
-                  {engineerUsage.length > 0 ? (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Engineer Name</TableHead>
-                                <TableHead>Materials</TableHead>
-                                <TableHead>Site</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {engineerUsage.map(eng => (
-                                <TableRow key={eng.name}>
-                                    <TableCell className="font-medium">{eng.name}</TableCell>
-                                    <TableCell>{eng.materials}</TableCell>
-                                    <TableCell>{eng.site}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                  ) : (
-                    <p className="text-center text-muted-foreground">No engineer data available.</p>
-                  )}
-              </div>
-            </DialogContent>
+                                return (
+                                  <TableRow key={item.item}>
+                                      <TableCell className="font-medium">{item.item}</TableCell>
+                                      <TableCell className="text-right">{item.boqQty}</TableCell>
+                                      <TableCell className="text-right">{item.actualQty}</TableCell>
+                                      <TableCell className={cn("text-right", qtyVariance > 0 ? "text-destructive" : "text-green-600")}>
+                                          {qtyVariance > 0 ? `+${qtyVariance}` : qtyVariance}
+                                      </TableCell>
+                                      <TableCell className="text-right">${item.boqRate.toFixed(2)}</TableCell>
+                                      <TableCell className="text-right">${item.actualRate.toFixed(2)}</TableCell>
+                                      <TableCell className={cn("text-right", rateVariance > 0 ? "text-destructive" : "text-green-600")}>
+                                          ${rateVariance.toFixed(2)}
+                                      </TableCell>
+                                      <TableCell className={cn("text-right font-semibold", costVariance > 0 ? "text-destructive" : "text-green-600")}>
+                                          ${costVariance.toFixed(2)}
+                                      </TableCell>
+                                  </TableRow>
+                                )
+                              })}
+                          </TableBody>
+                      </Table>
+                 </div>
+             </DialogContent>
           </Dialog>
-
           <StatCard
             title="Sites Overview"
             value={`${new Set(requests.map(r => r.site)).size} Sites`}

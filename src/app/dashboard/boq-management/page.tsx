@@ -211,11 +211,11 @@ export default function BoqManagementPage() {
               <div className="flex gap-4">
                 <Button type="submit" disabled={!selectedSiteForReport}>
                   <Download className="mr-2 h-4 w-4" />
-                  Download PDF
+                  Download BOQ vs Actual Report (PDF)
                 </Button>
                  <Button type="submit" disabled={!selectedSiteForReport} variant="outline">
                   <Download className="mr-2 h-4 w-4" />
-                  Download Excel
+                  Download BOQ vs Actual Report (Excel)
                 </Button>
               </div>
             </form>

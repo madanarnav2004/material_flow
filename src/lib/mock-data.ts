@@ -196,3 +196,10 @@ export const mockBoqData = {
       { skill: 'Helper', designation: 'Unskilled', rate: 15 },
   ]
 };
+
+export const boqVsActual = [
+  { site: 'North Site', item: 'Concrete Works', boqQty: 1000, boqRate: 150, actualQty: 800, actualRate: 155 },
+  { site: 'North Site', item: 'Excavation', boqQty: 100, boqRate: 50, actualQty: 120, actualRate: 50 },
+  { site: 'South Site', item: 'Brickwork', boqQty: 2000, boqRate: 20, actualQty: 1800, actualRate: 22 },
+  { site: 'South Site', item: 'Finishing', boqQty: 500, boqRate: 100, actualQty: 500, actualRate: 100 },
+];
