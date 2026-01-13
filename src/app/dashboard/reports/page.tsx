@@ -1,6 +1,8 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, FileSpreadsheet } from "lucide-react";
+import WorkDoneDownloader from "@/components/reports/work-done-downloader";
 
 const reports = [
   {
@@ -15,12 +17,12 @@ const reports = [
   },
   {
     title: "BOQ Item-wise Material Issued",
-    description: "Details on materials issued against Bill of Quantities items.",
+    description: "Details on materials issued against Bill of Quantities items, including cost.",
     variants: [],
   },
   {
     title: "Site-wise BOQ Report",
-    description: "Consumption and budget tracking per site based on BOQ.",
+    description: "Consumption and budget tracking per site based on BOQ (includes quantity, rate, amount).",
     variants: [],
   },
   {
@@ -44,6 +46,8 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold font-headline">Generate Reports</h1>
+
+      <WorkDoneDownloader />
       
       <Card>
         <CardHeader>

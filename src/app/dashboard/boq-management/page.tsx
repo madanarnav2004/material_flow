@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { FileUp, Upload, Sheet, FileCheck2, Trash2 } from 'lucide-react';
+import { FileUp, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,7 +45,16 @@ export default function BoqManagementPage() {
       title: 'BOQ Configuration Submitted!',
       description: `Your BOQ files for ${values.siteName} have been uploaded for processing.`,
     });
-    form.reset({ siteName: values.siteName });
+    // Reset file inputs if needed, but keep site selection
+    form.reset({
+      siteName: values.siteName,
+      overallBoqFile: undefined,
+      descriptionFile: undefined,
+      itemFile: undefined,
+      materialFile: undefined,
+      equipmentFile: undefined,
+      workforceFile: undefined,
+    });
   }
   
   const renderUploadCard = (name: keyof UploadFormValues, title: string, description: string) => (
@@ -85,7 +94,7 @@ export default function BoqManagementPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <Card>
                  <CardHeader>
-                    <CardTitle>Site Selection</CardTitle>
+                    <CardTitle>Step 1: Site Selection</CardTitle>
                     <CardDescription>
                     Select the site for which you want to upload or update the BOQ configuration. Each site's BOQ is managed separately.
                     </CardDescription>
@@ -120,20 +129,20 @@ export default function BoqManagementPage() {
               {selectedSite && (
                 <Card>
                     <CardHeader>
-                        <CardTitle>BOQ Excel Uploads for: <span className="text-primary">{selectedSite}</span></CardTitle>
+                        <CardTitle>Step 2: BOQ Excel Uploads for <span className="text-primary">{selectedSite}</span></CardTitle>
                         <CardDescription>Upload the master Excel files for each BOQ component. This will configure all dropdowns and rates for this site.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        {renderUploadCard('overallBoqFile', 'Overall BOQ Document', 'Upload the complete BOQ for the site in a single file.')}
+                        {renderUploadCard('overallBoqFile', 'Overall BOQ Document', 'Upload the complete BOQ including quantity and rate for the site.')}
                         
                         <Separator />
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           {renderUploadCard('descriptionFile', 'Description & Category', 'Excel for Description of Work and Category Number.')}
                           {renderUploadCard('itemFile', 'Item & Sub-Item of Work', 'Excel for Item of Work, Item Number, and Sub-Item.')}
-                          {renderUploadCard('materialFile', 'Material Types & Units', 'Excel for Material Type, Unit, and Rate.')}
-                          {renderUploadCard('equipmentFile', 'Equipment & Source', 'Excel for Source, Equipment Name, Unit, and Rate.')}
-                          {renderUploadCard('workforceFile', 'Workforce & Skills', 'Excel for Skill Type, Designation, and Labour Rate.')}
+                          {renderUploadCard('materialFile', 'Material Types, Units & Rates', 'Excel for Material Type, Unit, and Rate.')}
+                          {renderUploadCard('equipmentFile', 'Equipment, Source, Units & Rates', 'Excel for Source, Equipment Name, Unit, and Rate.')}
+                          {renderUploadCard('workforceFile', 'Workforce, Skills & Rates', 'Excel for Skill Type, Designation, and Labour Rate.')}
                         </div>
                         
                         <Separator />

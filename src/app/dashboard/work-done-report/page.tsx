@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -16,7 +17,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { mockBoqData } from '@/lib/mock-data';
-import WorkDoneDownloader from '@/components/reports/work-done-downloader';
 
 const materialSchema = z.object({
   type: z.string().min(1, 'Material type is required.'),
@@ -142,8 +142,6 @@ export default function WorkDoneReportPage() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold font-headline">Daily Work Done Report</h1>
       
-      <WorkDoneDownloader />
-
       <Card>
         <CardHeader>
           <CardTitle>Submit Today's Progress</CardTitle>
