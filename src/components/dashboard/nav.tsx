@@ -42,7 +42,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard', icon: Home, label: 'Dashboard', roles: ['director', 'site-manager', 'coordinator', 'store-manager', 'purchase-department'] },
   { href: '/dashboard/inventory', icon: Archive, label: 'Inventory', roles: ['director', 'site-manager', 'coordinator', 'store-manager'] },
   { href: '/dashboard/requests', icon: Package, label: 'Requests', roles: ['director', 'site-manager', 'coordinator', 'store-manager'] },
-  { href: '/dashboard/materials-issued', icon: Truck, label: 'Materials Issued', roles: ['director', 'site-manager', 'coordinator'] },
+  { href: '/dashboard/materials-issued', icon: Truck, label: 'Materials Issued', roles: ['director', 'site-manager', 'coordinator', 'store-manager'] },
   { href: '/dashboard/receipts', icon: PackageCheck, label: 'Receipts', roles: ['director', 'site-manager', 'store-manager'] },
   { href: '/dashboard/vehicle-entry', icon: Car, label: 'Vehicle Entry', roles: ['director', 'site-manager', 'coordinator'] },
   { href: '/dashboard/work-done-report', icon: ClipboardCheck, label: 'Work Done Report', roles: ['director', 'site-manager', 'coordinator'] },
