@@ -121,10 +121,10 @@ export default function BoqManagementPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FileClock /> BOQ and Work Done Report Downloader
+            <FileClock /> Download BOQ vs Actual Report
           </CardTitle>
           <CardDescription>
-            Generate and download work done reports with cost details for a specific site and date range.
+            Generate and download a detailed comparison report between planned BOQ and actual work done for a specific site and date range.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -211,11 +211,11 @@ export default function BoqManagementPage() {
               <div className="flex gap-4">
                 <Button type="submit" disabled={!selectedSiteForReport}>
                   <Download className="mr-2 h-4 w-4" />
-                  Download BOQ vs Actual Report (PDF)
+                  Download Report (PDF)
                 </Button>
                  <Button type="submit" disabled={!selectedSiteForReport} variant="outline">
                   <Download className="mr-2 h-4 w-4" />
-                  Download BOQ vs Actual Report (Excel)
+                  Download Report (Excel)
                 </Button>
               </div>
             </form>
