@@ -38,7 +38,7 @@ const reportSchema = z.object({
   singleDate: z.date().optional(),
   dateRange: z
     .object({
-      from: z.date(),
+      from: z.date().optional(),
       to: z.date().optional(),
     })
     .optional(),
@@ -93,10 +93,10 @@ export default function BoqManagementPage() {
     let reportDetails = '';
     switch (values.reportType) {
       case 'daily':
-        reportDetails = `Daily report for ${format(values.singleDate!, 'PPP')}`;
+        reportDetails = values.singleDate ? `Daily report for ${format(values.singleDate, 'PPP')}` : 'Daily report';
         break;
       case 'range':
-        reportDetails = `Report from ${format(values.dateRange!.from, 'PPP')} to ${format(values.dateRange!.to!, 'PPP')}`;
+        reportDetails = (values.dateRange?.from && values.dateRange.to) ? `Report from ${format(values.dateRange.from, 'PPP')} to ${format(values.dateRange.to, 'PPP')}` : 'Report for selected range';
         break;
 
       case 'monthly':
@@ -444,5 +444,3 @@ export default function BoqManagementPage() {
     </div>
   );
 }
-
-    
