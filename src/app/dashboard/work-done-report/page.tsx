@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CalendarIcon, PlusCircle, Save, Trash } from 'lucide-react';
+import { Save, PlusCircle, Trash } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,11 +13,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/hooks/use-user';
-import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { mockBoqData } from '@/lib/mock-data';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { mockBoqData } from '@/lib/mock-data';
+import WorkDoneDownloader from '@/components/reports/work-done-downloader';
 
 const materialSchema = z.object({
   type: z.string().min(1, 'Material type is required.'),
@@ -56,7 +55,6 @@ type WorkDoneFormValues = z.infer<typeof workDoneSchema>;
 
 export default function WorkDoneReportPage() {
   const { toast } = useToast();
-  const { user } = useUser();
 
   const form = useForm<WorkDoneFormValues>({
     resolver: zodResolver(workDoneSchema),
@@ -143,6 +141,9 @@ export default function WorkDoneReportPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold font-headline">Daily Work Done Report</h1>
+      
+      <WorkDoneDownloader />
+
       <Card>
         <CardHeader>
           <CardTitle>Submit Today's Progress</CardTitle>

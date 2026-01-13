@@ -1,7 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet, FileClock } from "lucide-react";
-import WorkDoneDownloader from "@/components/reports/work-done-downloader";
+import { Download, FileSpreadsheet } from "lucide-react";
 
 const reports = [
   {
@@ -46,8 +45,6 @@ export default function ReportsPage() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold font-headline">Generate Reports</h1>
       
-      <WorkDoneDownloader />
-
       <Card>
         <CardHeader>
           <CardTitle>Standard Reports</CardTitle>
