@@ -2,7 +2,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, FileSpreadsheet } from "lucide-react";
-import WorkDoneDownloader from "@/components/reports/work-done-downloader";
 
 const reports = [
   {
@@ -46,13 +45,11 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold font-headline">Generate Reports</h1>
-
-      <WorkDoneDownloader />
       
       <Card>
         <CardHeader>
           <CardTitle>Standard Reports</CardTitle>
-          <CardDescription>Generate other detailed reports for audit and analysis. Download in Excel format.</CardDescription>
+          <CardDescription>Generate detailed reports for audit and analysis. Download in Excel format.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {reports.map((report) => (
@@ -86,3 +83,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    
