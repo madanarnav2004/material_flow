@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -252,7 +253,7 @@ export default function WorkDoneDownloader() {
                              <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select a year" />
-                              </SelectTrigger>
+                              </Trigger>
                             </FormControl>
                             <SelectContent>
                                {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}

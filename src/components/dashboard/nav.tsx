@@ -42,7 +42,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: '/dashboard', icon: Home, label: 'Dashboard', roles: ['director', 'site-manager', 'coordinator', 'store-manager', 'purchase-department'] },
-  { href: '/dashboard/inventory', icon: Archive, label: 'Inventory', roles: ['site-manager', 'store-manager'] },
+  { href: '/dashboard/inventory', icon: Archive, label: 'Inventory', roles: ['store-manager'] },
   { href: '/dashboard/requests', icon: Package, label: 'Requests', roles: ['director', 'site-manager', 'coordinator', 'store-manager'] },
   { href: '/dashboard/materials-issued', icon: Truck, label: 'Materials Issued', roles: ['director', 'site-manager', 'coordinator', 'store-manager'] },
   { href: '/dashboard/receipts', icon: PackageCheck, label: 'Receipts', roles: ['director', 'site-manager', 'store-manager'] },
