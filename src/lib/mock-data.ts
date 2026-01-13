@@ -1,4 +1,5 @@
 
+
 export const monthlyConsumption = [
   { month: 'Jan', consumption: 186 },
   { month: 'Feb', consumption: 305 },
@@ -168,3 +169,30 @@ export const detailedMaterialValue = [
     { id: 'dmv-5', name: 'Sand', site: 'MAPI Store', quantity: 300, unit: 'cu.m.', rate: 20 },
     { id: 'dmv-6', name: 'Gravel', site: 'North Site', quantity: 5, unit: 'cu.m.', rate: 22 },
 ];
+
+// Mock Data for Work Done Report BOQ
+export const mockBoqData = {
+  descriptions: [
+    { description: 'Excavation', categoryNumber: 'CAT-01' },
+    { description: 'Concrete Work', categoryNumber: 'CAT-02' },
+    { description: 'Brickwork', categoryNumber: 'CAT-03' },
+  ],
+  items: [
+    { description: 'Excavation', item: 'Foundation', itemNumber: 'ITM-001' },
+    { description: 'Concrete Work', item: 'Columns', itemNumber: 'ITM-002' },
+    { description: 'Concrete Work', item: 'Slab', itemNumber: 'ITM-003' },
+    { description: 'Brickwork', item: 'Internal Walls', itemNumber: 'ITM-004' },
+  ],
+  materials: [
+      { type: 'Cement', unit: 'bags', rate: 10 },
+      { type: 'Sand', unit: 'cu.m.', rate: 25 },
+  ],
+  equipment: [
+      { source: 'Owned', name: 'JCB', unit: 'hours', rate: 50 },
+      { source: 'Hired', name: 'Crane', unit: 'hours', rate: 150 },
+  ],
+  workforce: [
+      { skill: 'Mason', designation: 'Skilled', rate: 30 },
+      { skill: 'Helper', designation: 'Unskilled', rate: 15 },
+  ]
+};

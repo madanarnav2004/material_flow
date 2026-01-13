@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/hooks/use-user';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { mockBoqData } from '@/lib/mock-data';
 
 const workDoneSchema = z.object({
   siteName: z.string(),
@@ -29,19 +30,6 @@ const workDoneSchema = z.object({
 });
 
 type WorkDoneFormValues = z.infer<typeof workDoneSchema>;
-
-// Mock data for dropdowns, to be replaced by coordinator-managed BOQ
-const mockWorkDescriptions = {
-  'Excavation': 'CAT-01',
-  'Concrete Work': 'CAT-02',
-  'Brickwork': 'CAT-03',
-};
-const mockWorkItems = {
-  'Foundation': 'ITM-001',
-  'Columns': 'ITM-002',
-  'Slab': 'ITM-003',
-};
-
 
 export default function WorkDoneReportPage() {
   const { toast } = useToast();
@@ -62,15 +50,24 @@ export default function WorkDoneReportPage() {
 
   const handleDescriptionChange = (value: string) => {
     form.setValue('descriptionOfWork', value);
-    const category = mockWorkDescriptions[value as keyof typeof mockWorkDescriptions] || '';
-    form.setValue('categoryNumber', category);
+    const selectedDesc = mockBoqData.descriptions.find(d => d.description === value);
+    form.setValue('categoryNumber', selectedDesc?.categoryNumber || '');
+    // Reset item of work when description changes
+    form.setValue('itemOfWork', '');
+    form.setValue('itemNumber', '');
   };
   
   const handleItemChange = (value: string) => {
     form.setValue('itemOfWork', value);
-    const itemNum = mockWorkItems[value as keyof typeof mockWorkItems] || '';
-    form.setValue('itemNumber', itemNum);
+    const selectedItem = mockBoqData.items.find(i => i.item === value);
+    form.setValue('itemNumber', selectedItem?.itemNumber || '');
   };
+
+  const selectedDescription = form.watch('descriptionOfWork');
+  const availableItems = React.useMemo(() => {
+    if (!selectedDescription) return [];
+    return mockBoqData.items.filter(i => i.description === selectedDescription);
+  }, [selectedDescription]);
 
 
   function onSubmit(values: WorkDoneFormValues) {
@@ -137,8 +134,8 @@ export default function WorkDoneReportPage() {
                           <Select onValueChange={handleDescriptionChange} defaultValue={field.value}>
                             <FormControl><SelectTrigger><SelectValue placeholder="Select work description" /></SelectTrigger></FormControl>
                             <SelectContent>
-                              {Object.keys(mockWorkDescriptions).map(desc => (
-                                <SelectItem key={desc} value={desc}>{desc}</SelectItem>
+                              {mockBoqData.descriptions.map(desc => (
+                                <SelectItem key={desc.description} value={desc.description}>{desc.description}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -165,11 +162,11 @@ export default function WorkDoneReportPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Item of Work</FormLabel>
-                          <Select onValueChange={handleItemChange} defaultValue={field.value}>
+                          <Select onValueChange={handleItemChange} value={field.value} disabled={!selectedDescription}>
                              <FormControl><SelectTrigger><SelectValue placeholder="Select work item" /></SelectTrigger></FormControl>
                             <SelectContent>
-                              {Object.keys(mockWorkItems).map(item => (
-                                <SelectItem key={item} value={item}>{item}</SelectItem>
+                              {availableItems.map(item => (
+                                <SelectItem key={item.item} value={item.item}>{item.item}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
