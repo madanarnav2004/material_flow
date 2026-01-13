@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, PlusCircle, Trash } from 'lucide-react';
+import { Save, PlusCircle, Trash, Download, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { mockBoqData } from '@/lib/mock-data';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 const materialSchema = z.object({
   type: z.string().min(1, 'Material type is required.'),
@@ -53,6 +56,13 @@ const workDoneSchema = z.object({
 
 type WorkDoneFormValues = z.infer<typeof workDoneSchema>;
 
+const downloadSchema = z.object({
+  startDate: z.date({ required_error: 'A start date is required.' }),
+  endDate: z.date({ required_error: 'An end date is required.' }),
+});
+
+type DownloadFormValues = z.infer<typeof downloadSchema>;
+
 export default function WorkDoneReportPage() {
   const { toast } = useToast();
 
@@ -70,6 +80,10 @@ export default function WorkDoneReportPage() {
       equipment: [{ source: '', name: '', usage: 0, unit: '' }],
       workforce: [{ skill: '', designation: '', count: 0 }],
     },
+  });
+
+  const downloadForm = useForm<DownloadFormValues>({
+    resolver: zodResolver(downloadSchema),
   });
 
   const { fields: materialFields, append: appendMaterial, remove: removeMaterial } = useFieldArray({
@@ -138,9 +152,104 @@ export default function WorkDoneReportPage() {
     });
   }
 
+  function onDownloadSubmit(values: DownloadFormValues) {
+    console.log('Download report for:', values);
+    toast({
+      title: 'Report Download Started',
+      description: `Generating report from ${format(values.startDate, 'PPP')} to ${format(values.endDate, 'PPP')}.`,
+    });
+  }
+
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold font-headline">Daily Work Done Report</h1>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Download Work Done Report</CardTitle>
+          <CardDescription>Select a date range to download the daily progress reports.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...downloadForm}>
+            <form onSubmit={downloadForm.handleSubmit(onDownloadSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                <FormField
+                  control={downloadForm.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Start Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={'outline'}
+                              className={cn(
+                                'w-full justify-start text-left font-normal',
+                                !field.value && 'text-muted-foreground'
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={downloadForm.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>End Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={'outline'}
+                              className={cn(
+                                'w-full justify-start text-left font-normal',
+                                !field.value && 'text-muted-foreground'
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit">
+                  <Download className="mr-2 h-4 w-4" /> Download Report
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
       
       <Card>
         <CardHeader>
