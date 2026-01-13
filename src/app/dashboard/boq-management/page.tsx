@@ -324,7 +324,7 @@ export default function BoqManagementPage() {
                                <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select a year" />
-                                </Trigger>
+                                </SelectTrigger>
                               </FormControl>
                               <SelectContent>
                                  {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
