@@ -94,12 +94,36 @@ export default function ReportsPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : report.variants.length > 0 ? (
-                  report.variants.map((variant: string) => (
-                    <Button key={variant} variant="outline">
-                      <Download className="mr-2 h-4 w-4" />
-                      Download {variant}
-                    </Button>
-                  ))
+                  report.variants.map((variant: string) => {
+                    if (variant === 'Site-wise') {
+                      return (
+                        <DropdownMenu key={variant}>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline">
+                              <Download className="mr-2 h-4 w-4" />
+                              Download {variant}
+                              <ChevronDown className="ml-2 h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuLabel>Select a Site</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {sitesList.map((site) => (
+                              <DropdownMenuItem key={site}>
+                                Download for {site}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      );
+                    }
+                    return (
+                      <Button key={variant} variant="outline">
+                        <Download className="mr-2 h-4 w-4" />
+                        Download {variant}
+                      </Button>
+                    );
+                  })
                 ) : (
                   <Button>
                     <Download className="mr-2 h-4 w-4" />
