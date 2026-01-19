@@ -1,10 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { PackageCheck, FileText, Download, Eye, AlertTriangle, CheckCircle, HelpCircle, ChevronDown, CalendarIcon, FileDiff } from 'lucide-react';
+import { PackageCheck, FileText, Download, Eye, AlertTriangle, CheckCircle, HelpCircle, ChevronDown, CalendarIcon, FileDiff, Upload, PlusCircle, Trash } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,8 +23,12 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { useMaterialContext } from '@/context/material-context';
 import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const materialReceiptSchema = z.object({
+
+// Schema for receiving from another site
+const fromSiteSchema = z.object({
   issuedId: z.string().min(1, 'An Issued Material ID must be selected.'),
   receiverName: z.string().min(2, "Receiver name is required."),
   requestId: z.string(),
@@ -39,11 +43,31 @@ const materialReceiptSchema = z.object({
   receivedDate: z.date({ required_error: 'Received date is required.' }),
 });
 
-type ReceiptFormValues = z.infer<typeof materialReceiptSchema>;
+type FromSiteFormValues = z.infer<typeof fromSiteSchema>;
+
+// Schema for direct shop purchase
+const shopMaterialItemSchema = z.object({
+  materialName: z.string().min(1, 'Material name is required.'),
+  unit: z.string().min(1, 'Unit is required.'),
+  quantity: z.coerce.number().min(0.1, 'Quantity must be > 0.'),
+  rate: z.coerce.number().min(0.01, 'Rate must be > 0.01'),
+});
+
+const fromShopSchema = z.object({
+  invoiceNumber: z.string().min(1, 'Invoice number is required.'),
+  vendorName: z.string().min(1, 'Vendor name is required.'),
+  invoiceDate: z.date({ required_error: 'Invoice date is required.' }),
+  materials: z.array(shopMaterialItemSchema).min(1, 'Please add at least one material.'),
+  invoiceFile: z.any().optional(),
+});
+
+type FromShopFormValues = z.infer<typeof fromShopSchema>;
+type ShopPurchase = FromShopFormValues & { totalAmount: number; receivedBillId: string };
+
 
 type ReceiptStatus = 'Accepted' | 'Mismatch' | 'Completed';
 
-type MaterialReceivedBill = ReceiptFormValues & {
+type MaterialReceivedBill = FromSiteFormValues & {
   receivedBillId: string;
   receiver: { name: string; } | null;
   status: ReceiptStatus;
@@ -66,7 +90,6 @@ type FullBillDetails = {
     receipt: MaterialReceivedBill | null;
 }
 
-// Mock data - CLEARED
 const initialPastReceipts: MaterialReceivedBill[] = [];
 
 export default function ReceiptsPage() {
@@ -76,8 +99,11 @@ export default function ReceiptsPage() {
   const [activeBillDetails, setActiveBillDetails] = React.useState<FullBillDetails | null>(null);
   const billContentRef = React.useRef<HTMLDivElement>(null);
 
-  const form = useForm<ReceiptFormValues>({
-    resolver: zodResolver(materialReceiptSchema),
+  const [shopPurchases, setShopPurchases] = React.useState<ShopPurchase[]>([]);
+
+  // Form for site-to-site transfers
+  const fromSiteForm = useForm<FromSiteFormValues>({
+    resolver: zodResolver(fromSiteSchema),
     defaultValues: {
       issuedId: '',
       receiverName: '',
@@ -90,31 +116,30 @@ export default function ReceiptsPage() {
   });
 
   const handleIssuedIdChange = (issuedId: string) => {
-    form.setValue('issuedId', issuedId);
+    fromSiteForm.setValue('issuedId', issuedId);
     const issuedItem = issuedMaterials.find(item => item.issuedId === issuedId);
     
     if (issuedItem) {
-        form.setValue('requestId', issuedItem.requestId);
-        form.setValue('materialName', issuedItem.materialName);
-        form.setValue('issuedQuantity', issuedItem.issuedQuantity);
-        form.setValue('issuingSite', issuedItem.issuingSite);
-        form.setValue('receivingSite', issuedItem.receivingSite);
-        form.setValue('receivedQuantity', issuedItem.issuedQuantity); // Pre-fill received with issued
+        fromSiteForm.setValue('requestId', issuedItem.requestId);
+        fromSiteForm.setValue('materialName', issuedItem.materialName);
+        fromSiteForm.setValue('issuedQuantity', issuedItem.issuedQuantity);
+        fromSiteForm.setValue('issuingSite', issuedItem.issuingSite);
+        fromSiteForm.setValue('receivingSite', issuedItem.receivingSite);
+        fromSiteForm.setValue('receivedQuantity', issuedItem.issuedQuantity);
         toast({
             title: 'Auto-filled!',
             description: 'Material details have been auto-filled from the Issued ID.',
         });
     } else {
-        // Optionally clear fields if no match is found
-        form.setValue('requestId', '');
-        form.setValue('materialName', '');
-        form.setValue('issuedQuantity', 0);
-        form.setValue('issuingSite', '');
-        form.setValue('receivingSite', '');
+        fromSiteForm.setValue('requestId', '');
+        fromSiteForm.setValue('materialName', '');
+        fromSiteForm.setValue('issuedQuantity', 0);
+        fromSiteForm.setValue('issuingSite', '');
+        fromSiteForm.setValue('receivingSite', '');
     }
   };
 
-  function onSubmit(values: ReceiptFormValues) {
+  function onFromSiteSubmit(values: FromSiteFormValues) {
     const today = new Date();
     const datePart = format(today, 'yyyyMMdd');
     const countPart = (Date.now() % 1000).toString().padStart(3, '0');
@@ -175,7 +200,7 @@ export default function ReceiptsPage() {
       const blob = new Blob([`<html><head><title>${billId}</title></head><body>${billHtml}</body></html>`], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-a.href = url;
+      a.href = url;
       a.download = `${billId}.html`;
       document.body.appendChild(a);
       a.click();
@@ -188,413 +213,271 @@ a.href = url;
     }
   };
 
-  const isDamaged = form.watch('isDamaged');
+  const isDamaged = fromSiteForm.watch('isDamaged');
+
+  // Form for shop purchases
+  const fromShopForm = useForm<FromShopFormValues>({
+    resolver: zodResolver(fromShopSchema),
+    defaultValues: {
+      invoiceNumber: '',
+      vendorName: '',
+      invoiceDate: new Date(),
+      materials: [{ materialName: '', unit: '', quantity: 0, rate: 0 }],
+    },
+  });
+
+  const { fields: shopFields, append: appendShopMaterial, remove: removeShopMaterial } = useFieldArray({
+    control: fromShopForm.control,
+    name: 'materials',
+  });
+
+  function onFromShopSubmit(values: FromShopFormValues) {
+    const totalAmount = values.materials.reduce((acc, item) => acc + (item.quantity * item.rate), 0);
+    const newBillId = `SHOP-REC-${format(new Date(), 'yyyyMMdd-HHmmss')}`;
+
+    const purchase: ShopPurchase = {
+      ...values,
+      totalAmount,
+      receivedBillId: newBillId,
+    };
+
+    setShopPurchases(prev => [purchase, ...prev]);
+    toast({
+      title: 'Shop Purchase Logged!',
+      description: `Invoice ${values.invoiceNumber} has been successfully logged.`,
+    });
+    fromShopForm.reset();
+    setActiveBillDetails(null); // Clear detailed 3-way view
+  }
+
 
   return (
     <TooltipProvider>
-    <div className="space-y-6">
+      <h1 className="text-3xl font-bold font-headline">Receipts</h1>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <div className="lg:col-span-3">
-            <Card>
-            <CardHeader>
-                <CardTitle>Log Material Receipt</CardTitle>
-                <CardDescription>Select a Material Issue ID to auto-fill details and log the received quantity.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <FormField
-                            control={form.control}
-                            name="issuedId"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Issued ID</FormLabel>
-                                 <Select onValueChange={(value) => handleIssuedIdChange(value)} defaultValue={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select an Issued ID" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {issuedMaterials.map(item => (
-                                        <SelectItem key={item.issuedId} value={item.issuedId}>
-                                          {item.issuedId} ({item.materialName})
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="requestId"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Original Request ID</FormLabel>
-                                <FormControl>
-                                    <Input {...field} readOnly />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                         <FormField
-                            control={form.control}
-                            name="materialName"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Material Name</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="e.g., Cement" {...field} readOnly />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="issuedQuantity"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Issued Quantity</FormLabel>
-                                <FormControl>
-                                    <Input type="number" placeholder="e.g., 50" {...field} readOnly />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <FormField
-                            control={form.control}
-                            name="issuingSite"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Issuing Site</FormLabel>
-                                 <FormControl>
-                                     <Input placeholder="e.g., MAPI Store" {...field} readOnly />
-                                 </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                        <FormField
-                            control={form.control}
-                            name="receivingSite"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Receiving Site</FormLabel>
-                                  <FormControl>
-                                      <Input placeholder="e.g., North Site" {...field} readOnly />
-                                  </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                    </div>
-                     <FormField
-                        control={form.control}
-                        name="receiverName"
-                        render={({ field }) => (
+          <Tabs defaultValue="from-site" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="from-site">Material Received from Site</TabsTrigger>
+              <TabsTrigger value="from-shop">Material Purchased from Shop</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="from-site">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Log Material Receipt from Site</CardTitle>
+                  <CardDescription>Select a Material Issue ID to auto-fill details and log the received quantity.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...fromSiteForm}>
+                    <form onSubmit={fromSiteForm.handleSubmit(onFromSiteSubmit)} className="space-y-6">
+                      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        <FormField control={fromSiteForm.control} name="issuedId" render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Receiver Name</FormLabel>
-                            <FormControl>
-                                <Input placeholder="e.g., Jane Doe" {...field} />
-                            </FormControl>
-                            <FormMessage />
+                              <FormLabel>Issued ID</FormLabel>
+                              <Select onValueChange={(value) => handleIssuedIdChange(value)} defaultValue={field.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Select an Issued ID" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  {issuedMaterials.map(item => (<SelectItem key={item.issuedId} value={item.issuedId}>{item.issuedId} ({item.materialName})</SelectItem>))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
                             </FormItem>
-                        )}
+                          )}
                         />
-
-                    <div className="rounded-md border p-4 bg-secondary/20 space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="receivedQuantity"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel className="text-base">Enter Received Quantity</FormLabel>
-                                <FormControl>
-                                    <Input type="number" placeholder="e.g., 50" {...field} className="bg-background text-lg"/>
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-                    
-                    <div className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="isDamaged"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                                <FormControl>
-                                    <Select
-                                        onValueChange={(value) => field.onChange(value === 'true')}
-                                        defaultValue={String(field.value)}
-                                    >
-                                    <SelectTrigger className="w-[180px]">
-                                        <SelectValue placeholder="Damage Status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="false">No Damage</SelectItem>
-                                        <SelectItem value="true">Damage Reported</SelectItem>
-                                    </SelectContent>
-                                    </Select>
-                                </FormControl>
-                                <FormLabel className="font-normal flex items-center gap-1">
-                                    Was the material damaged?
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>Select 'Damage Reported' if any items were damaged in transit.</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </FormLabel>
-                                </FormItem>
-                            )}
-                            />
-
-                        {isDamaged && (
-                            <FormField
-                            control={form.control}
-                            name="damageDescription"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Damage Description</FormLabel>
-                                <FormControl>
-                                    <Textarea
-                                    placeholder="Describe the damage, e.g., '2 bags torn, cement spilled'"
-                                    {...field}
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                        )}
-                    </div>
-
-                    <FormField
-                        control={form.control}
-                        name="remarks"
-                        render={({ field }) => (
+                        <FormField control={fromSiteForm.control} name="requestId" render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Remarks (Optional)</FormLabel>
-                            <FormControl>
-                                <Textarea placeholder="Add any additional remarks about the receipt..." {...field} />
-                            </FormControl>
-                            <FormMessage />
+                              <FormLabel>Original Request ID</FormLabel>
+                              <FormControl><Input {...field} readOnly /></FormControl>
+                              <FormMessage />
                             </FormItem>
-                        )}
+                          )}
                         />
-                    
-                    <FormField
-                        control={form.control}
-                        name="receivedDate"
-                        render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                            <FormLabel>Received Date</FormLabel>
-                             <Popover>
-                                    <PopoverTrigger asChild>
-                                    <FormControl>
-                                        <Button
-                                        variant={'outline'}
-                                        className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                                        >
-                                        {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                        </Button>
-                                    </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                                    </PopoverContent>
-                                </Popover>
-                            <FormMessage />
-                            </FormItem>
+                      </div>
+                      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        <FormField control={fromSiteForm.control} name="materialName" render={({ field }) => (
+                            <FormItem><FormLabel>Material Name</FormLabel><FormControl><Input placeholder="e.g., Cement" {...field} readOnly /></FormControl><FormMessage /></FormItem>
+                          )}
+                        />
+                        <FormField control={fromSiteForm.control} name="issuedQuantity" render={({ field }) => (
+                            <FormItem><FormLabel>Issued Quantity</FormLabel><FormControl><Input type="number" placeholder="e.g., 50" {...field} readOnly /></FormControl><FormMessage /></FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormField control={fromSiteForm.control} name="receiverName" render={({ field }) => (
+                          <FormItem><FormLabel>Receiver Name</FormLabel><FormControl><Input placeholder="e.g., Jane Doe" {...field} /></FormControl><FormMessage /></FormItem>
                         )}
-                    />
+                      />
+                      <div className="rounded-md border p-4 bg-secondary/20 space-y-4">
+                        <FormField control={fromSiteForm.control} name="receivedQuantity" render={({ field }) => (
+                            <FormItem><FormLabel className="text-base">Enter Received Quantity</FormLabel><FormControl><Input type="number" placeholder="e.g., 50" {...field} className="bg-background text-lg"/></FormControl><FormMessage /></FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="space-y-4">
+                        <FormField control={fromSiteForm.control} name="isDamaged" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <Select onValueChange={(value) => field.onChange(value === 'true')} defaultValue={String(field.value)}>
+                                  <SelectTrigger className="w-[180px]"><SelectValue placeholder="Damage Status" /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="false">No Damage</SelectItem>
+                                    <SelectItem value="true">Damage Reported</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </FormControl>
+                              <FormLabel className="font-normal flex items-center gap-1">Was the material damaged?</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                        {isDamaged && <FormField control={fromSiteForm.control} name="damageDescription" render={({ field }) => (<FormItem><FormLabel>Damage Description</FormLabel><FormControl><Textarea placeholder="Describe the damage..." {...field} /></FormControl><FormMessage /></FormItem>)} />}
+                      </div>
+                      <FormField control={fromSiteForm.control} name="remarks" render={({ field }) => (<FormItem><FormLabel>Remarks (Optional)</FormLabel><FormControl><Textarea placeholder="Add any additional remarks..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      <FormField control={fromSiteForm.control} name="receivedDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Received Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'} className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}><CalendarIcon className="ml-auto h-4 w-4 opacity-50" />{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                      <Button type="submit" size="lg" disabled={fromSiteForm.formState.isSubmitting}><PackageCheck className="mr-2 h-4 w-4" />{fromSiteForm.formState.isSubmitting ? 'Logging...' : 'Log Receipt & Generate Bill'}</Button>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="from-shop">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Log Direct Purchase from Shop</CardTitle>
+                  <CardDescription>Enter details for materials purchased directly from a local shop.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...fromShopForm}>
+                    <form onSubmit={fromShopForm.handleSubmit(onFromShopSubmit)} className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField control={fromShopForm.control} name="invoiceNumber" render={({ field }) => (<FormItem><FormLabel>Invoice Number</FormLabel><FormControl><Input placeholder="e.g., INV-2024-001" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                        <FormField control={fromShopForm.control} name="vendorName" render={({ field }) => (<FormItem><FormLabel>Vendor Name</FormLabel><FormControl><Input placeholder="e.g., Acme Suppliers" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                      </div>
+                      <FormField control={fromShopForm.control} name="invoiceDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Invoice Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'} className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}><CalendarIcon className="ml-auto h-4 w-4 opacity-50" />{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
+                      
+                      <div>
+                        <Label>Purchased Materials</Label>
+                        <div className="mt-2 rounded-md border">
+                          <Table>
+                            <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Unit</TableHead><TableHead>Qty</TableHead><TableHead>Rate</TableHead><TableHead /></TableRow></TableHeader>
+                            <TableBody>
+                              {shopFields.map((field, index) => (
+                                <TableRow key={field.id}>
+                                  <TableCell><FormField control={fromShopForm.control} name={`materials.${index}.materialName`} render={({ field }) => (<FormItem><FormControl><Input placeholder="Cement" {...field}/></FormControl><FormMessage/></FormItem>)}/></TableCell>
+                                  <TableCell><FormField control={fromShopForm.control} name={`materials.${index}.unit`} render={({ field }) => (<FormItem><FormControl><Input placeholder="bag" {...field}/></FormControl><FormMessage/></FormItem>)}/></TableCell>
+                                  <TableCell><FormField control={fromShopForm.control} name={`materials.${index}.quantity`} render={({ field }) => (<FormItem><FormControl><Input type="number" placeholder="50" {...field}/></FormControl><FormMessage/></FormItem>)}/></TableCell>
+                                  <TableCell><FormField control={fromShopForm.control} name={`materials.${index}.rate`} render={({ field }) => (<FormItem><FormControl><Input type="number" placeholder="10" {...field}/></FormControl><FormMessage/></FormItem>)}/></TableCell>
+                                  <TableCell><Button variant="ghost" size="icon" onClick={() => removeShopMaterial(index)} disabled={shopFields.length <= 1}><Trash className="h-4 w-4" /></Button></TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                        <Button type="button" variant="outline" size="sm" onClick={() => appendShopMaterial({ materialName: '', unit: '', quantity: 0, rate: 0 })} className="mt-4"><PlusCircle className="mr-2 h-4 w-4" /> Add Material</Button>
+                      </div>
 
-
-                    <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
-                    <PackageCheck className="mr-2 h-4 w-4" />
-                    {form.formState.isSubmitting ? 'Logging...' : 'Log Receipt & Generate Final Bill'}
-                    </Button>
-                </form>
-                </Form>
-            </CardContent>
-            </Card>
+                      <FormField control={fromShopForm.control} name="invoiceFile" render={({ field }) => (<FormItem><FormLabel>Upload Invoice Copy</FormLabel><FormControl><Input type="file" onChange={(e) => field.onChange(e.target.files)} /></FormControl><FormMessage /></FormItem>)}/>
+                      <Button type="submit" size="lg" disabled={fromShopForm.formState.isSubmitting}><Upload className="mr-2 h-4 w-4" />{fromShopForm.formState.isSubmitting ? 'Logging...' : 'Log Shop Purchase'}</Button>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
         {activeBillDetails && (
             <div className="lg:col-span-2">
                 <Card>
                     <CardHeader className="flex flex-row items-start justify-between">
                         <div>
-                        <CardTitle className="flex items-center gap-2">
-                            <FileDiff /> Bill Checking Process
-                        </CardTitle>
-                        <CardDescription>
-                            Comparing Request, Issued, and Received bills.
-                        </CardDescription>
+                          <CardTitle className="flex items-center gap-2"><FileDiff /> Bill Checking Process</CardTitle>
+                          <CardDescription>Comparing Request, Issued, and Received bills.</CardDescription>
                         </div>
-                         <Button variant="outline" size="sm" onClick={() => handleDownload(activeBillDetails.receipt?.receivedBillId ?? 'bill')}>
-                            <Download className="mr-2 h-4 w-4" />
-                            Download
-                        </Button>
+                         <Button variant="outline" size="sm" onClick={() => handleDownload(activeBillDetails.receipt?.receivedBillId ?? 'bill')}><Download className="mr-2 h-4 w-4" />Download</Button>
                     </CardHeader>
                     <CardContent ref={billContentRef} className="space-y-6 text-sm">
-                        
-                        {/* Status Summary */}
                         <div className="rounded-lg border p-4 space-y-2">
                             <h3 className="font-semibold text-base">Verification Status</h3>
-                            {activeBillDetails.receipt?.status === 'Mismatch' ? (
-                                <div className="flex items-center gap-2 text-destructive">
-                                    <AlertTriangle className="h-5 w-5" />
-                                    <p className="font-semibold">Query: Mismatch in quantities.</p>
-                                </div>
-                            ) : activeBillDetails.receipt?.status === 'Completed' ? (
-                                <div className="flex items-center gap-2 text-green-600">
-                                    <CheckCircle className="h-5 w-5" />
-                                    <p className="font-semibold">Process Completed: All bills match.</p>
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-2 text-blue-600">
-                                    <HelpCircle className="h-5 w-5" />
-                                    <p className="font-semibold">Process Pending: Verification required.</p>
-                                </div>
-                            )}
+                            {activeBillDetails.receipt?.status === 'Mismatch' ? ( <div className="flex items-center gap-2 text-destructive"><AlertTriangle className="h-5 w-5" /><p className="font-semibold">Query: Mismatch in quantities.</p></div>) 
+                            : activeBillDetails.receipt?.status === 'Completed' ? (<div className="flex items-center gap-2 text-green-600"><CheckCircle className="h-5 w-5" /><p className="font-semibold">Process Completed: All bills match.</p></div>) 
+                            : (<div className="flex items-center gap-2 text-blue-600"><HelpCircle className="h-5 w-5" /><p className="font-semibold">Process Pending: Verification required.</p></div>)}
                         </div>
-
-                        {/* Request Bill */}
                         <div className="space-y-2">
                             <h3 className="font-semibold text-base text-muted-foreground">1. Material Request Bill</h3>
-                            <div className="rounded-lg border p-4 space-y-2">
-                                <p><strong>Request ID:</strong> {activeBillDetails.request?.id}</p>
-                                <p><strong>Requesting Site:</strong> {activeBillDetails.request?.site}</p>
-                                <Separator />
-                                <div className="flex justify-between items-center">
-                                    <span>{activeBillDetails.request?.material}</span>
-                                    <span className="font-bold text-lg">{activeBillDetails.request?.quantity} units</span>
-                                </div>
-                            </div>
+                            <div className="rounded-lg border p-4 space-y-2"><p><strong>Request ID:</strong> {activeBillDetails.request?.id}</p><p><strong>Requesting Site:</strong> {activeBillDetails.request?.site}</p><Separator /><div className="flex justify-between items-center"><span>{activeBillDetails.request?.material}</span><span className="font-bold text-lg">{activeBillDetails.request?.quantity} units</span></div></div>
                         </div>
-
-                        {/* Issued Bill */}
                         <div className="space-y-2">
                              <h3 className="font-semibold text-base text-muted-foreground">2. Material Issued Bill</h3>
-                            <div className="rounded-lg border p-4 space-y-2">
-                                <p><strong>Issued ID:</strong> {activeBillDetails.issue?.issuedId}</p>
-                                <p><strong>Issuing Site:</strong> {activeBillDetails.issue?.issuingSite}</p>
-                                <Separator />
-                                <div className="flex justify-between items-center">
-                                    <span>{activeBillDetails.issue?.materialName}</span>
-                                    <span className="font-bold text-lg">{activeBillDetails.issue?.issuedQuantity} units</span>
-                                </div>
-                            </div>
+                            <div className="rounded-lg border p-4 space-y-2"><p><strong>Issued ID:</strong> {activeBillDetails.issue?.issuedId}</p><p><strong>Issuing Site:</strong> {activeBillDetails.issue?.issuingSite}</p><Separator /><div className="flex justify-between items-center"><span>{activeBillDetails.issue?.materialName}</span><span className="font-bold text-lg">{activeBillDetails.issue?.issuedQuantity} units</span></div></div>
                         </div>
-
-                        {/* Received Bill */}
                          <div className="space-y-2">
                              <h3 className="font-semibold text-base text-muted-foreground">3. Final Material Received Bill</h3>
-                            <div className="rounded-lg border p-4 space-y-2 bg-secondary/30">
-                                <p><strong>Receipt ID:</strong> {activeBillDetails.receipt?.receivedBillId}</p>
-                                <p><strong>Receiver:</strong> {activeBillDetails.receipt?.receiver?.name}</p>
-                                <Separator />
-                                <div className="flex justify-between items-center">
-                                    <span>{activeBillDetails.receipt?.materialName}</span>
-                                    <span className={cn("font-bold text-xl", activeBillDetails.receipt?.status === 'Mismatch' && 'text-destructive')}>{activeBillDetails.receipt?.receivedQuantity} units</span>
-                                </div>
-                                 {activeBillDetails.receipt?.remarks && <p className="text-xs text-muted-foreground pt-2"><strong>Remarks:</strong> {activeBillDetails.receipt.remarks}</p>}
-                            </div>
+                            <div className="rounded-lg border p-4 space-y-2 bg-secondary/30"><p><strong>Receipt ID:</strong> {activeBillDetails.receipt?.receivedBillId}</p><p><strong>Receiver:</strong> {activeBillDetails.receipt?.receiver?.name}</p><Separator /><div className="flex justify-between items-center"><span>{activeBillDetails.receipt?.materialName}</span><span className={cn("font-bold text-xl", activeBillDetails.receipt?.status === 'Mismatch' && 'text-destructive')}>{activeBillDetails.receipt?.receivedQuantity} units</span></div>{activeBillDetails.receipt?.remarks && <p className="text-xs text-muted-foreground pt-2"><strong>Remarks:</strong> {activeBillDetails.receipt.remarks}</p>}</div>
                         </div>
-                        
                     </CardContent>
                 </Card>
             </div>
         )}
       </div>
       
-      <Card>
-        <CardHeader>
-            <CardTitle>Past Material Receipts</CardTitle>
-            <CardDescription>A log of recently verified material receipts.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            {pastReceipts.length > 0 ? (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Receipt ID</TableHead>
-                            <TableHead>Request ID</TableHead>
-                            <TableHead>Material</TableHead>
-                            <TableHead>Issued</TableHead>
-                            <TableHead>Received</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Action</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {pastReceipts.map(rec => (
-                            <TableRow key={rec.receivedBillId}>
-                                <TableCell className="font-medium">{rec.receivedBillId}</TableCell>
-                                <TableCell>{rec.requestId}</TableCell>
-                                <TableCell>{rec.materialName}</TableCell>
-                                <TableCell>{rec.issuedQuantity}</TableCell>
-                                <TableCell>{rec.receivedQuantity}</TableCell>
-                                <TableCell>{format(rec.receivedDate, 'yyyy-MM-dd')}</TableCell>
-                                <TableCell>
-                                    <Badge 
-                                        variant={rec.status === 'Accepted' ? 'default' : rec.status === 'Completed' ? 'outline' : 'destructive'}
-                                        className={cn(
-                                            rec.status === 'Accepted' && 'bg-green-600/80',
-                                            rec.status === 'Completed' && 'border-green-600 text-green-600'
-                                            )}
-                                    >
-                                        {rec.status === 'Accepted' ? <CheckCircle className="mr-1 h-3 w-3" /> : rec.status === 'Mismatch' ? <AlertTriangle className="mr-1 h-3 w-3" /> : null}
-                                        {rec.status}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell className="text-right space-x-2">
-                                    <Button variant="outline" size="sm" onClick={() => handleViewBill(rec.receivedBillId)}>
-                                        <Eye className="mr-2 h-4 w-4" />
-                                        Check Bill
-                                    </Button>
-                                    <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" size="sm">
-                                        Update Status <ChevronDown className="ml-2 h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Accepted')}>Accepted</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Mismatch')}>Mismatch</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Completed')}>Mark as Completed</DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            ) : (
-                <div className="flex items-center justify-center p-8">
-                    <p className="text-center text-muted-foreground">No receipts logged yet.</p>
-                </div>
-            )}
-        </CardContent>
-      </Card>
-    </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+              <CardTitle>Past Site-to-Site Receipts</CardTitle>
+              <CardDescription>A log of recently verified material receipts from other sites.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              {pastReceipts.length > 0 ? (
+                  <Table>
+                      <TableHeader><TableRow><TableHead>Receipt ID</TableHead><TableHead>Request ID</TableHead><TableHead>Material</TableHead><TableHead>Qty</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+                      <TableBody>
+                          {pastReceipts.map(rec => (
+                              <TableRow key={rec.receivedBillId}>
+                                  <TableCell className="font-medium">{rec.receivedBillId}</TableCell>
+                                  <TableCell>{rec.requestId}</TableCell>
+                                  <TableCell>{rec.materialName}</TableCell>
+                                  <TableCell>{rec.receivedQuantity}</TableCell>
+                                  <TableCell><Badge variant={rec.status === 'Accepted' ? 'default' : rec.status === 'Completed' ? 'outline' : 'destructive'} className={cn(rec.status === 'Accepted' && 'bg-green-600/80', rec.status === 'Completed' && 'border-green-600 text-green-600')}>{rec.status}</Badge></TableCell>
+                                  <TableCell className="text-right space-x-2">
+                                      <Button variant="outline" size="sm" onClick={() => handleViewBill(rec.receivedBillId)}><Eye className="mr-2 h-4 w-4" />Check</Button>
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild><Button variant="outline" size="sm">Update <ChevronDown className="ml-2 h-4 w-4" /></Button></DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end"><DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Accepted')}>Accepted</DropdownMenuItem><DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Mismatch')}>Mismatch</DropdownMenuItem><DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Completed')}>Completed</DropdownMenuItem></DropdownMenuContent>
+                                      </DropdownMenu>
+                                  </TableCell>
+                              </TableRow>
+                          ))}
+                      </TableBody>
+                  </Table>
+              ) : (<div className="flex items-center justify-center p-8"><p className="text-center text-muted-foreground">No site receipts logged yet.</p></div>)}
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Shop Purchases</CardTitle>
+            <CardDescription>A log of materials purchased directly from shops.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {shopPurchases.length > 0 ? (
+              <Table>
+                <TableHeader><TableRow><TableHead>Invoice #</TableHead><TableHead>Vendor</TableHead><TableHead>Date</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {shopPurchases.map((purchase) => (
+                    <TableRow key={purchase.receivedBillId}>
+                      <TableCell className="font-medium">{purchase.invoiceNumber}</TableCell>
+                      <TableCell>{purchase.vendorName}</TableCell>
+                      <TableCell>{format(purchase.invoiceDate, 'PPP')}</TableCell>
+                      <TableCell className="text-right">${purchase.totalAmount.toFixed(2)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (<div className="flex items-center justify-center p-8"><p className="text-center text-muted-foreground">No shop purchases logged yet.</p></div>)}
+          </CardContent>
+        </Card>
+      </div>
     </TooltipProvider>
   );
 }
