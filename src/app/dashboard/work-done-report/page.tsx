@@ -139,13 +139,26 @@ export default function WorkDoneReportPage() {
     form.setValue(`equipment.${index}.source`, value);
     form.setValue(`equipment.${index}.name`, '');
     form.setValue(`equipment.${index}.unit`, '');
+    form.setValue(`equipment.${index}.rate`, 0);
   };
   
   const handleEquipmentNameChange = (value: string, index: number) => {
     form.setValue(`equipment.${index}.name`, value);
     const selectedEquipment = mockBoqData.equipment.find(e => e.name === value);
     form.setValue(`equipment.${index}.unit`, selectedEquipment?.unit || '');
+    if (selectedEquipment) {
+        form.setValue(`equipment.${index}.rate`, selectedEquipment.rate);
+    }
   };
+
+  const handleWorkforceDesignationChange = (value: string, index: number) => {
+    form.setValue(`workforce.${index}.designation`, value);
+    const selectedWorkforce = mockBoqData.workforce.find(w => w.designation === value);
+    if (selectedWorkforce) {
+        form.setValue(`workforce.${index}.rate`, selectedWorkforce.rate);
+    }
+  };
+
 
   function onSubmit(values: WorkDoneFormValues) {
     console.log(values);
@@ -535,7 +548,7 @@ export default function WorkDoneReportPage() {
                                     control={form.control}
                                     name={`equipment.${index}.rate`}
                                     render={({ field }) => (
-                                        <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
                                     )}
                                   />
                                 </TableCell>
@@ -599,7 +612,7 @@ export default function WorkDoneReportPage() {
                                         name={`workforce.${index}.designation`}
                                         render={({ field }) => (
                                             <FormItem>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <Select onValueChange={(value) => handleWorkforceDesignationChange(value, index)} defaultValue={field.value}>
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Select designation" /></SelectTrigger></FormControl>
                                                 <SelectContent>
                                                     {[...new Set(mockBoqData.workforce.map(w => w.designation))].map(des => (
@@ -635,7 +648,7 @@ export default function WorkDoneReportPage() {
                                         control={form.control}
                                         name={`workforce.${index}.rate`}
                                         render={({ field }) => (
-                                            <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>

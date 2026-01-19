@@ -200,16 +200,21 @@ export default function BoqComparisonPage() {
                   <TableHead className="text-right">Actual Qty</TableHead>
                   <TableHead className="text-right">Qty Variance</TableHead>
                   <TableHead className="text-right">BOQ Rate</TableHead>
-                  <TableHead className="text-right">Actual Rate</TableHead>
-                  <TableHead className="text-right">Rate Variance</TableHead>
-                  <TableHead className="text-right">Cost Variance</TableHead>
+                  <TableHead className="text-right">Actual Material Rate</TableHead>
+                  <TableHead className="text-right">Manpower Cost</TableHead>
+                  <TableHead className="text-right">Equipment Cost</TableHead>
+                  <TableHead className="text-right">Total Actual Cost</TableHead>
+                  <TableHead className="text-right">Total Cost Var.</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredComparisonData.map(item => {
                   const qtyVariance = item.actualQty - item.boqQty;
-                  const rateVariance = item.actualRate - item.boqRate;
-                  const costVariance = (item.actualQty * item.actualRate) - (item.boqQty * item.boqRate);
+                  const boqTotalCost = item.boqQty * item.boqRate;
+                  const actualMaterialCost = item.actualQty * item.actualRate;
+                  const actualTotalCost = actualMaterialCost + (item.actualManpowerCost || 0) + (item.actualEquipmentCost || 0);
+                  const costVariance = actualTotalCost - boqTotalCost;
+
 
                   return (
                     <TableRow key={item.item}>
@@ -221,9 +226,9 @@ export default function BoqComparisonPage() {
                       </TableCell>
                       <TableCell className="text-right">${item.boqRate.toFixed(2)}</TableCell>
                       <TableCell className="text-right">${item.actualRate.toFixed(2)}</TableCell>
-                      <TableCell className={cn("text-right", rateVariance > 0 ? "text-destructive" : "text-green-600")}>
-                        ${rateVariance.toFixed(2)}
-                      </TableCell>
+                      <TableCell className="text-right">${(item.actualManpowerCost || 0).toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${(item.actualEquipmentCost || 0).toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-semibold">${actualTotalCost.toFixed(2)}</TableCell>
                       <TableCell className={cn("text-right font-semibold", costVariance > 0 ? "text-destructive" : "text-green-600")}>
                         ${costVariance.toFixed(2)}
                       </TableCell>
