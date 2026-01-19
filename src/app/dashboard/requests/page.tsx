@@ -35,7 +35,6 @@ const requestSchema = z.object({
   requestId: z.string(),
   requesterName: z.string().min(2, 'Requester name is required.'),
   requestingSite: z.string().min(1, 'Requesting site is required.'),
-  issuingSite: z.string().min(1, 'Issuing site is required.'),
   materials: z.array(materialItemSchema).min(1, 'Please add at least one material.'),
   requiredPeriod: z.object({
     from: z.date({ required_error: 'Start date is required.' }),
@@ -50,7 +49,8 @@ type MaterialIndentBill = RequestFormValues & {
   issuedId: string;
   shiftingDate: Date;
   requester: { name: string; } | null;
-  totalValue: number; // This can be calculated differently or removed if rate is not present
+  totalValue: number;
+  issuingSite?: string;
 }
 
 const generateRequestId = (siteName: string, count: number) => {
@@ -74,7 +74,6 @@ export default function RequestsPage() {
       requestId: '',
       requesterName: '',
       requestingSite: '',
-      issuingSite: '',
       materials: [{ materialName: '', unit: '', quantity: 1, remarks: '' }],
       remarks: '',
     },
@@ -97,8 +96,6 @@ export default function RequestsPage() {
   });
 
   function onSubmit(values: RequestFormValues) {
-    // Since rate is removed, totalValue calculation needs to be reconsidered.
-    // For now, let's set it to 0 or remove it from the bill generation logic if not needed.
     const totalValue = 0; 
     const idParts = values.requestId.split('-');
     const datePart = idParts.length > 2 ? idParts[2] : format(new Date(), 'yyyyMMdd');
@@ -110,9 +107,10 @@ export default function RequestsPage() {
       ...values,
       requestDate: new Date(),
       issuedId: newIssuedId,
-      shiftingDate: new Date(), // Assuming shifting happens immediately on approval
+      shiftingDate: new Date(),
       requester: { name: values.requesterName },
       totalValue,
+      issuingSite: "Pending Assignment",
     };
     
     setLastGeneratedBill(bill);
@@ -129,7 +127,7 @@ export default function RequestsPage() {
 
     toast({
       title: 'Indent Submitted!',
-      description: `Your material indent has been sent to ${values.issuingSite}. A Material Indent Bill will be generated upon approval.`,
+      description: `Your material indent has been sent for processing.`,
     });
     
     form.reset();
@@ -153,7 +151,6 @@ export default function RequestsPage() {
         requestDate: requestDate,
         requesterName: 'Sample Requester',
         requestingSite: request.site,
-        issuingSite: 'MAPI Store', // Mock issuing site
         materials: [{ materialName: request.material, unit: 'unit', quantity: request.quantity, remarks: '' }], // Mock unit
         requiredPeriod: { from: fromDate, to: returnDate },
         remarks: `This is a sample bill for request ${request.id}`,
@@ -161,6 +158,7 @@ export default function RequestsPage() {
         shiftingDate: new Date(returnDate.getTime() - 9 * 24 * 60 * 60 * 1000),
         requester: { name: 'Sample Requester' },
         totalValue: 0, // No rate, so no value
+        issuingSite: request.issuingSite || 'Pending Assignment',
       };
       setLastGeneratedBill(bill);
     }
@@ -201,7 +199,7 @@ export default function RequestsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Create Material Indent</CardTitle>
-              <CardDescription>Fill in the details to request materials. A Material Indent Bill will be generated automatically upon approval and issue.</CardDescription>
+              <CardDescription>Fill in the details to request materials. The Purchase Department will assign an issuing site.</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...form}>
@@ -244,8 +242,7 @@ export default function RequestsPage() {
                       )}
                     />
                   </div>
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    <FormField
+                  <FormField
                       control={form.control}
                       name="requesterName"
                       render={({ field }) => (
@@ -258,31 +255,6 @@ export default function RequestsPage() {
                         </FormItem>
                       )}
                     />
-                     <FormField
-                      control={form.control}
-                      name="issuingSite"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Issuing Site</FormLabel>
-                           <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select an issuing site" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="MAPI Store">MAPI Store</SelectItem>
-                              <SelectItem value="North Site">North Site</SelectItem>
-                              <SelectItem value="South Site">South Site</SelectItem>
-                              <SelectItem value="West Site">West Site</SelectItem>
-                              <SelectItem value="East Site">East Site</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
                   
                   <div>
                     <Label>Materials</Label>
@@ -450,7 +422,7 @@ export default function RequestsPage() {
 
                   <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
                     <Send className="mr-2 h-4 w-4" />
-                    {form.formState.isSubmitting ? 'Submitting...' : 'Submit Indent & Generate Bill'}
+                    {form.formState.isSubmitting ? 'Submitting...' : 'Submit Indent'}
                   </Button>
                 </form>
               </Form>

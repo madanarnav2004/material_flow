@@ -41,13 +41,13 @@ export const lowStockMaterials = [
 ];
 
 export const pendingRequests = [
-    { id: 'REQ-WEST-20240721-004', material: '2000 Bricks', quantity: '2000', site: 'West Site', status: 'Pending' as const },
-    { id: 'REQ-SOUTH-20240720-003', material: '50 cu.m. Sand', quantity: '50', site: 'South Site', status: 'Pending' as const },
+    { id: 'REQ-WEST-20240721-004', material: 'Bricks', quantity: 2000, site: 'West Site' },
+    { id: 'REQ-SOUTH-20240720-003', material: 'Sand', quantity: 50, site: 'South Site' },
 ];
 
 export const materialReturnReminders = [
-    { id: 'REQ-NORTH-20240720-001', material: 'Cement', quantity: 500, site: 'North Site', status: 'Issued' as const, returnDate: '2024-08-15' },
-    { id: 'REQ-EAST-20240718-002', material: 'Steel Rebar', quantity: 10, site: 'East Site', status: 'Completed' as const, returnDate: '2024-08-10' },
+    { id: 'REQ-NORTH-20240720-001', material: 'Cement', quantity: 500, site: 'North Site', status: 'Issued' as const, returnDate: '2024-08-15', issuingSite: 'MAPI Store' },
+    { id: 'REQ-EAST-20240718-002', material: 'Steel Rebar', quantity: 10, site: 'East Site', status: 'Completed' as const, returnDate: '2024-08-10', issuingSite: 'MAPI Store' },
     { id: 'REQ-WEST-20240721-004', material: 'Bricks', quantity: 2000, site: 'West Site', status: 'Pending' as const, returnDate: '2024-08-20' },
     { id: 'REQ-SOUTH-20240720-003', material: 'Sand', quantity: 50, site: 'South Site', status: 'Pending' as const, returnDate: '2024-08-18' },
 ];
@@ -103,6 +103,9 @@ export const detailedStock = [
     { id: 'ds-2', material: 'Cement', site: 'MAPI Store', quantity: 1500, type: 'Central Store', mismatch: false },
     { id: 'ds-3', material: 'Steel Rebar', site: 'North Site', quantity: 9, type: 'Site Stock', mismatch: true, expected: 10 },
     { id: 'ds-4', material: 'Gravel', site: 'North Site', quantity: 5, type: 'Site Stock', mismatch: false },
+    { id: 'ds-5', material: 'Bricks', site: 'West Site', quantity: 5000, type: 'Site Stock', mismatch: false },
+    { id: 'ds-6', material: 'Bricks', site: 'MAPI Store', quantity: 10000, type: 'Central Store', mismatch: false },
+    { id: 'ds-7', material: 'Sand', site: 'South Site', quantity: 120, type: 'Site Stock', mismatch: false },
 ];
 
 export const stockUpdates = [

@@ -11,13 +11,14 @@ import {
 
 export type IndentStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended' | 'Partially Issued';
 
-interface MaterialIndent {
+export interface MaterialIndent {
   id: string;
   material: string;
   quantity: number;
   site: string;
   status: IndentStatus;
   returnDate: string;
+  issuingSite?: string;
 }
 
 interface PendingIndent {

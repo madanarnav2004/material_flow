@@ -21,7 +21,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 type RequestFormValues = {
   requesterName: string;
   requestingSite: string;
-  issuingSite: string;
   materials: { materialName: string; quantity: number; rate: number; }[];
   requiredPeriod: { from: Date; to: Date; };
   remarks?: string;
@@ -30,6 +29,7 @@ type MaterialIndentBill = RequestFormValues & {
   requestId: string;
   requestDate: Date;
   issuedId: string;
+  issuingSite?: string;
   shiftingDate: Date;
   requester: { name: string; } | null;
   totalValue: number;
@@ -71,7 +71,7 @@ export default function CoordinatorDashboard() {
         requestDate: requestDate,
         requesterName: 'Sample Requester',
         requestingSite: request.site,
-        issuingSite: 'MAPI Store', // Mock issuing site
+        issuingSite: request.issuingSite || 'Pending Assignment',
         materials: [{ materialName: request.material, quantity: request.quantity, rate: 10 }], // Mock rate
         requiredPeriod: { from: fromDate, to: returnDate },
         remarks: `This is a sample bill for request ${request.id}`,
@@ -483,8 +483,8 @@ export default function CoordinatorDashboard() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Material</TableHead>
-                            <TableHead>Quantity</TableHead>
-                            <TableHead>Site</TableHead>
+                            <TableHead>Issuing Site</TableHead>
+                            <TableHead>Requesting Site</TableHead>
                             <TableHead>Return Date</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
@@ -494,7 +494,7 @@ export default function CoordinatorDashboard() {
                         {requests.map(req => (
                             <TableRow key={req.id}>
                                 <TableCell className="font-medium">{req.material}</TableCell>
-                                <TableCell>{req.quantity}</TableCell>
+                                <TableCell>{req.issuingSite || 'Pending'}</TableCell>
                                 <TableCell>{req.site}</TableCell>
                                 <TableCell>{req.returnDate}</TableCell>
                                 <TableCell>
