@@ -32,12 +32,15 @@ const equipmentSchema = z.object({
   name: z.string().min(1, 'Equipment name is required.'),
   usage: z.coerce.number().min(0.1, 'Usage is required.'),
   unit: z.string(),
+  rate: z.coerce.number().min(0, 'Rate must be a positive number.').optional(),
 });
 
 const workforceSchema = z.object({
   skill: z.string().min(1, 'Skill is required.'),
   designation: z.string().min(1, 'Designation is required.'),
   count: z.coerce.number().min(1, 'Count is required.'),
+  hours: z.coerce.number().min(0.1, 'Hours are required'),
+  rate: z.coerce.number().min(0, 'Rate must be a positive number.').optional(),
 });
 
 const workDoneSchema = z.object({
@@ -77,8 +80,8 @@ export default function WorkDoneReportPage() {
       itemNumber: '',
       quantityOfWork: 0,
       materials: [{ type: '', quantity: 0, unit: '' }],
-      equipment: [{ source: '', name: '', usage: 0, unit: '' }],
-      workforce: [{ skill: '', designation: '', count: 0 }],
+      equipment: [{ source: '', name: '', usage: 0, unit: '', rate: 0 }],
+      workforce: [{ skill: '', designation: '', count: 0, hours: 0, rate: 0 }],
     },
   });
 
@@ -453,16 +456,17 @@ export default function WorkDoneReportPage() {
 
               {/* Equipment Usage */}
               <Card>
-                <CardHeader><CardTitle>Equipment Usage</CardTitle></CardHeader>
+                <CardHeader><CardTitle>Equipment &amp; Vehicle Usage</CardTitle></CardHeader>
                 <CardContent>
                     <div className="rounded-md border">
                         <Table>
                             <TableHeader>
                             <TableRow>
                                 <TableHead>Source</TableHead>
-                                <TableHead>Equipment Name</TableHead>
-                                <TableHead>Usage</TableHead>
+                                <TableHead>Equipment/Vehicle</TableHead>
+                                <TableHead>Usage (Hrs)</TableHead>
                                 <TableHead>Unit</TableHead>
+                                <TableHead>Rate/hr ($)</TableHead>
                                 <TableHead className="w-12"></TableHead>
                             </TableRow>
                             </TableHeader>
@@ -527,6 +531,15 @@ export default function WorkDoneReportPage() {
                                     />
                                 </TableCell>
                                 <TableCell>
+                                  <FormField
+                                    control={form.control}
+                                    name={`equipment.${index}.rate`}
+                                    render={({ field }) => (
+                                        <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )}
+                                  />
+                                </TableCell>
+                                <TableCell>
                                     <Button variant="ghost" size="icon" onClick={() => removeEquipment(index)} disabled={equipmentFields.length <= 1}>
                                     <Trash className="h-4 w-4" />
                                     </Button>
@@ -536,7 +549,7 @@ export default function WorkDoneReportPage() {
                             </TableBody>
                         </Table>
                     </div>
-                    <Button type="button" variant="outline" size="sm" onClick={() => appendEquipment({ source: '', name: '', usage: 0, unit: '' })} className="mt-4">
+                    <Button type="button" variant="outline" size="sm" onClick={() => appendEquipment({ source: '', name: '', usage: 0, unit: '', rate: 0 })} className="mt-4">
                         <PlusCircle className="mr-2 h-4 w-4" /> Add Equipment
                     </Button>
                 </CardContent>
@@ -552,7 +565,9 @@ export default function WorkDoneReportPage() {
                             <TableRow>
                                 <TableHead>Skill Type</TableHead>
                                 <TableHead>Designation</TableHead>
-                                <TableHead>No. of Workers</TableHead>
+                                <TableHead>Worker Count</TableHead>
+                                <TableHead>Total Hours</TableHead>
+                                <TableHead>Rate/hr ($)</TableHead>
                                 <TableHead className="w-12"></TableHead>
                             </TableRow>
                             </TableHeader>
@@ -607,6 +622,24 @@ export default function WorkDoneReportPage() {
                                     />
                                 </TableCell>
                                 <TableCell>
+                                    <FormField
+                                        control={form.control}
+                                        name={`workforce.${index}.hours`}
+                                        render={({ field }) => (
+                                            <FormItem><FormControl><Input type="number" placeholder="e.g., 8" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <FormField
+                                        control={form.control}
+                                        name={`workforce.${index}.rate`}
+                                        render={({ field }) => (
+                                            <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )}
+                                    />
+                                </TableCell>
+                                <TableCell>
                                     <Button variant="ghost" size="icon" onClick={() => removeWorkforce(index)} disabled={workforceFields.length <= 1}>
                                     <Trash className="h-4 w-4" />
                                     </Button>
@@ -616,7 +649,7 @@ export default function WorkDoneReportPage() {
                             </TableBody>
                         </Table>
                     </div>
-                    <Button type="button" variant="outline" size="sm" onClick={() => appendWorkforce({ skill: '', designation: '', count: 0 })} className="mt-4">
+                    <Button type="button" variant="outline" size="sm" onClick={() => appendWorkforce({ skill: '', designation: '', count: 0, hours: 0, rate: 0 })} className="mt-4">
                         <PlusCircle className="mr-2 h-4 w-4" /> Add Workforce
                     </Button>
                 </CardContent>

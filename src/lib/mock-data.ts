@@ -201,8 +201,8 @@ export const mockBoqData = {
 };
 
 export const boqVsActual = [
-  { site: 'North Site', item: 'Concrete Works', boqQty: 1000, boqRate: 150, actualQty: 800, actualRate: 155 },
-  { site: 'North Site', item: 'Excavation', boqQty: 100, boqRate: 50, actualQty: 120, actualRate: 50 },
-  { site: 'South Site', item: 'Brickwork', boqQty: 2000, boqRate: 20, actualQty: 1800, actualRate: 22 },
-  { site: 'South Site', item: 'Finishing', boqQty: 500, boqRate: 100, actualQty: 500, actualRate: 100 },
+  { site: 'North Site', item: 'Concrete Works', boqQty: 1000, boqRate: 150, actualQty: 800, actualRate: 120, actualManpowerCost: 15000, actualEquipmentCost: 4000 },
+  { site: 'North Site', item: 'Excavation', boqQty: 100, boqRate: 50, actualQty: 120, actualRate: 40, actualManpowerCost: 5000, actualEquipmentCost: 2000 },
+  { site: 'South Site', item: 'Brickwork', boqQty: 2000, boqRate: 20, actualQty: 1800, actualRate: 18, actualManpowerCost: 9000, actualEquipmentCost: 800 },
+  { site: 'South Site', item: 'Finishing', boqQty: 500, boqRate: 100, actualQty: 500, actualRate: 90, actualManpowerCost: 30000, actualEquipmentCost: 1500 },
 ];
