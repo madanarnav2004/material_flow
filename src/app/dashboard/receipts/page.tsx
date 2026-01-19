@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -287,7 +288,7 @@ export default function ReceiptsPage() {
                         />
                         <FormField control={fromSiteForm.control} name="requestId" render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Original Indent ID</FormLabel>
+                              <FormLabel>Indent ID</FormLabel>
                               <FormControl><Input {...field} readOnly /></FormControl>
                               <FormMessage />
                             </FormItem>
