@@ -1,7 +1,15 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet } from "lucide-react";
+import { Download, FileSpreadsheet, ChevronDown } from "lucide-react";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const reports = [
   {
@@ -18,11 +26,13 @@ const reports = [
     title: "BOQ Item-wise Material Issued",
     description: "Details on materials issued against Bill of Quantities items, including cost.",
     variants: [],
+    hasSiteDropdown: true,
   },
   {
     title: "Site-wise BOQ Report",
     description: "Consumption and budget tracking per site based on BOQ (includes quantity, rate, amount).",
     variants: [],
+    hasSiteDropdown: true,
   },
   {
     title: "Material Received Report",
@@ -41,6 +51,8 @@ const reports = [
   },
 ];
 
+const sitesList = ["North Site", "South Site", "West Site", "East Site"];
+
 export default function ReportsPage() {
   return (
     <div className="space-y-6">
@@ -52,7 +64,7 @@ export default function ReportsPage() {
           <CardDescription>Generate detailed reports for audit and analysis. Download in Excel format.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {reports.map((report) => (
+          {reports.map((report: any) => (
             <Card key={report.title} className="shadow-none">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -62,8 +74,27 @@ export default function ReportsPage() {
                 <CardDescription>{report.description}</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-wrap gap-4">
-                {report.variants.length > 0 ? (
-                  report.variants.map((variant) => (
+                {report.hasSiteDropdown ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Site-wise Report
+                        <ChevronDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuLabel>Select a Site</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {sitesList.map((site) => (
+                        <DropdownMenuItem key={site}>
+                          Download for {site}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : report.variants.length > 0 ? (
+                  report.variants.map((variant: string) => (
                     <Button key={variant} variant="outline">
                       <Download className="mr-2 h-4 w-4" />
                       Download {variant}
@@ -83,5 +114,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
-    
