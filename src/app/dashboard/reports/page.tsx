@@ -42,7 +42,7 @@ const reports = [
   {
     title: "Material Request Register",
     description: "A complete log of all material requests.",
-    variants: [],
+    variants: ["Site-wise", "Organization-wise"],
   },
   {
     title: "Request vs. Received Comparison",
