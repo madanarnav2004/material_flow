@@ -55,6 +55,7 @@ const shopMaterialItemSchema = z.object({
 });
 
 const fromShopSchema = z.object({
+  purchaseType: z.enum(['with-po', 'without-po'], { required_error: 'Purchase type is required.' }),
   invoiceNumber: z.string().min(1, 'Invoice number is required.'),
   vendorName: z.string().min(1, 'Vendor name is required.'),
   invoiceDate: z.date({ required_error: 'Invoice date is required.' }),
@@ -259,15 +260,15 @@ export default function ReceiptsPage() {
         <div className="lg:col-span-3">
           <Tabs defaultValue="from-site" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="from-site">Material Received from Site</TabsTrigger>
-              <TabsTrigger value="from-shop">Material Purchased from Shop</TabsTrigger>
+              <TabsTrigger value="from-site">GRN (other site / store)</TabsTrigger>
+              <TabsTrigger value="from-shop">New Purchase Material</TabsTrigger>
             </TabsList>
             
             <TabsContent value="from-site">
               <Card>
                 <CardHeader>
-                  <CardTitle>Log Goods Received Note (GRN) from Site</CardTitle>
-                  <CardDescription>Select a Material Issue ID to auto-fill details and log the GRN.</CardDescription>
+                  <CardTitle>Log GRN from Other Site / Store</CardTitle>
+                  <CardDescription>Select an Issued Material ID to log the received goods.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Form {...fromSiteForm}>
@@ -275,7 +276,7 @@ export default function ReceiptsPage() {
                       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <FormField control={fromSiteForm.control} name="issuedId" render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Issued ID</FormLabel>
+                              <FormLabel>Indent ID</FormLabel>
                               <Select onValueChange={(value) => handleIssuedIdChange(value)} defaultValue={field.value}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Select an Issued ID" /></SelectTrigger></FormControl>
                                 <SelectContent>
@@ -345,12 +346,33 @@ export default function ReceiptsPage() {
             <TabsContent value="from-shop">
               <Card>
                 <CardHeader>
-                  <CardTitle>Log Direct Purchase from Shop</CardTitle>
-                  <CardDescription>Enter details for materials purchased directly from a local shop.</CardDescription>
+                  <CardTitle>Log New Purchase Material</CardTitle>
+                  <CardDescription>Enter invoice details for materials purchased with or without a Purchase Order.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Form {...fromShopForm}>
                     <form onSubmit={fromShopForm.handleSubmit(onFromShopSubmit)} className="space-y-6">
+                       <FormField
+                        control={fromShopForm.control}
+                        name="purchaseType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Purchase Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select purchase type (With PO / Without PO)" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="with-po">With PO</SelectItem>
+                                <SelectItem value="without-po">Without PO</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField control={fromShopForm.control} name="invoiceNumber" render={({ field }) => (<FormItem><FormLabel>Invoice Number</FormLabel><FormControl><Input placeholder="e.g., INV-2024-001" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                         <FormField control={fromShopForm.control} name="vendorName" render={({ field }) => (<FormItem><FormLabel>Vendor Name</FormLabel><FormControl><Input placeholder="e.g., Acme Suppliers" {...field} /></FormControl><FormMessage /></FormItem>)}/>
@@ -463,12 +485,13 @@ export default function ReceiptsPage() {
           <CardContent>
             {shopPurchases.length > 0 ? (
               <Table>
-                <TableHeader><TableRow><TableHead>Invoice #</TableHead><TableHead>Vendor</TableHead><TableHead>Date</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Invoice #</TableHead><TableHead>Vendor</TableHead><TableHead>Type</TableHead><TableHead>Date</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {shopPurchases.map((purchase) => (
                     <TableRow key={purchase.receivedBillId}>
                       <TableCell className="font-medium">{purchase.invoiceNumber}</TableCell>
                       <TableCell>{purchase.vendorName}</TableCell>
+                      <TableCell>{purchase.purchaseType === 'with-po' ? 'With PO' : 'Without PO'}</TableCell>
                       <TableCell>{format(purchase.invoiceDate, 'PPP')}</TableCell>
                       <TableCell className="text-right">${purchase.totalAmount.toFixed(2)}</TableCell>
                     </TableRow>
