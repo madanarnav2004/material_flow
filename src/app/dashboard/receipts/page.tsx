@@ -56,12 +56,17 @@ const shopMaterialItemSchema = z.object({
 
 const fromShopSchema = z.object({
   purchaseType: z.enum(['with-po', 'without-po'], { required_error: 'Purchase type is required.' }),
+  poNumber: z.string().optional(),
   invoiceNumber: z.string().min(1, 'Invoice number is required.'),
   vendorName: z.string().min(1, 'Vendor name is required.'),
   invoiceDate: z.date({ required_error: 'Invoice date is required.' }),
   materials: z.array(shopMaterialItemSchema).min(1, 'Please add at least one material.'),
   invoiceFile: z.any().optional(),
+}).refine(data => data.purchaseType !== 'with-po' || (data.poNumber && data.poNumber.length > 0), {
+    message: 'PO Number is required for purchases with a PO.',
+    path: ['poNumber'],
 });
+
 
 type FromShopFormValues = z.infer<typeof fromShopSchema>;
 type ShopPurchase = FromShopFormValues & { totalAmount: number; receivedBillId: string };
@@ -221,6 +226,8 @@ export default function ReceiptsPage() {
   const fromShopForm = useForm<FromShopFormValues>({
     resolver: zodResolver(fromShopSchema),
     defaultValues: {
+      purchaseType: 'without-po',
+      poNumber: '',
       invoiceNumber: '',
       vendorName: '',
       invoiceDate: new Date(),
@@ -232,6 +239,8 @@ export default function ReceiptsPage() {
     control: fromShopForm.control,
     name: 'materials',
   });
+
+  const purchaseType = fromShopForm.watch('purchaseType');
 
   function onFromShopSubmit(values: FromShopFormValues) {
     const totalAmount = values.materials.reduce((acc, item) => acc + (item.quantity * item.rate), 0);
@@ -248,7 +257,14 @@ export default function ReceiptsPage() {
       title: 'Shop Purchase Logged!',
       description: `Invoice ${values.invoiceNumber} has been successfully logged.`,
     });
-    fromShopForm.reset();
+    fromShopForm.reset({
+        purchaseType: 'without-po',
+        poNumber: '',
+        invoiceNumber: '',
+        vendorName: '',
+        invoiceDate: new Date(),
+        materials: [{ materialName: '', unit: '', quantity: 0, rate: 0 }],
+    });
     setActiveBillDetails(null); // Clear detailed 3-way view
   }
 
@@ -276,7 +292,7 @@ export default function ReceiptsPage() {
                       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <FormField control={fromSiteForm.control} name="issuedId" render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Indent ID</FormLabel>
+                              <FormLabel>Issued ID</FormLabel>
                               <Select onValueChange={(value) => handleIssuedIdChange(value)} defaultValue={field.value}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Select an Issued ID" /></SelectTrigger></FormControl>
                                 <SelectContent>
@@ -373,6 +389,21 @@ export default function ReceiptsPage() {
                           </FormItem>
                         )}
                       />
+                      {purchaseType === 'with-po' && (
+                        <FormField
+                            control={fromShopForm.control}
+                            name="poNumber"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Purchase Order Number</FormLabel>
+                                <FormControl>
+                                <Input placeholder="Enter PO Number" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                      )}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField control={fromShopForm.control} name="invoiceNumber" render={({ field }) => (<FormItem><FormLabel>Invoice Number</FormLabel><FormControl><Input placeholder="e.g., INV-2024-001" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                         <FormField control={fromShopForm.control} name="vendorName" render={({ field }) => (<FormItem><FormLabel>Vendor Name</FormLabel><FormControl><Input placeholder="e.g., Acme Suppliers" {...field} /></FormControl><FormMessage /></FormItem>)}/>
@@ -485,11 +516,12 @@ export default function ReceiptsPage() {
           <CardContent>
             {shopPurchases.length > 0 ? (
               <Table>
-                <TableHeader><TableRow><TableHead>Invoice #</TableHead><TableHead>Vendor</TableHead><TableHead>Type</TableHead><TableHead>Date</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Invoice #</TableHead><TableHead>PO #</TableHead><TableHead>Vendor</TableHead><TableHead>Type</TableHead><TableHead>Date</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {shopPurchases.map((purchase) => (
                     <TableRow key={purchase.receivedBillId}>
                       <TableCell className="font-medium">{purchase.invoiceNumber}</TableCell>
+                      <TableCell>{purchase.poNumber || 'N/A'}</TableCell>
                       <TableCell>{purchase.vendorName}</TableCell>
                       <TableCell>{purchase.purchaseType === 'with-po' ? 'With PO' : 'Without PO'}</TableCell>
                       <TableCell>{format(purchase.invoiceDate, 'PPP')}</TableCell>
