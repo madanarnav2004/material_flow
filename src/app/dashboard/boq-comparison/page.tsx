@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { boqVsActual } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
-import { Layers, Download, Calendar as CalendarIcon } from 'lucide-react';
+import { FileSpreadsheet, Download, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -34,11 +34,19 @@ export default function BoqComparisonPage() {
     resolver: zodResolver(reportSchema),
   });
 
-  const onReportSubmit = (values: ReportFormValues) => {
-    console.log('Generating report with values:', values);
+  const onExcelSubmit = (values: ReportFormValues) => {
+    console.log('Generating Excel report with values:', values);
+    toast({
+      title: 'Excel Report Generation Started!',
+      description: `Generating comprehensive Excel report for ${values.siteName}. This may take a moment.`,
+    });
+  };
+  
+  const onPdfSubmit = (values: ReportFormValues) => {
+    console.log('Generating PDF report with values:', values);
     const reportDetails = `BOQ vs Actual Comparison Report from ${format(values.startDate, 'PPP')} to ${format(values.endDate, 'PPP')}`;
     toast({
-      title: 'Report Generation Started!',
+      title: 'PDF Report Generation Started!',
       description: `Generating ${reportDetails} for ${values.siteName}.`,
     });
   };
@@ -50,14 +58,14 @@ export default function BoqComparisonPage() {
   return (
     <div className="space-y-6">
        <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
-        <Layers /> BOQ vs Actual Comparison
+        <FileSpreadsheet /> BOQ Analysis
       </h1>
       <Card>
         <CardHeader className="flex flex-row items-start justify-between">
           <div>
-            <CardTitle>Site-wise Comparison</CardTitle>
+            <CardTitle>Site-wise BOQ Analysis</CardTitle>
             <CardDescription>
-              Compare planned BOQ quantities and rates with actuals from daily progress reports for a selected site.
+              Analyze planned BOQ against actual execution data including consumption, cost, and work-in-progress.
             </CardDescription>
           </div>
           <Dialog>
@@ -69,13 +77,13 @@ export default function BoqComparisonPage() {
             </DialogTrigger>
             <DialogContent className="max-w-xl">
               <DialogHeader>
-                <DialogTitle>Download BOQ vs Actual Comparison</DialogTitle>
+                <DialogTitle>Download Detailed BOQ Analysis Report</DialogTitle>
                 <DialogDescription>
-                  Select a site and date range to generate a detailed comparison report.
+                  Select a site and date range to generate a comprehensive Excel report comparing BOQ data with actual execution, including breakups of material, equipment, and workforce usage.
                 </DialogDescription>
               </DialogHeader>
               <Form {...reportForm}>
-                <form onSubmit={reportForm.handleSubmit(onReportSubmit)} className="space-y-6 pt-4">
+                <div className="space-y-6 pt-4">
                   <div className="grid grid-cols-1 gap-6">
                     <FormField
                       control={reportForm.control}
@@ -155,16 +163,16 @@ export default function BoqComparisonPage() {
                     </div>
                   </div>
                   <div className="flex justify-end gap-4">
-                    <Button type="submit" variant="outline">
+                     <Button type="button" variant="outline" onClick={reportForm.handleSubmit(onPdfSubmit)}>
                       <Download className="mr-2 h-4 w-4" />
-                      Download Excel
+                      Download PDF Summary
                     </Button>
-                    <Button type="submit">
-                      <Download className="mr-2 h-4 w-4" />
-                      Download PDF
+                    <Button type="button" onClick={reportForm.handleSubmit(onExcelSubmit)}>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Download Comprehensive Excel
                     </Button>
                   </div>
-                </form>
+                </div>
               </Form>
             </DialogContent>
           </Dialog>

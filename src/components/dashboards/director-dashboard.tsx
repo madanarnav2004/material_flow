@@ -1,7 +1,7 @@
-
 'use client';
 
 import { Bar, BarChart, CartesianGrid, XAxis, Pie, PieChart, Cell } from 'recharts';
+import { useRouter } from 'next/navigation';
 import {
   ChartConfig,
   ChartContainer,
@@ -25,6 +25,7 @@ import {
   Download,
   BarChart as BarChartIcon,
   Building,
+  FileSpreadsheet,
 } from 'lucide-react';
 import {
   monthlyConsumption,
@@ -100,6 +101,7 @@ const siteWiseTotal = detailedMaterialValue.reduce((acc, item) => {
 
 
 export default function DirectorDashboard() {
+  const router = useRouter();
   const { toast } = useToast();
   const { requests, setRequests, lowStockMaterials } = useMaterialContext();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
@@ -195,87 +197,14 @@ export default function DirectorDashboard() {
       <h1 className="text-3xl font-bold font-headline">Director Dashboard</h1>
       <div className="grid gap-6">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Dialog>
-            <DialogTrigger asChild>
-              <div className="cursor-pointer">
-                <StatCard
-                  title="Total Material Value"
-                  value={`$${(totalValue / 1000000).toFixed(1)}M`}
-                  icon={DollarSign}
-                  description="+0.0% from last month"
-                />
-              </div>
-            </DialogTrigger>
-            <DialogContent className="max-w-6xl">
-              <DialogHeader>
-                <DialogTitle>Total Material Value Breakdown</DialogTitle>
-                <DialogDescription>
-                  A detailed breakdown of all materials, their quantities, rates, and total values across the organization.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-                  <div className="md:col-span-1 space-y-4">
-                      <Card>
-                          <CardHeader>
-                              <CardTitle>Site-wise Value</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                              <div className="space-y-2">
-                                  {Object.entries(siteWiseTotal).map(([site, value]) => (
-                                      <div key={site} className="flex justify-between items-center text-sm">
-                                          <div className="flex items-center gap-2">
-                                              <Building className="h-4 w-4 text-muted-foreground" />
-                                              <span className="font-medium">{site}</span>
-                                          </div>
-                                          <span className="font-mono">${(value as number).toLocaleString()}</span>
-                                      </div>
-                                  ))}
-                              </div>
-                              <Separator className="my-4" />
-                              <div className="flex justify-between font-bold">
-                                  <span>Grand Total</span>
-                                  <span>${totalValue.toLocaleString()}</span>
-                              </div>
-                          </CardContent>
-                      </Card>
-                  </div>
-                  <div className="md:col-span-3">
-                      <div className="max-h-[60vh] overflow-y-auto border rounded-lg">
-                          <Table>
-                          <TableHeader className="sticky top-0 bg-background">
-                              <TableRow>
-                              <TableHead>Material</TableHead>
-                              <TableHead>Site</TableHead>
-                              <TableHead className="text-right">Quantity</TableHead>
-                              <TableHead className="text-right">Avg. Rate</TableHead>
-                              <TableHead className="text-right">Total Value</TableHead>
-                              </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                              {detailedMaterialValue.map(item => (
-                              <TableRow key={item.id}>
-                                  <TableCell className="font-medium">{item.name}</TableCell>
-                                  <TableCell>{item.site}</TableCell>
-                                  <TableCell className="text-right">
-                                  {item.quantity} {item.unit}
-                                  </TableCell>
-                                  <TableCell className="text-right">${item.rate.toFixed(2)}</TableCell>
-                                  <TableCell className="text-right font-medium">${(item.quantity * item.rate).toLocaleString()}</TableCell>
-                              </TableRow>
-                              ))}
-                          </TableBody>
-                          </Table>
-                      </div>
-                  </div>
-              </div>
-              <div className="flex justify-end gap-4 mt-4">
-                  <Button onClick={handleDownloadExcel}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Excel
-                  </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <StatCard
+            title="BOQ Analysis"
+            value="Open Analyzer"
+            icon={FileSpreadsheet}
+            description="Compare planned vs actuals"
+            className="border-primary/50"
+            onClick={() => router.push('/dashboard/boq-comparison')}
+          />
 
           <Dialog>
             <DialogTrigger asChild>
