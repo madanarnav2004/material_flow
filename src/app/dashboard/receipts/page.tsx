@@ -26,6 +26,7 @@ import { useMaterialContext } from '@/context/material-context';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 
 // Schema for receiving from another site
@@ -107,6 +108,11 @@ export default function ReceiptsPage() {
   const billContentRef = React.useRef<HTMLDivElement>(null);
 
   const [shopPurchases, setShopPurchases] = React.useState<ShopPurchase[]>([]);
+  
+  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = React.useState(false);
+  const [selectedReceiptForUpdate, setSelectedReceiptForUpdate] = React.useState<{ receipt: MaterialReceivedBill, newStatus: ReceiptStatus } | null>(null);
+  const [updateRemarks, setUpdateRemarks] = React.useState('');
+
 
   // Form for site-to-site transfers
   const fromSiteForm = useForm<FromSiteFormValues>({
@@ -193,18 +199,47 @@ export default function ReceiptsPage() {
     }
   };
 
-  const handleStatusChange = (receiptId: string, newStatus: ReceiptStatus) => {
-    setPastReceipts(receipts => receipts.map(r => r.receivedBillId === receiptId ? { ...r, status: newStatus } : r));
-    
-    if (activeBillDetails?.receipt?.receivedBillId === receiptId) {
-        setActiveBillDetails(prev => prev ? { ...prev, receipt: prev.receipt ? { ...prev.receipt, status: newStatus } : null } : null);
-    }
-
-    toast({
-      title: 'Status Updated',
-      description: `GRN ${receiptId} has been marked as ${newStatus}.`,
-    });
+  const handleStatusUpdateClick = (receipt: MaterialReceivedBill, newStatus: ReceiptStatus) => {
+    setSelectedReceiptForUpdate({ receipt, newStatus });
+    setUpdateRemarks(receipt.remarks || '');
+    setIsUpdateDialogOpen(true);
   };
+  
+  const handleConfirmStatusUpdate = () => {
+      if (!selectedReceiptForUpdate) return;
+      const { receipt, newStatus } = selectedReceiptForUpdate;
+  
+      setPastReceipts(receipts =>
+          receipts.map(r =>
+              r.receivedBillId === receipt.receivedBillId
+                  ? { ...r, status: newStatus, remarks: updateRemarks }
+                  : r
+          )
+      );
+      
+      if (activeBillDetails?.receipt?.receivedBillId === receipt.receivedBillId) {
+          setActiveBillDetails(prev =>
+              prev
+                  ? {
+                        ...prev,
+                        receipt: prev.receipt
+                            ? { ...prev.receipt, status: newStatus, remarks: updateRemarks }
+                            : null,
+                    }
+                  : null
+          );
+      }
+  
+      toast({
+        title: 'Status Updated',
+        description: `GRN ${receipt.receivedBillId} has been marked as ${newStatus}.`,
+      });
+  
+      setIsUpdateDialogOpen(false);
+      setSelectedReceiptForUpdate(null);
+      setUpdateRemarks('');
+  };
+
   
   const handleDownload = (billId: string) => {
     if (billContentRef.current) {
@@ -311,7 +346,7 @@ export default function ReceiptsPage() {
                         <FormField control={fromSiteForm.control} name="requestId" render={({ field }) => (
                             <FormItem>
                               <FormLabel>Indent ID</FormLabel>
-                              <FormControl><Input {...field} readOnly /></FormControl>
+                              <FormControl><Input {...field} readOnly value={field.value ?? ''} /></FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -319,11 +354,11 @@ export default function ReceiptsPage() {
                       </div>
                       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <FormField control={fromSiteForm.control} name="materialName" render={({ field }) => (
-                            <FormItem><FormLabel>Material Name</FormLabel><FormControl><Input placeholder="e.g., Cement" {...field} readOnly /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Material Name</FormLabel><FormControl><Input placeholder="e.g., Cement" {...field} readOnly value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                           )}
                         />
                         <FormField control={fromSiteForm.control} name="issuedQuantity" render={({ field }) => (
-                            <FormItem><FormLabel>Issued Quantity</FormLabel><FormControl><Input type="number" placeholder="e.g., 50" {...field} readOnly /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Issued Quantity</FormLabel><FormControl><Input type="number" placeholder="e.g., 50" {...field} readOnly value={field.value ?? 0} /></FormControl><FormMessage /></FormItem>
                           )}
                         />
                       </div>
@@ -502,7 +537,11 @@ export default function ReceiptsPage() {
                                       <Button variant="outline" size="sm" onClick={() => handleViewBill(rec.receivedBillId)}><Eye className="mr-2 h-4 w-4" />Check</Button>
                                       <DropdownMenu>
                                         <DropdownMenuTrigger asChild><Button variant="outline" size="sm">Update <ChevronDown className="ml-2 h-4 w-4" /></Button></DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end"><DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Accepted')}>Accepted</DropdownMenuItem><DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Mismatch')}>Mismatch</DropdownMenuItem><DropdownMenuItem onClick={() => handleStatusChange(rec.receivedBillId, 'Completed')}>Completed</DropdownMenuItem></DropdownMenuContent>
+                                        <DropdownMenuContent align="end">
+                                          <DropdownMenuItem onClick={() => handleStatusUpdateClick(rec, 'Accepted')}>Accepted</DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => handleStatusUpdateClick(rec, 'Mismatch')}>Mismatch</DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => handleStatusUpdateClick(rec, 'Completed')}>Completed</DropdownMenuItem>
+                                        </DropdownMenuContent>
                                       </DropdownMenu>
                                   </TableCell>
                               </TableRow>
@@ -539,6 +578,33 @@ export default function ReceiptsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update GRN Status: {selectedReceiptForUpdate?.receipt.receivedBillId}</DialogTitle>
+            <DialogDescription>
+              You are changing the status to <Badge variant={selectedReceiptForUpdate?.newStatus === 'Mismatch' ? 'destructive' : 'default'}>{selectedReceiptForUpdate?.newStatus}</Badge>. Add or update remarks below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+              <Label htmlFor="update-remarks">Remarks</Label>
+              <Textarea
+                  id="update-remarks"
+                  value={updateRemarks}
+                  onChange={(e) => setUpdateRemarks(e.target.value)}
+                  placeholder="Add remarks about this status change..."
+              />
+          </div>
+          <DialogFooter>
+              <Button variant="outline" onClick={() => setIsUpdateDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleConfirmStatusUpdate}>Confirm Update</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </TooltipProvider>
   );
 }
+
+    
