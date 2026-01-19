@@ -119,6 +119,11 @@ export default function ReceiptsPage() {
       damageDescription: '',
       remarks: '',
       receivedDate: new Date(),
+      requestId: '',
+      issuingSite: '',
+      receivingSite: '',
+      materialName: '',
+      issuedQuantity: 0,
     },
   });
 
