@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CalendarIcon, PlusCircle, Trash, Send, FileText, Eye, Download, ChevronDown } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Trash, Send, FileText, Eye, Download } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +20,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useMaterialContext, type IndentStatus } from '@/context/material-context';
 
@@ -120,7 +119,7 @@ export default function RequestsPage() {
       material: values.materials.map(m => m.materialName).join(', '),
       quantity: values.materials.reduce((acc, m) => acc + m.quantity, 0),
       site: values.requestingSite,
-      status: 'Pending' as IndentStatus,
+      status: 'Pending Director Approval' as IndentStatus,
       returnDate: format(values.requiredPeriod.to, 'yyyy-MM-dd'),
     };
     setRequests(prev => [newRequestEntry, ...prev]);
@@ -162,14 +161,6 @@ export default function RequestsPage() {
       };
       setLastGeneratedBill(bill);
     }
-  };
-  
-  const handleStatusChange = (reqId: string, newStatus: IndentStatus) => {
-    setRequests(requests.map(req => req.id === reqId ? { ...req, status: newStatus } : req));
-    toast({
-      title: `Indent ${newStatus}`,
-      description: `Indent ID ${reqId} has been marked as ${newStatus}.`,
-    });
   };
   
   const handleDownload = (billId: string) => {
@@ -537,19 +528,17 @@ export default function RequestsPage() {
                             <TableCell>
                                 <Badge 
                                     variant={
-                                        req.status === 'Pending' ? 'secondary' : 
-                                        req.status === 'Approved' ? 'default' :
-                                        req.status === 'Issued' ? 'default' :
+                                        req.status === 'Director Rejected' || req.status === 'Purchase Rejected' ? 'destructive' :
                                         req.status === 'Completed' ? 'outline' :
-                                        req.status === 'Partially Issued' ? 'destructive' :
-                                        'destructive'
+                                        'default'
                                     }
                                     className={cn(
-                                        req.status === 'Approved' && 'bg-blue-500/80 text-white',
-                                        req.status === 'Issued' && 'bg-green-600/80 text-white',
-                                        req.status === 'Extended' && 'border-amber-500/50 text-amber-500',
-                                        req.status === 'Mismatch' && 'bg-orange-500/80 text-white',
-                                        req.status === 'Partially Issued' && 'bg-orange-500/80 text-white'
+                                        req.status === 'Pending Director Approval' && 'bg-yellow-500/80',
+                                        req.status === 'Director Approved' && 'bg-blue-500/80',
+                                        req.status === 'Issued' && 'bg-green-600/80',
+                                        req.status === 'PO Generated' && 'bg-purple-500/80',
+                                        req.status === 'Partially Issued' && 'bg-orange-500/80',
+                                        (req.status === 'Director Rejected' || req.status === 'Purchase Rejected') && 'bg-destructive'
                                     )}
                                 >
                                     {req.status}
@@ -560,21 +549,6 @@ export default function RequestsPage() {
                                     <Eye className="mr-2 h-4 w-4" />
                                     View Bill
                                 </Button>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="sm">
-                                      Update Status <ChevronDown className="ml-2 h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Approved')}>Approved</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Rejected')}>Rejected</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Issued')}>Issued</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Partially Issued')}>Partially Issued</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Completed')}>Completed</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Mismatch')}>Mismatch</DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
                             </TableCell>
                         </TableRow>
                     ))}

@@ -101,18 +101,19 @@ const siteWiseTotal = detailedMaterialValue.reduce((acc, item) => {
 
 export default function DirectorDashboard() {
   const { toast } = useToast();
-  const { requests, setRequests, pendingRequests, lowStockMaterials } = useMaterialContext();
+  const { requests, setRequests, lowStockMaterials } = useMaterialContext();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
   const [selectedMonth, setSelectedMonth] = React.useState<string | null>(null);
   const [isConsumptionDialogOpen, setIsConsumptionDialogOpen] = React.useState(false);
 
+  const indentsForApproval = requests.filter(r => r.status === 'Pending Director Approval');
   const totalMaterials = materialStock.reduce((acc, item) => acc + item.value, 0);
 
   const handleStatusChange = (reqId: string, newStatus: IndentStatus) => {
     setRequests(requests.map(req => (req.id === reqId ? { ...req, status: newStatus } : req)));
     toast({
       title: `Indent ${newStatus}`,
-      description: `Indent ID ${reqId} has been marked as ${newStatus}.`,
+      description: `Indent ID ${reqId} has been updated. A notification has been sent.`,
     });
   };
 
@@ -321,52 +322,13 @@ export default function DirectorDashboard() {
             </DialogContent>
           </Dialog>
 
-          <Dialog>
-            <DialogTrigger asChild>
-              <div className="cursor-pointer">
-                <StatCard
-                  title="Pending Indents"
-                  value={pendingRequests.length.toString()}
-                  icon={Package}
-                  description={`From ${new Set(pendingRequests.map(p => p.site)).size} sites`}
-                />
-              </div>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl">
-              <DialogHeader>
-                <DialogTitle>Pending Indents</DialogTitle>
-                <DialogDescription>Material indents from various sites awaiting action.</DialogDescription>
-              </DialogHeader>
-              <div className="max-h-[60vh] overflow-y-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Indent ID</TableHead>
-                      <TableHead>Material</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Site</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pendingRequests.map(item => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.id}</TableCell>
-                        <TableCell>{item.material}</TableCell>
-                        <TableCell>{item.quantity}</TableCell>
-                        <TableCell>{item.site}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-               <div className="flex justify-end mt-4">
-                  <Button onClick={handleDownloadExcel}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Export List
-                  </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <StatCard
+            title="Pending Your Approval"
+            value={indentsForApproval.length.toString()}
+            icon={Package}
+            description={`From ${new Set(indentsForApproval.map(p => p.site)).size} sites`}
+            className="border-yellow-500/50"
+          />
 
           <Dialog>
             <DialogTrigger asChild>
@@ -416,6 +378,61 @@ export default function DirectorDashboard() {
             </DialogContent>
           </Dialog>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Indents Awaiting Your Approval</CardTitle>
+            <CardDescription>Review and approve or reject material indents from sites.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {indentsForApproval.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Indent ID</TableHead>
+                    <TableHead>Material</TableHead>
+                    <TableHead>Qty</TableHead>
+                    <TableHead>Site</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {indentsForApproval.map(req => (
+                    <TableRow key={req.id}>
+                      <TableCell className="font-medium">{req.id}</TableCell>
+                      <TableCell>{req.material}</TableCell>
+                      <TableCell>{req.quantity}</TableCell>
+                      <TableCell>{req.site}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              Actions <ChevronDown className="ml-2 h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleViewBill(req.id)}>
+                              <Eye className="mr-2 h-4 w-4" /> View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Director Approved')}>
+                              Approve
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Director Rejected')} className="text-destructive">
+                              Reject
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-center text-muted-foreground p-4">No indents are currently awaiting your approval.</p>
+            )}
+          </CardContent>
+        </Card>
         
         <div className="grid gap-6 lg:grid-cols-5">
           <div className="lg:col-span-3 space-y-6">
@@ -526,58 +543,6 @@ export default function DirectorDashboard() {
             </Card>
           </div>
           <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Pending Indents</CardTitle>
-                <CardDescription>Material indents awaiting action.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Material</TableHead>
-                      <TableHead>Qty</TableHead>
-                      <TableHead>Site</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pendingRequests.map(item => (
-                      <TableRow key={item.id} className="text-sm">
-                        <TableCell className="font-medium">{item.material}</TableCell>
-                        <TableCell>{item.quantity}</TableCell>
-                        <TableCell>{item.site}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Low Stock Materials</CardTitle>
-                <CardDescription>Materials running below the minimum threshold.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Material</TableHead>
-                      <TableHead>Site</TableHead>
-                      <TableHead>Qty</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {lowStockMaterials.map(item => (
-                      <TableRow key={item.id} className="text-sm text-destructive">
-                        <TableCell className="font-medium">{item.material}</TableCell>
-                        <TableCell>{item.site}</TableCell>
-                        <TableCell className="font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
             {lastGeneratedBill && (
               <div className="lg:col-span-2">
                 <Card>
@@ -679,24 +644,23 @@ export default function DirectorDashboard() {
                         <TableCell>{req.site}</TableCell>
                         <TableCell>{req.returnDate}</TableCell>
                         <TableCell>
-                          <Badge
-                            variant={
-                              req.status === 'Pending' ? 'secondary' :
-                              req.status === 'Approved' ? 'default' :
-                              req.status === 'Issued' ? 'default' :
-                              req.status === 'Completed' ? 'outline' :
-                              req.status === 'Partially Issued' ? 'destructive' :
-                              'destructive'
-                            }
-                            className={cn(
-                              req.status === 'Approved' && 'bg-blue-500/80 text-white',
-                              req.status === 'Issued' && 'bg-green-600/80 text-white',
-                              req.status === 'Extended' && 'border-amber-500/50 text-amber-500',
-                              req.status === 'Mismatch' && 'bg-orange-500/80 text-white',
-                              req.status === 'Partially Issued' && 'bg-orange-500/80 text-white'
-                            )}
+                           <Badge 
+                              variant={
+                                  req.status === 'Director Rejected' || req.status === 'Purchase Rejected' ? 'destructive' :
+                                  req.status === 'Completed' ? 'outline' :
+                                  'default'
+                              }
+                              className={cn(
+                                  'text-white',
+                                  req.status === 'Pending Director Approval' && 'bg-yellow-500/80',
+                                  req.status === 'Director Approved' && 'bg-blue-500/80',
+                                  req.status === 'Issued' && 'bg-green-600/80',
+                                  req.status === 'PO Generated' && 'bg-purple-500/80',
+                                  req.status === 'Partially Issued' && 'bg-orange-500/80',
+                                  (req.status === 'Director Rejected' || req.status === 'Purchase Rejected') && 'bg-destructive'
+                              )}
                           >
-                            {req.status}
+                              {req.status}
                           </Badge>
                         </TableCell>
                       </TableRow>
@@ -733,24 +697,23 @@ export default function DirectorDashboard() {
                       <TableCell>{req.site}</TableCell>
                       <TableCell>{req.returnDate}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant={
-                            req.status === 'Pending' ? 'secondary' :
-                            req.status === 'Approved' ? 'default' :
-                            req.status === 'Issued' ? 'default' :
-                            req.status === 'Completed' ? 'outline' :
-                            req.status === 'Partially Issued' ? 'destructive' :
-                            'destructive'
-                          }
-                          className={cn(
-                            req.status === 'Approved' && 'bg-blue-500/80 text-white',
-                            req.status === 'Issued' && 'bg-green-600/80 text-white',
-                            req.status === 'Extended' && 'border-amber-500/50 text-amber-500',
-                            req.status === 'Mismatch' && 'bg-orange-500/80 text-white',
-                            req.status === 'Partially Issued' && 'bg-orange-500/80 text-white'
-                          )}
+                        <Badge 
+                            variant={
+                                req.status === 'Director Rejected' || req.status === 'Purchase Rejected' ? 'destructive' :
+                                req.status === 'Completed' ? 'outline' :
+                                'default'
+                            }
+                            className={cn(
+                                'text-white',
+                                req.status === 'Pending Director Approval' && 'bg-yellow-500/80',
+                                req.status === 'Director Approved' && 'bg-blue-500/80',
+                                req.status === 'Issued' && 'bg-green-600/80',
+                                req.status === 'PO Generated' && 'bg-purple-500/80',
+                                req.status === 'Partially Issued' && 'bg-orange-500/80',
+                                (req.status === 'Director Rejected' || req.status === 'Purchase Rejected') && 'bg-destructive'
+                            )}
                         >
-                          {req.status}
+                            {req.status}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-2">
@@ -758,29 +721,23 @@ export default function DirectorDashboard() {
                           <Eye className="mr-2 h-4 w-4" />
                           View Bill
                         </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              Update Status <ChevronDown className="ml-2 h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Approved')}>
-                              Approved
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Rejected')}>
-                              Rejected
-                            </DropdownMenuItem>
-                             <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Issued')}>Issued</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Partially Issued')}>Partially Issued</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Completed')}>
-                              Completed
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Mismatch')}>
-                              Mismatch
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {req.status === 'Pending Director Approval' && (
+                           <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                Update Status <ChevronDown className="ml-2 h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Director Approved')}>
+                                Approve
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Director Rejected')} className="text-destructive">
+                                Reject
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

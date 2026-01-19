@@ -1,12 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { Download, Upload, CheckCircle, Settings, Send, FilePlus } from 'lucide-react';
+import { Download, Upload, CheckCircle, Settings, Send, FilePlus, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { useMaterialContext, MaterialIndent } from '@/context/material-context';
+import { useMaterialContext, MaterialIndent, IndentStatus } from '@/context/material-context';
 import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { detailedStock } from '@/lib/mock-data';
@@ -14,10 +14,11 @@ import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 
-type PurchaseRequest = MaterialIndent & {
-    prId: string;
-    prDate: Date;
+type PurchaseOrder = MaterialIndent & {
+    poId: string;
+    poDate: Date;
 };
 
 
@@ -26,9 +27,9 @@ export default function PurchaseDepartmentDashboard() {
   const { requests, setRequests } = useMaterialContext();
   const [selectedIndent, setSelectedIndent] = React.useState<MaterialIndent | null>(null);
   const [issuingSite, setIssuingSite] = React.useState<string>('');
-  const [newPurchaseRequest, setNewPurchaseRequest] = React.useState<PurchaseRequest | null>(null);
+  const [generatedPO, setGeneratedPO] = React.useState<PurchaseOrder | null>(null);
 
-  const pendingIndents = requests.filter(req => req.status === 'Pending' || req.status === 'Rejected');
+  const indentsForProcessing = requests.filter(req => req.status === 'Director Approved');
 
   const materialAvailability = selectedIndent
     ? detailedStock.filter(s => s.material.toLowerCase() === selectedIndent.material.toLowerCase())
@@ -39,10 +40,10 @@ export default function PurchaseDepartmentDashboard() {
   const handleProcessClick = (indent: MaterialIndent) => {
     setSelectedIndent(indent);
     setIssuingSite('');
-    setNewPurchaseRequest(null);
+    setGeneratedPO(null);
   };
 
-  const handleConfirmAssignment = () => {
+  const handleFinalApproval = (decision: 'Issued' | 'Purchase Rejected') => {
     if (!selectedIndent || !issuingSite) {
         toast({ variant: 'destructive', title: 'Error', description: 'Please select an issuing site.' });
         return;
@@ -50,38 +51,46 @@ export default function PurchaseDepartmentDashboard() {
 
     setRequests(prevRequests =>
         prevRequests.map(req =>
-            req.id === selectedIndent.id ? { ...req, status: 'Approved', issuingSite: issuingSite } : req
+            req.id === selectedIndent.id ? { ...req, status: decision, issuingSite: issuingSite } : req
         )
     );
 
     toast({
-        title: 'Indent Approved',
-        description: `Indent ${selectedIndent.id} assigned to ${issuingSite}. Notification sent.`,
+        title: `Indent ${decision}`,
+        description: `Indent ${selectedIndent.id} has been processed.`,
     });
     setSelectedIndent(null);
   };
   
-  const handleCreatePurchaseRequest = () => {
+  const handleCreatePO = () => {
     if (!selectedIndent) return;
 
-    const pr: PurchaseRequest = {
+    const po: PurchaseOrder = {
         ...selectedIndent,
-        prId: `PR-${selectedIndent.id}`,
-        prDate: new Date(),
+        poId: `PO-${selectedIndent.id}`,
+        poDate: new Date(),
+        status: 'PO Generated',
     };
     
-    setNewPurchaseRequest(pr);
-    setSelectedIndent(null); // Close the dialog
+    setGeneratedPO(po);
+    
+    setRequests(prevRequests =>
+        prevRequests.map(req =>
+            req.id === selectedIndent.id ? { ...req, status: 'PO Generated' } : req
+        )
+    );
+
+    setSelectedIndent(null);
     toast({
-      title: 'Purchase Request Created',
-      description: `A new purchase request for ${selectedIndent.material} has been generated.`,
+      title: 'Purchase Order Generated',
+      description: `A new PO for ${selectedIndent.material} has been generated.`,
     });
   };
 
-  const handleDownloadPR = (prId: string) => {
+  const handleDownloadPO = (poId: string) => {
       toast({
           title: "Download Started",
-          description: `Purchase Request ${prId} is downloading.`
+          description: `Purchase Order ${poId} is downloading.`
       });
   }
 
@@ -95,7 +104,7 @@ export default function PurchaseDepartmentDashboard() {
       if (org[item.material]) {
         org[item.material].quantity += item.quantity;
       } else {
-        org[item.material] = { quantity: item.quantity, unit: item.type === 'Site Stock' ? 'units' : 'bags' }; // Example unit logic
+        org[item.material] = { quantity: item.quantity, unit: 'units' }; // Example unit
       }
       
       // Site-wise grouping
@@ -119,13 +128,13 @@ export default function PurchaseDepartmentDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Pending Material Indents</CardTitle>
+            <CardTitle>Indents for Processing</CardTitle>
             <CardDescription>
-              Assign an issuing site for pending indents based on material availability.
+              Assign an issuing site for director-approved indents.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {pendingIndents.length > 0 ? (
+            {indentsForProcessing.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -137,7 +146,7 @@ export default function PurchaseDepartmentDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pendingIndents.map(indent => (
+                  {indentsForProcessing.map(indent => (
                     <TableRow key={indent.id}>
                       <TableCell className="font-medium">{indent.id}</TableCell>
                       <TableCell>{indent.material}</TableCell>
@@ -155,40 +164,40 @@ export default function PurchaseDepartmentDashboard() {
               </Table>
             ) : (
               <div className="flex items-center justify-center p-8">
-                <p className="text-center text-muted-foreground">No pending indents require action.</p>
+                <p className="text-center text-muted-foreground">No indents are awaiting processing.</p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {newPurchaseRequest && (
+        {generatedPO && (
             <Card>
                 <CardHeader>
-                    <CardTitle>Generated Purchase Request</CardTitle>
-                    <CardDescription>A new PR has been created for an unavailable material.</CardDescription>
+                    <CardTitle>Generated Purchase Order</CardTitle>
+                    <CardDescription>A new PO has been created for an unavailable material.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="p-4 border rounded-lg space-y-2">
                         <div className="flex justify-between">
-                            <span className="font-semibold">PR Number:</span>
-                            <span>{newPurchaseRequest.prId}</span>
+                            <span className="font-semibold">PO Number:</span>
+                            <span>{generatedPO.poId}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="font-semibold">Material:</span>
-                            <span>{newPurchaseRequest.material}</span>
+                            <span>{generatedPO.material}</span>
                         </div>
                          <div className="flex justify-between">
                             <span className="font-semibold">Quantity:</span>
-                            <span>{newPurchaseRequest.quantity}</span>
+                            <span>{generatedPO.quantity}</span>
                         </div>
                          <div className="flex justify-between">
                             <span className="font-semibold">Requesting Site:</span>
-                            <span>{newPurchaseRequest.site}</span>
+                            <span>{generatedPO.site}</span>
                         </div>
                     </div>
-                    <Button onClick={() => handleDownloadPR(newPurchaseRequest.prId)} className="w-full">
+                    <Button onClick={() => handleDownloadPO(generatedPO.poId)} className="w-full">
                         <Download className="mr-2 h-4 w-4" />
-                        Download Purchase Request
+                        Download Purchase Order
                     </Button>
                 </CardContent>
             </Card>
@@ -277,7 +286,7 @@ export default function PurchaseDepartmentDashboard() {
                     </Card>
                 </div>
                 <div className="space-y-4">
-                    <h3 className="font-semibold text-lg">Assign Site</h3>
+                    <h3 className="font-semibold text-lg">Assign Site & Action</h3>
                     <div className="p-4 border rounded-lg space-y-4">
                         <Label htmlFor="issuing-site-select">Select Issuing Site</Label>
                         <Select onValueChange={setIssuingSite} value={issuingSite}>
@@ -290,10 +299,23 @@ export default function PurchaseDepartmentDashboard() {
                                 ))}
                             </SelectContent>
                         </Select>
-                        <Button onClick={handleConfirmAssignment} disabled={!issuingSite} className="w-full">
-                            <Send className="mr-2 h-4 w-4" />
-                            Confirm & Send Notification
-                        </Button>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button disabled={!issuingSite} className="w-full">
+                              Select Final Action <ChevronDown className="ml-2 h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem onClick={() => handleFinalApproval('Issued')}>
+                                <Send className="mr-2 h-4 w-4" /> Issue from Selected Site
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleFinalApproval('Purchase Rejected')} className="text-destructive">
+                                Reject Indent
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
                     </div>
                 </div>
             </div>
@@ -304,9 +326,9 @@ export default function PurchaseDepartmentDashboard() {
                     <p className="text-muted-foreground mb-4">
                         This material is not available at any site or the central store.
                     </p>
-                    <Button onClick={handleCreatePurchaseRequest}>
+                    <Button onClick={handleCreatePO}>
                         <FilePlus className="mr-2 h-4 w-4" />
-                        Create New Purchase Request
+                        Create Purchase Order
                     </Button>
                 </div>
             </div>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
@@ -9,7 +8,17 @@ import {
     lowStockMaterials as initialLowStockMaterials
 } from '@/lib/mock-data';
 
-export type IndentStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended' | 'Partially Issued';
+export type IndentStatus = 
+  | 'Pending Director Approval' 
+  | 'Director Approved' 
+  | 'Director Rejected' 
+  | 'Issued' 
+  | 'Purchase Rejected'
+  | 'PO Generated'
+  | 'Completed' 
+  | 'Mismatch' 
+  | 'Extended' 
+  | 'Partially Issued';
 
 export interface MaterialIndent {
   id: string;
@@ -65,7 +74,7 @@ const MaterialContext = createContext<MaterialContextType | undefined>(undefined
 export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [requests, setRequests] = useState<MaterialIndent[]>(initialRequests);
   const [pendingRequests, setPendingRequests] = useState<PendingIndent[]>(
-    initialPendingRequests.map(pr => ({...pr, status: 'Pending'}))
+    initialPendingRequests.map(pr => ({...pr, status: 'Pending Director Approval'}))
   );
   const [issuedMaterials, setIssuedMaterials] = useState<IssuedMaterial[]>(initialIssuedMaterials);
   const [lowStockMaterials, setLowStockMaterials] = useState<LowStockMaterial[]>(initialLowStockMaterials);

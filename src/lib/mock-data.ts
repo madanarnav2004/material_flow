@@ -48,8 +48,8 @@ export const pendingRequests = [
 export const materialReturnReminders = [
     { id: 'REQ-NORTH-20240720-001', material: 'Cement', quantity: 500, site: 'North Site', status: 'Issued' as const, returnDate: '2024-08-15', issuingSite: 'MAPI Store' },
     { id: 'REQ-EAST-20240718-002', material: 'Steel Rebar', quantity: 10, site: 'East Site', status: 'Completed' as const, returnDate: '2024-08-10', issuingSite: 'MAPI Store' },
-    { id: 'REQ-WEST-20240721-004', material: 'Bricks', quantity: 2000, site: 'West Site', status: 'Pending' as const, returnDate: '2024-08-20' },
-    { id: 'REQ-SOUTH-20240720-003', material: 'Sand', quantity: 50, site: 'South Site', status: 'Pending' as const, returnDate: '2024-08-18' },
+    { id: 'REQ-WEST-20240721-004', material: 'Bricks', quantity: 2000, site: 'West Site', status: 'Pending Director Approval' as const, returnDate: '2024-08-20' },
+    { id: 'REQ-SOUTH-20240720-003', material: 'Sand', quantity: 50, site: 'South Site', status: 'Director Approved' as const, returnDate: '2024-08-18' },
 ];
 
 export const issuedMaterialsForReceipt = [
