@@ -97,7 +97,8 @@ export default function MaterialsIssuedPage() {
     const today = new Date();
     const datePart = format(today, 'yyyyMMdd');
     const countPart = (Date.now() % 1000).toString().padStart(3, '0');
-    const newBillId = `ISS-BILL-${datePart}-${countPart}`;
+    const siteCode = selectedRequest.site.replace(/\s+/g, '').substring(0, 4).toUpperCase();
+    const newBillId = `ISS-${siteCode}-${datePart}-${countPart}`;
 
     const bill: GeneratedBill = {
       ...values,
