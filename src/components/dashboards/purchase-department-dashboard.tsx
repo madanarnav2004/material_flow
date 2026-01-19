@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { detailedStock } from '@/lib/mock-data';
 import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Label } from '@/components/ui/label';
 
 export default function PurchaseDepartmentDashboard() {
   const { toast } = useToast();
