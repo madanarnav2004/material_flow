@@ -32,7 +32,7 @@ const materialIssueItemSchema = z.object({
 });
 
 const issueBillSchema = z.object({
-  requestId: z.string().min(1, 'A Material Request must be selected.'),
+  requestId: z.string().min(1, 'A Material Indent must be selected.'),
   issuedDate: z.date({ required_error: 'Issued date is required.' }),
   materials: z.array(materialIssueItemSchema).min(1, 'Please add at least one material.'),
 });
@@ -80,7 +80,7 @@ export default function MaterialsIssuedPage() {
             remarks: '',
         });
         toast({
-            title: "Request selected",
+            title: "Indent selected",
             description: "Material details have been auto-filled."
         });
     }
@@ -90,7 +90,7 @@ export default function MaterialsIssuedPage() {
   function onSubmit(values: IssueBillFormValues) {
     const selectedRequest = requests.find(r => r.id === values.requestId);
     if (!selectedRequest) {
-        toast({variant: 'destructive', title: 'Error', description: 'Selected request not found.'});
+        toast({variant: 'destructive', title: 'Error', description: 'Selected indent not found.'});
         return;
     }
 
@@ -155,7 +155,7 @@ export default function MaterialsIssuedPage() {
           <Card>
             <CardHeader>
               <CardTitle>Generate Material Issue Bill</CardTitle>
-              <CardDescription>Select a Material Request to auto-fill details and generate an issue bill.</CardDescription>
+              <CardDescription>Select a Material Indent to auto-fill details and generate an issue bill.</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...form}>
@@ -166,11 +166,11 @@ export default function MaterialsIssuedPage() {
                       name="requestId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Material Request Bill Number</FormLabel>
+                          <FormLabel>Material Indent Number</FormLabel>
                           <Select onValueChange={handleRequestChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select a request to issue" />
+                                <SelectValue placeholder="Select an indent to issue" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -340,7 +340,7 @@ export default function MaterialsIssuedPage() {
                   <div className="grid grid-cols-2 gap-2">
                     <p><strong>Issue Bill ID:</strong> {lastGeneratedBill.issueBillId}</p>
                     <p><strong>Issued Date:</strong> {format(lastGeneratedBill.issuedDate, 'PPP')}</p>
-                    <p><strong>Request Bill #:</strong> {lastGeneratedBill.requestId}</p>
+                    <p><strong>Indent ID:</strong> {lastGeneratedBill.requestId}</p>
                   </div>
                 </div>
 

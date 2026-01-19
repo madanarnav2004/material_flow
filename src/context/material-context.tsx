@@ -9,23 +9,23 @@ import {
     lowStockMaterials as initialLowStockMaterials
 } from '@/lib/mock-data';
 
-type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended' | 'Partially Issued';
+export type IndentStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended' | 'Partially Issued';
 
-interface MaterialRequest {
+interface MaterialIndent {
   id: string;
   material: string;
   quantity: number;
   site: string;
-  status: RequestStatus;
+  status: IndentStatus;
   returnDate: string;
 }
 
-interface PendingRequest {
+interface PendingIndent {
   id: string;
   material: string;
   quantity: string | number;
   site: string;
-  status?: RequestStatus;
+  status?: IndentStatus;
 }
 
 
@@ -49,10 +49,10 @@ interface LowStockMaterial {
 
 
 interface MaterialContextType {
-  requests: MaterialRequest[];
-  setRequests: React.Dispatch<React.SetStateAction<MaterialRequest[]>>;
-  pendingRequests: PendingRequest[];
-  setPendingRequests: React.Dispatch<React.SetStateAction<PendingRequest[]>>;
+  requests: MaterialIndent[];
+  setRequests: React.Dispatch<React.SetStateAction<MaterialIndent[]>>;
+  pendingRequests: PendingIndent[];
+  setPendingRequests: React.Dispatch<React.SetStateAction<PendingIndent[]>>;
   issuedMaterials: IssuedMaterial[];
   setIssuedMaterials: React.Dispatch<React.SetStateAction<IssuedMaterial[]>>;
   lowStockMaterials: LowStockMaterial[];
@@ -62,8 +62,8 @@ interface MaterialContextType {
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
 
 export const MaterialProvider = ({ children }: { children: ReactNode }) => {
-  const [requests, setRequests] = useState<MaterialRequest[]>(initialRequests);
-  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>(
+  const [requests, setRequests] = useState<MaterialIndent[]>(initialRequests);
+  const [pendingRequests, setPendingRequests] = useState<PendingIndent[]>(
     initialPendingRequests.map(pr => ({...pr, status: 'Pending'}))
   );
   const [issuedMaterials, setIssuedMaterials] = useState<IssuedMaterial[]>(initialIssuedMaterials);

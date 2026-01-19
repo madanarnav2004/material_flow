@@ -18,11 +18,11 @@ export const materialStock = [
 ];
 
 export const recentActivities = [
-    { id: '1', type: 'Request', site: 'North Site', status: 'Approved', date: '2024-07-20', details: '500 Bags of Cement' },
+    { id: '1', type: 'Indent', site: 'North Site', status: 'Approved', date: '2024-07-20', details: '500 Bags of Cement' },
     { id: '2', type: 'Issue', site: 'MAPI Store', status: 'In Transit', date: '2024-07-20', details: '500 Bags of Cement to North Site' },
-    { id: '3', type: 'Receipt', site: 'North Site', status: 'Completed', date: '2024-07-19', details: '10 tons of Steel' },
+    { id: '3', type: 'GRN', site: 'North Site', status: 'Completed', date: '2024-07-19', details: '10 tons of Steel' },
     { id: '4', type: 'Invoice', site: 'Purchase Dept', status: 'Uploaded', date: '2024-07-18', details: 'Invoice for 10 tons of Steel' },
-    { id: '5', type: 'Request', site: 'West Site', status: 'Pending', date: '2024-07-17', details: '2000 Bricks' },
+    { id: '5', type: 'Indent', site: 'West Site', status: 'Pending', date: '2024-07-17', details: '2000 Bricks' },
 ];
 
 export const allMaterials = [
@@ -133,8 +133,8 @@ export const siteStock = [
 ];
 
 export const recentSiteActivity = [
-    { id: 'sa-1', type: 'Receipt', details: '500 Bags of Cement', from: 'MAPI Store', status: 'Completed', date: '2024-07-20' },
-    { id: 'sa-2', type: 'Request', details: '100 cu.m. Sand', to: 'MAPI Store', status: 'Pending', date: '2024-07-21' },
+    { id: 'sa-1', type: 'GRN', details: '500 Bags of Cement', from: 'MAPI Store', status: 'Completed', date: '2024-07-20' },
+    { id: 'sa-2', type: 'Indent', details: '100 cu.m. Sand', to: 'MAPI Store', status: 'Pending', date: '2024-07-21' },
     { id: 'sa-3', type: 'Internal Issue', details: '20 bags Cement', to: 'Block A', status: 'Completed', date: '2024-07-21' },
 ];
 
@@ -156,8 +156,8 @@ export const storeInventory = [
 
 export const recentStoreActivity = [
     { id: 'rsa-1', type: 'Issue', details: '500 Bags Cement', site: 'North Site', status: 'Completed', date: '2024-07-20' },
-    { id: 'rsa-2', type: 'Receipt', details: '100 tons Steel', site: 'Vendor A', status: 'Accepted', date: '2024-07-19' },
-    { id: 'rsa-3', type: 'Request', details: '2000 Bricks', site: 'West Site', status: 'Pending', date: '2024-07-21' },
+    { id: 'rsa-2', type: 'GRN', details: '100 tons Steel', site: 'Vendor A', status: 'Accepted', date: '2024-07-19' },
+    { id: 'rsa-3', type: 'Indent', details: '2000 Bricks', site: 'West Site', status: 'Pending', date: '2024-07-21' },
     { id: 'rsa-4', type: 'Transfer In', details: '10 cu.m. Gravel', site: 'West Site', status: 'Completed', date: '2024-07-18' },
 ];
 

@@ -161,12 +161,12 @@ export default function ReceiptsPage() {
     setActiveBillDetails({ request: requestDetails, issue: issueDetails, receipt: bill });
 
 
-    let toastDescription = `Receipt for ${values.receivedQuantity} units of ${values.materialName} logged.`;
+    let toastDescription = `GRN for ${values.receivedQuantity} units of ${values.materialName} logged.`;
     if (status === 'Mismatch') {
       toastDescription += ' Quantity mismatch detected.';
     }
     toast({
-      title: 'Material Receipt Logged!',
+      title: 'GRN Logged!',
       description: toastDescription,
       variant: status === 'Mismatch' ? 'destructive' : 'default',
     });
@@ -190,7 +190,7 @@ export default function ReceiptsPage() {
 
     toast({
       title: 'Status Updated',
-      description: `Receipt ${receiptId} has been marked as ${newStatus}.`,
+      description: `GRN ${receiptId} has been marked as ${newStatus}.`,
     });
   };
   
@@ -253,7 +253,7 @@ export default function ReceiptsPage() {
 
   return (
     <TooltipProvider>
-      <h1 className="text-3xl font-bold font-headline">Receipts</h1>
+      <h1 className="text-3xl font-bold font-headline">Goods Received Note (GRN)</h1>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <div className="lg:col-span-3">
           <Tabs defaultValue="from-site" className="w-full">
@@ -265,8 +265,8 @@ export default function ReceiptsPage() {
             <TabsContent value="from-site">
               <Card>
                 <CardHeader>
-                  <CardTitle>Log Material Receipt from Site</CardTitle>
-                  <CardDescription>Select a Material Issue ID to auto-fill details and log the received quantity.</CardDescription>
+                  <CardTitle>Log Goods Received Note (GRN) from Site</CardTitle>
+                  <CardDescription>Select a Material Issue ID to auto-fill details and log the GRN.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Form {...fromSiteForm}>
@@ -287,7 +287,7 @@ export default function ReceiptsPage() {
                         />
                         <FormField control={fromSiteForm.control} name="requestId" render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Original Request ID</FormLabel>
+                              <FormLabel>Original Indent ID</FormLabel>
                               <FormControl><Input {...field} readOnly /></FormControl>
                               <FormMessage />
                             </FormItem>
@@ -334,7 +334,7 @@ export default function ReceiptsPage() {
                       </div>
                       <FormField control={fromSiteForm.control} name="remarks" render={({ field }) => (<FormItem><FormLabel>Remarks (Optional)</FormLabel><FormControl><Textarea placeholder="Add any additional remarks..." {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={fromSiteForm.control} name="receivedDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Received Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'} className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}><CalendarIcon className="ml-auto h-4 w-4 opacity-50" />{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
-                      <Button type="submit" size="lg" disabled={fromSiteForm.formState.isSubmitting}><PackageCheck className="mr-2 h-4 w-4" />{fromSiteForm.formState.isSubmitting ? 'Logging...' : 'Log Receipt & Generate Bill'}</Button>
+                      <Button type="submit" size="lg" disabled={fromSiteForm.formState.isSubmitting}><PackageCheck className="mr-2 h-4 w-4" />{fromSiteForm.formState.isSubmitting ? 'Logging...' : 'Log GRN & Generate Bill'}</Button>
                     </form>
                   </Form>
                 </CardContent>
@@ -392,7 +392,7 @@ export default function ReceiptsPage() {
                     <CardHeader className="flex flex-row items-start justify-between">
                         <div>
                           <CardTitle className="flex items-center gap-2"><FileDiff /> Bill Checking Process</CardTitle>
-                          <CardDescription>Comparing Request, Issued, and Received bills.</CardDescription>
+                          <CardDescription>Comparing Indent, Issued, and GRN bills.</CardDescription>
                         </div>
                          <Button variant="outline" size="sm" onClick={() => handleDownload(activeBillDetails.receipt?.receivedBillId ?? 'bill')}><Download className="mr-2 h-4 w-4" />Download</Button>
                     </CardHeader>
@@ -404,16 +404,16 @@ export default function ReceiptsPage() {
                             : (<div className="flex items-center gap-2 text-blue-600"><HelpCircle className="h-5 w-5" /><p className="font-semibold">Process Pending: Verification required.</p></div>)}
                         </div>
                         <div className="space-y-2">
-                            <h3 className="font-semibold text-base text-muted-foreground">1. Material Request Bill</h3>
-                            <div className="rounded-lg border p-4 space-y-2"><p><strong>Request ID:</strong> {activeBillDetails.request?.id}</p><p><strong>Requesting Site:</strong> {activeBillDetails.request?.site}</p><Separator /><div className="flex justify-between items-center"><span>{activeBillDetails.request?.material}</span><span className="font-bold text-lg">{activeBillDetails.request?.quantity} units</span></div></div>
+                            <h3 className="font-semibold text-base text-muted-foreground">1. Material Indent Bill</h3>
+                            <div className="rounded-lg border p-4 space-y-2"><p><strong>Indent ID:</strong> {activeBillDetails.request?.id}</p><p><strong>Requesting Site:</strong> {activeBillDetails.request?.site}</p><Separator /><div className="flex justify-between items-center"><span>{activeBillDetails.request?.material}</span><span className="font-bold text-lg">{activeBillDetails.request?.quantity} units</span></div></div>
                         </div>
                         <div className="space-y-2">
                              <h3 className="font-semibold text-base text-muted-foreground">2. Material Issued Bill</h3>
                             <div className="rounded-lg border p-4 space-y-2"><p><strong>Issued ID:</strong> {activeBillDetails.issue?.issuedId}</p><p><strong>Issuing Site:</strong> {activeBillDetails.issue?.issuingSite}</p><Separator /><div className="flex justify-between items-center"><span>{activeBillDetails.issue?.materialName}</span><span className="font-bold text-lg">{activeBillDetails.issue?.issuedQuantity} units</span></div></div>
                         </div>
                          <div className="space-y-2">
-                             <h3 className="font-semibold text-base text-muted-foreground">3. Final Material Received Bill</h3>
-                            <div className="rounded-lg border p-4 space-y-2 bg-secondary/30"><p><strong>Receipt ID:</strong> {activeBillDetails.receipt?.receivedBillId}</p><p><strong>Receiver:</strong> {activeBillDetails.receipt?.receiver?.name}</p><Separator /><div className="flex justify-between items-center"><span>{activeBillDetails.receipt?.materialName}</span><span className={cn("font-bold text-xl", activeBillDetails.receipt?.status === 'Mismatch' && 'text-destructive')}>{activeBillDetails.receipt?.receivedQuantity} units</span></div>{activeBillDetails.receipt?.remarks && <p className="text-xs text-muted-foreground pt-2"><strong>Remarks:</strong> {activeBillDetails.receipt.remarks}</p>}</div>
+                             <h3 className="font-semibold text-base text-muted-foreground">3. Final Goods Received Note (GRN)</h3>
+                            <div className="rounded-lg border p-4 space-y-2 bg-secondary/30"><p><strong>GRN ID:</strong> {activeBillDetails.receipt?.receivedBillId}</p><p><strong>Receiver:</strong> {activeBillDetails.receipt?.receiver?.name}</p><Separator /><div className="flex justify-between items-center"><span>{activeBillDetails.receipt?.materialName}</span><span className={cn("font-bold text-xl", activeBillDetails.receipt?.status === 'Mismatch' && 'text-destructive')}>{activeBillDetails.receipt?.receivedQuantity} units</span></div>{activeBillDetails.receipt?.remarks && <p className="text-xs text-muted-foreground pt-2"><strong>Remarks:</strong> {activeBillDetails.receipt.remarks}</p>}</div>
                         </div>
                     </CardContent>
                 </Card>
@@ -424,13 +424,13 @@ export default function ReceiptsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-              <CardTitle>Past Site-to-Site Receipts</CardTitle>
-              <CardDescription>A log of recently verified material receipts from other sites.</CardDescription>
+              <CardTitle>Past Site-to-Site GRNs</CardTitle>
+              <CardDescription>A log of recently verified GRNs from other sites.</CardDescription>
           </CardHeader>
           <CardContent>
               {pastReceipts.length > 0 ? (
                   <Table>
-                      <TableHeader><TableRow><TableHead>Receipt ID</TableHead><TableHead>Request ID</TableHead><TableHead>Material</TableHead><TableHead>Qty</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+                      <TableHeader><TableRow><TableHead>GRN ID</TableHead><TableHead>Indent ID</TableHead><TableHead>Material</TableHead><TableHead>Qty</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
                       <TableBody>
                           {pastReceipts.map(rec => (
                               <TableRow key={rec.receivedBillId}>
@@ -450,7 +450,7 @@ export default function ReceiptsPage() {
                           ))}
                       </TableBody>
                   </Table>
-              ) : (<div className="flex items-center justify-center p-8"><p className="text-center text-muted-foreground">No site receipts logged yet.</p></div>)}
+              ) : (<div className="flex items-center justify-center p-8"><p className="text-center text-muted-foreground">No site GRNs logged yet.</p></div>)}
           </CardContent>
         </Card>
         

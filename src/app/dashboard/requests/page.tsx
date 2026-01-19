@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useMaterialContext } from '@/context/material-context';
+import { useMaterialContext, type IndentStatus } from '@/context/material-context';
 
 const materialItemSchema = z.object({
   materialName: z.string().min(1, 'Material name is required.'),
@@ -45,14 +45,13 @@ const requestSchema = z.object({
 });
 
 type RequestFormValues = z.infer<typeof requestSchema>;
-type MaterialRequestBill = RequestFormValues & {
+type MaterialIndentBill = RequestFormValues & {
   requestDate: Date;
   issuedId: string;
   shiftingDate: Date;
   requester: { name: string; } | null;
   totalValue: number; // This can be calculated differently or removed if rate is not present
 }
-type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended' | 'Partially Issued';
 
 const generateRequestId = (siteName: string, count: number) => {
     const today = new Date();
@@ -64,7 +63,7 @@ const generateRequestId = (siteName: string, count: number) => {
 
 export default function RequestsPage() {
   const { toast } = useToast();
-  const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialRequestBill | null>(null);
+  const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
   const { requests, setRequests } = useMaterialContext();
   const billContentRef = React.useRef<HTMLDivElement>(null);
 
@@ -107,7 +106,7 @@ export default function RequestsPage() {
 
     const newIssuedId = `ISS-${idParts[1]}-${datePart}-${countPart}`;
 
-    const bill: MaterialRequestBill = {
+    const bill: MaterialIndentBill = {
       ...values,
       requestDate: new Date(),
       issuedId: newIssuedId,
@@ -123,14 +122,14 @@ export default function RequestsPage() {
       material: values.materials.map(m => m.materialName).join(', '),
       quantity: values.materials.reduce((acc, m) => acc + m.quantity, 0),
       site: values.requestingSite,
-      status: 'Pending' as RequestStatus,
+      status: 'Pending' as IndentStatus,
       returnDate: format(values.requiredPeriod.to, 'yyyy-MM-dd'),
     };
     setRequests(prev => [newRequestEntry, ...prev]);
 
     toast({
-      title: 'Request Submitted!',
-      description: `Your material request has been sent to ${values.issuingSite}. A Material Request Bill will be generated upon approval.`,
+      title: 'Indent Submitted!',
+      description: `Your material indent has been sent to ${values.issuingSite}. A Material Indent Bill will be generated upon approval.`,
     });
     
     form.reset();
@@ -149,7 +148,7 @@ export default function RequestsPage() {
       const siteCode = idParts.length > 1 ? idParts[1] : 'SITE';
 
 
-      const bill: MaterialRequestBill = {
+      const bill: MaterialIndentBill = {
         requestId: `REQ-${siteCode}-${datePart}-${countPart}`,
         requestDate: requestDate,
         requesterName: 'Sample Requester',
@@ -167,11 +166,11 @@ export default function RequestsPage() {
     }
   };
   
-  const handleStatusChange = (reqId: string, newStatus: RequestStatus) => {
+  const handleStatusChange = (reqId: string, newStatus: IndentStatus) => {
     setRequests(requests.map(req => req.id === reqId ? { ...req, status: newStatus } : req));
     toast({
-      title: `Request ${newStatus}`,
-      description: `Request ID ${reqId} has been marked as ${newStatus}.`,
+      title: `Indent ${newStatus}`,
+      description: `Indent ID ${reqId} has been marked as ${newStatus}.`,
     });
   };
   
@@ -201,8 +200,8 @@ export default function RequestsPage() {
         <div className="lg:col-span-3">
           <Card>
             <CardHeader>
-              <CardTitle>Create Material Request</CardTitle>
-              <CardDescription>Fill in the details to request materials. A Material Request Bill will be generated automatically upon approval and issue.</CardDescription>
+              <CardTitle>Create Material Indent</CardTitle>
+              <CardDescription>Fill in the details to request materials. A Material Indent Bill will be generated automatically upon approval and issue.</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...form}>
@@ -236,7 +235,7 @@ export default function RequestsPage() {
                       name="requestId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Request ID</FormLabel>
+                          <FormLabel>Indent ID</FormLabel>
                           <FormControl>
                             <Input {...field} readOnly disabled />
                           </FormControl>
@@ -451,7 +450,7 @@ export default function RequestsPage() {
 
                   <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
                     <Send className="mr-2 h-4 w-4" />
-                    {form.formState.isSubmitting ? 'Submitting...' : 'Submit Request & Generate Bill'}
+                    {form.formState.isSubmitting ? 'Submitting...' : 'Submit Indent & Generate Bill'}
                   </Button>
                 </form>
               </Form>
@@ -465,10 +464,10 @@ export default function RequestsPage() {
               <CardHeader className="flex flex-row items-start justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    <FileText /> Material Request Bill
+                    <FileText /> Material Indent Bill
                   </CardTitle>
                   <CardDescription>
-                    This is the generated bill for your request.
+                    This is the generated bill for your indent.
                   </CardDescription>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => handleDownload(lastGeneratedBill.requestId)}>
@@ -478,10 +477,10 @@ export default function RequestsPage() {
               </CardHeader>
               <CardContent ref={billContentRef} className="space-y-4">
                 <div className="space-y-2 rounded-lg border p-4">
-                  <h3 className="font-semibold">Request Information</h3>
+                  <h3 className="font-semibold">Indent Information</h3>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <p><strong>Request ID:</strong> {lastGeneratedBill.requestId}</p>
-                    <p><strong>Request Date:</strong> {format(lastGeneratedBill.requestDate, 'PPP')}</p>
+                    <p><strong>Indent ID:</strong> {lastGeneratedBill.requestId}</p>
+                    <p><strong>Indent Date:</strong> {format(lastGeneratedBill.requestDate, 'PPP')}</p>
                     <p><strong>Requesting Site:</strong> {lastGeneratedBill.requestingSite}</p>
                     <p><strong>Requester:</strong> {lastGeneratedBill.requester?.name}</p>
                   </div>
@@ -538,15 +537,15 @@ export default function RequestsPage() {
 
       <Card>
         <CardHeader>
-            <CardTitle>Recent Material Requests</CardTitle>
-            <CardDescription>A log of the most recent requests and their statuses, which become Material Request Bills upon approval.</CardDescription>
+            <CardTitle>Recent Material Indents</CardTitle>
+            <CardDescription>A log of the most recent indents and their statuses, which become Material Indent Bills upon approval.</CardDescription>
         </CardHeader>
         <CardContent>
           {requests.length > 0 ? (
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Request ID</TableHead>
+                        <TableHead>Indent ID</TableHead>
                         <TableHead>Material</TableHead>
                         <TableHead>Quantity</TableHead>
                         <TableHead>Site</TableHead>
@@ -611,7 +610,7 @@ export default function RequestsPage() {
             </Table>
             ) : (
                 <div className="flex items-center justify-center p-8">
-                    <p className="text-center text-muted-foreground">No requests submitted yet.</p>
+                    <p className="text-center text-muted-foreground">No indents submitted yet.</p>
                 </div>
             )}
         </CardContent>

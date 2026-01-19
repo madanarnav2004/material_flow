@@ -43,10 +43,9 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { useMaterialContext } from '@/context/material-context';
+import { useMaterialContext, type IndentStatus } from '@/context/material-context';
 
 
-type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Issued' | 'Completed' | 'Mismatch' | 'Extended';
 type RequestFormValues = {
   requesterName: string;
   requestingSite: string;
@@ -55,7 +54,7 @@ type RequestFormValues = {
   requiredPeriod: { from: Date; to: Date; };
   remarks?: string;
 };
-type MaterialRequestBill = RequestFormValues & {
+type MaterialIndentBill = RequestFormValues & {
   requestId: string;
   requestDate: Date;
   issuedId: string;
@@ -68,13 +67,13 @@ type MaterialRequestBill = RequestFormValues & {
 export default function SiteManagerDashboard() {
   const { toast } = useToast();
   const { requests, setRequests } = useMaterialContext();
-  const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialRequestBill | null>(null);
+  const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
 
-  const handleStatusChange = (reqId: string, newStatus: RequestStatus) => {
+  const handleStatusChange = (reqId: string, newStatus: IndentStatus) => {
     setRequests(requests.map(req => req.id === reqId ? { ...req, status: newStatus } : req));
     toast({
-      title: `Request ${newStatus}`,
-      description: `Request ID ${reqId} has been marked as ${newStatus}.`,
+      title: `Indent ${newStatus}`,
+      description: `Indent ID ${reqId} has been marked as ${newStatus}.`,
     });
   };
 
@@ -89,7 +88,7 @@ export default function SiteManagerDashboard() {
       const countPart = idParts.length > 3 ? idParts[3] : request.id.slice(-3);
       const siteCode = idParts.length > 1 ? idParts[1] : 'SITE';
 
-      const bill: MaterialRequestBill = {
+      const bill: MaterialIndentBill = {
         requestId: `REQ-${siteCode}-${datePart}-${countPart}`,
         requestDate: requestDate,
         requesterName: 'Sample Requester',
@@ -168,7 +167,7 @@ export default function SiteManagerDashboard() {
            <Dialog>
             <DialogTrigger asChild>
               <StatCard
-                title="Pending Requests"
+                title="Pending Indents"
                 value={pendingSiteRequests.length.toString()}
                 icon={Package}
                 description="Awaiting approval or issue"
@@ -177,8 +176,8 @@ export default function SiteManagerDashboard() {
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
-                  <DialogTitle>Pending Requests</DialogTitle>
-                  <DialogDescription>Material requests awaiting action for this site.</DialogDescription>
+                  <DialogTitle>Pending Indents</DialogTitle>
+                  <DialogDescription>Material indents awaiting action for this site.</DialogDescription>
               </DialogHeader>
               <div className="max-h-[60vh] overflow-y-auto">
                   {pendingSiteRequests.length > 0 ? (
@@ -201,13 +200,13 @@ export default function SiteManagerDashboard() {
                         </TableBody>
                     </Table>
                   ): (
-                    <p className="text-center text-muted-foreground">No pending requests for this site.</p>
+                    <p className="text-center text-muted-foreground">No pending indents for this site.</p>
                   )}
               </div>
             </DialogContent>
           </Dialog>
           <StatCard
-            title="Pending Receipts"
+            title="Pending GRNs"
             value="1"
             icon={PackageCheck}
             description="Materials in transit to your site"
@@ -268,8 +267,8 @@ export default function SiteManagerDashboard() {
             <div className="lg:col-span-3 space-y-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Pending Requests</CardTitle>
-                        <CardDescription>Material requests awaiting action.</CardDescription>
+                        <CardTitle>Pending Indents</CardTitle>
+                        <CardDescription>Material indents awaiting action.</CardDescription>
                     </CardHeader>
                     <CardContent>
                       {pendingSiteRequests.length > 0 ? (
@@ -292,7 +291,7 @@ export default function SiteManagerDashboard() {
                               </TableBody>
                         </Table>
                       ) : (
-                        <p className="text-center text-muted-foreground">No pending requests.</p>
+                        <p className="text-center text-muted-foreground">No pending indents.</p>
                       )}
                     </CardContent>
                 </Card>
@@ -330,18 +329,18 @@ export default function SiteManagerDashboard() {
                 <Card>
                   <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <FileText /> Material Request Bill
+                        <FileText /> Material Indent Bill
                       </CardTitle>
                       <CardDescription>
-                        This is the generated bill for the selected request.
+                        This is the generated bill for the selected indent.
                       </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2 rounded-lg border p-4">
-                      <h3 className="font-semibold">Request Information</h3>
+                      <h3 className="font-semibold">Indent Information</h3>
                       <div className="grid grid-cols-2 gap-2 text-sm">
-                        <p><strong>Request ID:</strong> {lastGeneratedBill.requestId}</p>
-                        <p><strong>Request Date:</strong> {format(lastGeneratedBill.requestDate, 'PPP')}</p>
+                        <p><strong>Indent ID:</strong> {lastGeneratedBill.requestId}</p>
+                        <p><strong>Indent Date:</strong> {format(lastGeneratedBill.requestDate, 'PPP')}</p>
                         <p><strong>Requesting Site:</strong> {lastGeneratedBill.requestingSite}</p>
                         <p><strong>Requester:</strong> {lastGeneratedBill.requester?.name}</p>
                       </div>
@@ -383,7 +382,7 @@ export default function SiteManagerDashboard() {
           <DialogTrigger asChild>
             <Card className="cursor-pointer hover:shadow-lg transition-shadow">
               <CardHeader>
-                  <CardTitle>Material Return Reminders</CardTitle>
+                  <CardTitle>Material Indent Return Reminders</CardTitle>
                   <CardDescription>Materials due for return or with extended dates for this site.</CardDescription>
               </CardHeader>
               <CardContent>
@@ -436,7 +435,7 @@ export default function SiteManagerDashboard() {
           </DialogTrigger>
           <DialogContent className="max-w-4xl">
             <DialogHeader>
-              <DialogTitle>All Material Return Reminders</DialogTitle>
+              <DialogTitle>All Material Indent Return Reminders</DialogTitle>
               <DialogDescription>Materials due for return or with extended dates for this site.</DialogDescription>
             </DialogHeader>
             <div className="max-h-[60vh] overflow-y-auto">

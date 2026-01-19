@@ -47,7 +47,7 @@ export default function PurchaseDepartmentDashboard() {
           <CardHeader>
             <CardTitle>Pending Material Indents for Procurement</CardTitle>
             <CardDescription>
-              These material requests could not be fulfilled from existing stock and require fresh procurement.
+              These material indents could not be fulfilled from existing stock and require fresh procurement.
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -35,17 +35,17 @@ const reports = [
     hasSiteDropdown: true,
   },
   {
-    title: "Material Received Report",
+    title: "Goods Received Note (GRN) Report",
     description: "Confirmation of materials received at various locations.",
     variants: ["Site-wise", "Organization-wise"],
   },
   {
-    title: "Material Request Register",
-    description: "A complete log of all material requests.",
+    title: "Material Indent Register",
+    description: "A complete log of all material indents.",
     variants: ["Site-wise", "Organization-wise"],
   },
   {
-    title: "Request vs. Received Comparison",
+    title: "Indent vs. GRN Comparison",
     description: "Analysis of discrepancies between requested and received quantities.",
     variants: [],
   },
