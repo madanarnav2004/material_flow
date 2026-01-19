@@ -28,7 +28,6 @@ import {
 } from 'lucide-react';
 import {
   monthlyConsumption,
-  materialStock,
   recentActivities,
   detailedMonthlyConsumption,
   detailedStock,
@@ -51,6 +50,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useMaterialContext, type IndentStatus } from '@/context/material-context';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 
 const chartConfig: ChartConfig = {
@@ -105,9 +105,34 @@ export default function DirectorDashboard() {
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
   const [selectedMonth, setSelectedMonth] = React.useState<string | null>(null);
   const [isConsumptionDialogOpen, setIsConsumptionDialogOpen] = React.useState(false);
+  const [consumptionSite, setConsumptionSite] = React.useState('All');
+  const [stockSite, setStockSite] = React.useState('Overall');
 
   const indentsForApproval = requests.filter(r => r.status === 'Pending Director Approval');
-  const totalMaterials = materialStock.reduce((acc, item) => acc + item.value, 0);
+  
+  const stockLocations = ['Overall', ...new Set(detailedStock.map(s => s.site))];
+  const consumptionSites = ['All', ...new Set(detailedMonthlyConsumption.Jun.siteWise.map((s:any) => s.site))];
+
+  const totalMaterials = React.useMemo(() => {
+    return detailedStock.reduce((acc, item) => acc + item.quantity, 0);
+  }, []);
+
+  const filteredStockData = React.useMemo(() => {
+    const stock = stockSite === 'Overall'
+        ? detailedStock
+        : detailedStock.filter(s => s.site === stockSite);
+    
+    const aggregated = stock.reduce((acc, item) => {
+        if (acc[item.material]) {
+            acc[item.material] += item.quantity;
+        } else {
+            acc[item.material] = item.quantity;
+        }
+        return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(aggregated).map(([name, value]) => ({ name, value }));
+  }, [stockSite]);
 
   const handleStatusChange = (reqId: string, newStatus: IndentStatus) => {
     setRequests(requests.map(req => (req.id === reqId ? { ...req, status: newStatus } : req)));
@@ -157,6 +182,7 @@ export default function DirectorDashboard() {
     if (data && data.activePayload && data.activePayload.length > 0) {
       const month = data.activePayload[0].payload.month;
       setSelectedMonth(month);
+      setConsumptionSite('All'); // Reset site filter on new month selection
       setIsConsumptionDialogOpen(true);
     }
   };
@@ -461,9 +487,19 @@ export default function DirectorDashboard() {
               <DialogContent className="max-w-4xl">
                 <DialogHeader>
                   <DialogTitle>Monthly Consumption Details: {selectedMonth}</DialogTitle>
-                  <DialogDescription>
-                    Detailed material consumption for {selectedMonth}.
-                  </DialogDescription>
+                  <div className="flex justify-between items-center pt-2">
+                    <DialogDescription>
+                      Detailed material consumption for {selectedMonth}.
+                    </DialogDescription>
+                    <Select value={consumptionSite} onValueChange={setConsumptionSite}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Select a Site" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {consumptionSites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                  </div>
                 </DialogHeader>
                 {selectedMonthData ? (
                   <div className="max-h-[60vh] overflow-y-auto space-y-6">
@@ -488,7 +524,7 @@ export default function DirectorDashboard() {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold mb-2">Site-wise Consumption</h3>
-                       {selectedMonthData.siteWise.map((siteData:any) => (
+                       {(selectedMonthData.siteWise.filter((s:any) => consumptionSite === 'All' || s.site === consumptionSite)).map((siteData:any) => (
                          <div key={siteData.site} className="mb-4">
                            <h4 className="font-medium text-md mb-1">{siteData.site}</h4>
                             <Table>
@@ -524,15 +560,27 @@ export default function DirectorDashboard() {
             </Dialog>
             <Card>
               <CardHeader>
-                <CardTitle>Material Stock Distribution</CardTitle>
-                <CardDescription>Overall stock distribution by material type.</CardDescription>
+                <div className="flex justify-between items-start">
+                    <div>
+                        <CardTitle>Material Stock Distribution</CardTitle>
+                        <CardDescription>Stock distribution by material type.</CardDescription>
+                    </div>
+                    <Select value={stockSite} onValueChange={setStockSite}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Select Location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {stockLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
               </CardHeader>
               <CardContent className="flex items-center justify-center">
                 <ChartContainer config={pieChartConfig} className="h-[250px] w-full">
                   <PieChart>
                     <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
-                    <Pie data={materialStock} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                      {materialStock.map((entry, index) => (
+                    <Pie data={filteredStockData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                      {filteredStockData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
