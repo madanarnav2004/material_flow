@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Download, Upload, CheckCircle, Settings, Send } from 'lucide-react';
+import { Download, Upload, CheckCircle, Settings, Send, FilePlus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -13,12 +13,20 @@ import { detailedStock } from '@/lib/mock-data';
 import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+type PurchaseRequest = MaterialIndent & {
+    prId: string;
+    prDate: Date;
+};
+
 
 export default function PurchaseDepartmentDashboard() {
   const { toast } = useToast();
   const { requests, setRequests } = useMaterialContext();
   const [selectedIndent, setSelectedIndent] = React.useState<MaterialIndent | null>(null);
   const [issuingSite, setIssuingSite] = React.useState<string>('');
+  const [newPurchaseRequest, setNewPurchaseRequest] = React.useState<PurchaseRequest | null>(null);
 
   const pendingIndents = requests.filter(req => req.status === 'Pending' || req.status === 'Rejected');
 
@@ -31,6 +39,7 @@ export default function PurchaseDepartmentDashboard() {
   const handleProcessClick = (indent: MaterialIndent) => {
     setSelectedIndent(indent);
     setIssuingSite('');
+    setNewPurchaseRequest(null);
   };
 
   const handleConfirmAssignment = () => {
@@ -52,17 +61,62 @@ export default function PurchaseDepartmentDashboard() {
     setSelectedIndent(null);
   };
   
-  const handleMarkCompleted = (indentId: string) => {
-     toast({
-      title: 'Process Completed',
-      description: `Procurement for indent ${indentId} has been marked as complete.`,
+  const handleCreatePurchaseRequest = () => {
+    if (!selectedIndent) return;
+
+    const pr: PurchaseRequest = {
+        ...selectedIndent,
+        prId: `PR-${selectedIndent.id}`,
+        prDate: new Date(),
+    };
+    
+    setNewPurchaseRequest(pr);
+    setSelectedIndent(null); // Close the dialog
+    toast({
+      title: 'Purchase Request Created',
+      description: `A new purchase request for ${selectedIndent.material} has been generated.`,
     });
   };
+
+  const handleDownloadPR = (prId: string) => {
+      toast({
+          title: "Download Started",
+          description: `Purchase Request ${prId} is downloading.`
+      });
+  }
+
+  // Memoize stock calculations
+  const { orgStock, siteStock, storeStock } = React.useMemo(() => {
+    const org: { [key: string]: { quantity: number; unit: string } } = {};
+    const site: { [key: string]: {name: string, quantity: number, unit: string}[] } = {};
+    
+    detailedStock.forEach(item => {
+      // Org-wide aggregation
+      if (org[item.material]) {
+        org[item.material].quantity += item.quantity;
+      } else {
+        org[item.material] = { quantity: item.quantity, unit: item.type === 'Site Stock' ? 'units' : 'bags' }; // Example unit logic
+      }
+      
+      // Site-wise grouping
+      if (!site[item.site]) {
+        site[item.site] = [];
+      }
+      site[item.site].push({ name: item.material, quantity: item.quantity, unit: 'units' });
+    });
+
+    const orgStock = Object.entries(org).map(([name, data]) => ({ name, ...data }));
+    const siteStock = site;
+    const storeStock = detailedStock.filter(s => s.site === 'MAPI Store');
+
+    return { orgStock, siteStock, storeStock };
+  }, []);
+
 
   return (
     <>
       <h1 className="text-3xl font-bold font-headline">Purchase Department Dashboard</h1>
-      <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Pending Material Indents</CardTitle>
@@ -77,10 +131,8 @@ export default function PurchaseDepartmentDashboard() {
                   <TableRow>
                     <TableHead>Indent Number</TableHead>
                     <TableHead>Material</TableHead>
-                    <TableHead>Quantity</TableHead>
+                    <TableHead>Qty</TableHead>
                     <TableHead>Requesting Site</TableHead>
-                    <TableHead>Return Date</TableHead>
-                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -91,10 +143,6 @@ export default function PurchaseDepartmentDashboard() {
                       <TableCell>{indent.material}</TableCell>
                       <TableCell>{indent.quantity}</TableCell>
                       <TableCell>{indent.site}</TableCell>
-                      <TableCell>{indent.returnDate}</TableCell>
-                      <TableCell>
-                        <Badge variant={indent.status === 'Pending' ? 'secondary' : 'destructive'}>{indent.status}</Badge>
-                      </TableCell>
                       <TableCell className="text-right space-x-2">
                          <Button size="sm" onClick={() => handleProcessClick(indent)}>
                           <Settings className="mr-2 h-4 w-4" />
@@ -112,7 +160,87 @@ export default function PurchaseDepartmentDashboard() {
             )}
           </CardContent>
         </Card>
+
+        {newPurchaseRequest && (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Generated Purchase Request</CardTitle>
+                    <CardDescription>A new PR has been created for an unavailable material.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="p-4 border rounded-lg space-y-2">
+                        <div className="flex justify-between">
+                            <span className="font-semibold">PR Number:</span>
+                            <span>{newPurchaseRequest.prId}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="font-semibold">Material:</span>
+                            <span>{newPurchaseRequest.material}</span>
+                        </div>
+                         <div className="flex justify-between">
+                            <span className="font-semibold">Quantity:</span>
+                            <span>{newPurchaseRequest.quantity}</span>
+                        </div>
+                         <div className="flex justify-between">
+                            <span className="font-semibold">Requesting Site:</span>
+                            <span>{newPurchaseRequest.site}</span>
+                        </div>
+                    </div>
+                    <Button onClick={() => handleDownloadPR(newPurchaseRequest.prId)} className="w-full">
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Purchase Request
+                    </Button>
+                </CardContent>
+            </Card>
+        )}
       </div>
+      
+       <Card>
+            <CardHeader>
+                <CardTitle>Material Stock Overview</CardTitle>
+                <CardDescription>
+                    Live inventory counts across the organization.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Tabs defaultValue="organization" className="w-full">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="organization">Organization-wise</TabsTrigger>
+                        <TabsTrigger value="site">Site-wise</TabsTrigger>
+                        <TabsTrigger value="store">Store-wise</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="organization">
+                        <Table>
+                            <TableHeader><TableRow><TableHead>Material</TableHead><TableHead className="text-right">Total Quantity</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                                {orgStock.map(item => (<TableRow key={item.name}><TableCell>{item.name}</TableCell><TableCell className="text-right">{item.quantity.toLocaleString()} {item.unit}</TableCell></TableRow>))}
+                            </TableBody>
+                        </Table>
+                    </TabsContent>
+                    <TabsContent value="site">
+                        {Object.entries(siteStock).map(([siteName, materials]) => (
+                            <div key={siteName} className="mb-4">
+                                <h3 className="font-semibold mb-2">{siteName}</h3>
+                                <Table>
+                                    <TableHeader><TableRow><TableHead>Material</TableHead><TableHead className="text-right">Quantity</TableHead></TableRow></TableHeader>
+                                    <TableBody>
+                                        {materials.map(item => (<TableRow key={item.name}><TableCell>{item.name}</TableCell><TableCell className="text-right">{item.quantity.toLocaleString()} {item.unit}</TableCell></TableRow>))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        ))}
+                    </TabsContent>
+                    <TabsContent value="store">
+                        <Table>
+                            <TableHeader><TableRow><TableHead>Material</TableHead><TableHead className="text-right">Quantity</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                                {storeStock.map(item => (<TableRow key={item.id}><TableCell>{item.material}</TableCell><TableCell className="text-right">{item.quantity.toLocaleString()}</TableCell></TableRow>))}
+                            </TableBody>
+                        </Table>
+                    </TabsContent>
+                </Tabs>
+            </CardContent>
+        </Card>
 
       <Dialog open={!!selectedIndent} onOpenChange={(isOpen) => !isOpen && setSelectedIndent(null)}>
         <DialogContent className="max-w-4xl">
@@ -122,55 +250,67 @@ export default function PurchaseDepartmentDashboard() {
               Assign an issuing site for <span className="font-semibold">{selectedIndent?.quantity} units</span> of <span className="font-semibold">{selectedIndent?.material}</span> for <span className="font-semibold">{selectedIndent?.site}</span>.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-            <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Material Availability</h3>
-                <Card>
-                    <CardContent className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Location</TableHead>
-                                <TableHead>Available Quantity</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {materialAvailability.length > 0 ? materialAvailability.map(stock => (
-                                <TableRow key={stock.id}>
-                                    <TableCell>{stock.site}</TableCell>
-                                    <TableCell>{stock.quantity}</TableCell>
-                                </TableRow>
-                            )) : (
+
+          {materialAvailability.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                <div className="space-y-4">
+                    <h3 className="font-semibold text-lg">Material Availability</h3>
+                    <Card>
+                        <CardContent className="p-0">
+                        <Table>
+                            <TableHeader>
                                 <TableRow>
-                                    <TableCell colSpan={2} className="text-center">No stock found for this material.</TableCell>
+                                    <TableHead>Location</TableHead>
+                                    <TableHead className="text-right">Available Quantity</TableHead>
                                 </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                    </CardContent>
-                </Card>
+                            </TableHeader>
+                            <TableBody>
+                                {materialAvailability.map(stock => (
+                                    <TableRow key={stock.id}>
+                                        <TableCell>{stock.site}</TableCell>
+                                        <TableCell className="text-right">{stock.quantity}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+                <div className="space-y-4">
+                    <h3 className="font-semibold text-lg">Assign Site</h3>
+                    <div className="p-4 border rounded-lg space-y-4">
+                        <Label htmlFor="issuing-site-select">Select Issuing Site</Label>
+                        <Select onValueChange={setIssuingSite} value={issuingSite}>
+                            <SelectTrigger id="issuing-site-select">
+                                <SelectValue placeholder="Choose a site..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {availableSites.map(site => (
+                                    <SelectItem key={site} value={site}>{site}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button onClick={handleConfirmAssignment} disabled={!issuingSite} className="w-full">
+                            <Send className="mr-2 h-4 w-4" />
+                            Confirm & Send Notification
+                        </Button>
+                    </div>
+                </div>
             </div>
-            <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Assign Site</h3>
-                <div className="p-4 border rounded-lg space-y-4">
-                    <Label htmlFor="issuing-site-select">Select Issuing Site</Label>
-                    <Select onValueChange={setIssuingSite} value={issuingSite}>
-                        <SelectTrigger id="issuing-site-select">
-                            <SelectValue placeholder="Choose a site..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {availableSites.map(site => (
-                                <SelectItem key={site} value={site}>{site}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Button onClick={handleConfirmAssignment} disabled={!issuingSite} className="w-full">
-                        <Send className="mr-2 h-4 w-4" />
-                        Confirm & Send Notification
+          ) : (
+             <div className="py-4">
+                <div className="text-center p-8 border rounded-lg bg-secondary/50">
+                    <h3 className="font-semibold text-lg">No Stock Found</h3>
+                    <p className="text-muted-foreground mb-4">
+                        This material is not available at any site or the central store.
+                    </p>
+                    <Button onClick={handleCreatePurchaseRequest}>
+                        <FilePlus className="mr-2 h-4 w-4" />
+                        Create New Purchase Request
                     </Button>
                 </div>
             </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </>
