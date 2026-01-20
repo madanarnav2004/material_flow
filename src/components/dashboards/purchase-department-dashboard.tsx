@@ -58,14 +58,16 @@ export default function PurchaseDepartmentDashboard() {
   };
 
   const handleFinalApproval = (decision: 'Issued' | 'Purchase Rejected') => {
-    if (!selectedIndent || !issuingSite) {
+    if (!selectedIndent) return;
+
+    if (decision === 'Issued' && !issuingSite) {
         toast({ variant: 'destructive', title: 'Error', description: 'Please select an issuing site.' });
         return;
     }
 
     setRequests(prevRequests =>
         prevRequests.map(req =>
-            req.id === selectedIndent.id ? { ...req, status: decision, issuingSite: issuingSite } : req
+            req.id === selectedIndent.id ? { ...req, status: decision, issuingSite: decision === 'Issued' ? issuingSite : undefined } : req
         )
     );
 
@@ -390,36 +392,49 @@ export default function PurchaseDepartmentDashboard() {
                     </Card>
                 </div>
                 <div className="space-y-4">
-                    <h3 className="font-semibold text-lg">Assign Site &amp; Action</h3>
+                    <h3 className="font-semibold text-lg">Assign Site & Action</h3>
                     <div className="p-4 border rounded-lg space-y-4">
-                        <Label htmlFor="issuing-site-select">Select Issuing Site</Label>
-                        <Select onValueChange={setIssuingSite} value={issuingSite}>
-                            <SelectTrigger id="issuing-site-select">
-                                <SelectValue placeholder="Choose a site..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {availableSites.map(site => (
-                                    <SelectItem key={site} value={site}>{site}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <div>
+                            <Label htmlFor="issuing-site-select" className="text-sm font-normal text-muted-foreground">Option 1: Issue from existing stock</Label>
+                            <Select onValueChange={setIssuingSite} value={issuingSite}>
+                                <SelectTrigger id="issuing-site-select">
+                                    <SelectValue placeholder="Choose a site..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableSites.map(site => (
+                                        <SelectItem key={site} value={site}>{site}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
 
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button disabled={!issuingSite} className="w-full">
-                              Select Final Action <ChevronDown className="ml-2 h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem onClick={() => handleFinalApproval('Issued')}>
+                            <Button onClick={() => handleFinalApproval('Issued')} disabled={!issuingSite} className="w-full mt-2">
                                 <Send className="mr-2 h-4 w-4" /> Issue from Selected Site
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleFinalApproval('Purchase Rejected')} className="text-destructive">
-                                Reject Indent
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                            </Button>
+                        </div>
 
+                        <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t" />
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-background px-2 text-muted-foreground">
+                                    Or
+                                </span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <Label className="text-sm font-normal text-muted-foreground">Option 2: Purchase new material</Label>
+                            <Button onClick={handleCreatePO} variant="secondary" className="w-full">
+                                <FilePlus className="mr-2 h-4 w-4" /> Purchase New (Generate PO)
+                            </Button>
+                        </div>
+
+                        <Separator />
+
+                        <Button onClick={() => handleFinalApproval('Purchase Rejected')} variant="destructive" className="w-full">
+                             Reject Indent
+                        </Button>
                     </div>
                 </div>
             </div>
