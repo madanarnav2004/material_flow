@@ -15,7 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 const uploadSchema = z.object({
   siteName: z.string().min(1, 'Please select a site.'),
-  quantitiesFile: z.any().refine(files => files?.length > 0, 'File is required.'),
+  quantitiesFile: (typeof window !== 'undefined' ? z.instanceof(File) : z.any())
+    .refine(file => file, 'File is required.'),
 });
 
 type UploadFormValues = z.infer<typeof uploadSchema>;
@@ -88,10 +89,10 @@ export default function GodownActionsPage() {
                                 <Input
                                 type="file"
                                 accept=".xlsx, .xls, .csv"
-                                onChange={(e) => onChange(e.target.files)}
-                                {...rest}
+                                onChange={(e) => onChange(e.target.files?.[0])}
                                 />
                             </FormControl>
+                            {value && <p className="text-sm text-muted-foreground mt-2">Selected file: {value.name}</p>}
                             <FormMessage />
                         </FormItem>
                     )}

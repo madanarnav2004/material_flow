@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import * as React from 'react';
@@ -20,14 +18,16 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 
+const fileSchema = (typeof window !== 'undefined' ? z.instanceof(File) : z.any()).optional();
+
 const uploadSchema = z.object({
   siteName: z.string().min(1, 'Please select a site.'),
-  overallBoqFile: z.any().optional(),
-  descriptionFile: z.any().optional(),
-  itemFile: z.any().optional(),
-  materialFile: z.any().optional(),
-  equipmentFile: z.any().optional(),
-  workforceFile: z.any().optional(),
+  overallBoqFile: fileSchema,
+  descriptionFile: fileSchema,
+  itemFile: fileSchema,
+  materialFile: fileSchema,
+  equipmentFile: fileSchema,
+  workforceFile: fileSchema,
 });
 
 type UploadFormValues = z.infer<typeof uploadSchema>;
@@ -95,15 +95,18 @@ export default function BoqManagementPage() {
         <FormField
           control={uploadForm.control}
           name={name}
-          render={({ field }) => (
+          render={({ field: { onChange, value, ...rest } }) => (
             <FormItem>
               <FormControl>
                 <Input
                   type="file"
                   accept=".xlsx, .xls, .csv"
-                  onChange={(e) => field.onChange(e.target.files)}
+                  onChange={(e) =>
+                    onChange(e.target.files ? e.target.files[0] : null)
+                  }
                 />
               </FormControl>
+              {value && <p className="text-sm text-muted-foreground mt-2">Selected: {value.name}</p>}
               <FormMessage />
             </FormItem>
           )}

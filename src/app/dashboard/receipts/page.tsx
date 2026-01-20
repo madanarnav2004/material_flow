@@ -71,7 +71,7 @@ const fromShopSchema = z.object({
   vendorName: z.string().min(1, 'Vendor name is required.'),
   invoiceDate: z.date({ required_error: 'Invoice date is required.' }),
   materials: z.array(shopMaterialItemSchema).min(1, 'Please add at least one material.'),
-  invoiceFile: z.any().optional(),
+  invoiceFile: (typeof window !== 'undefined' ? z.instanceof(File) : z.any()).optional(),
 }).refine(data => data.purchaseType !== 'with-po' || (data.poNumber && data.poNumber.length > 0), {
     message: 'PO Number is required for purchases with a PO.',
     path: ['poNumber'],
@@ -309,6 +309,7 @@ export default function ReceiptsPage() {
       vendorName: '',
       invoiceDate: new Date(),
       materials: [{ materialName: '', classification: 'Consumable', unit: '', quantity: 0, rate: 0 }],
+      invoiceFile: undefined,
     },
   });
 
@@ -364,14 +365,7 @@ export default function ReceiptsPage() {
       });
     });
     
-    fromShopForm.reset({
-        purchaseType: 'without-po',
-        poNumber: '',
-        invoiceNumber: '',
-        vendorName: '',
-        invoiceDate: new Date(),
-        materials: [{ materialName: '', classification: 'Consumable', unit: '', quantity: 0, rate: 0 }],
-    });
+    fromShopForm.reset();
     setActiveBillDetails(null);
   }
 
@@ -541,7 +535,25 @@ export default function ReceiptsPage() {
                         <Button type="button" variant="outline" size="sm" onClick={() => appendShopMaterial({ materialName: '', classification: 'Consumable', unit: '', quantity: 0, rate: 0 })} className="mt-4"><PlusCircle className="mr-2 h-4 w-4" /> Add Material</Button>
                       </div>
 
-                      <FormField control={fromShopForm.control} name="invoiceFile" render={({ field }) => (<FormItem><FormLabel>Upload Invoice Copy</FormLabel><FormControl><Input type="file" onChange={(e) => field.onChange(e.target.files)} /></FormControl><FormMessage /></FormItem>)}/>
+                      <FormField
+                        control={fromShopForm.control}
+                        name="invoiceFile"
+                        render={({ field: { onChange, value } }) => (
+                          <FormItem>
+                            <FormLabel>Upload Invoice Copy</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="file"
+                                onChange={(e) =>
+                                  onChange(e.target.files ? e.target.files[0] : null)
+                                }
+                              />
+                            </FormControl>
+                            {value && <p className="text-sm text-muted-foreground mt-2">Selected: {value.name}</p>}
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       <Button type="submit" size="lg" disabled={fromShopForm.formState.isSubmitting}><Upload className="mr-2 h-4 w-4" />{fromShopForm.formState.isSubmitting ? 'Logging...' : 'Log Shop Purchase'}</Button>
                     </form>
                   </Form>

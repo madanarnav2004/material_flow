@@ -22,6 +22,8 @@ import RateConfiguration from '@/components/vehicle/rate-configuration';
 import { useUser } from '@/hooks/use-user';
 import BillComparison from '@/components/vehicle/bill-comparison';
 
+const fileSchema = (typeof window !== 'undefined' ? z.instanceof(File) : z.any()).optional();
+
 const vehicleEntrySchema = z.object({
   billDateRange: z.object({ from: z.date(), to: z.date().optional() }).optional(),
   vehicleNumber: z.string().min(1, 'Vehicle number is required.'),
@@ -48,7 +50,7 @@ const vehicleEntrySchema = z.object({
   rentPeriodFrom: z.date().optional(),
   rentPeriodTo: z.date().optional(),
   totalWorkingHoursRent: z.coerce.number().optional(),
-  billFile: z.any().optional(),
+  billFile: fileSchema,
   
   // Billing
   gstPercentage: z.coerce.number().min(0).optional(),
@@ -340,15 +342,25 @@ export default function VehicleEntryPage() {
                         <FormField name="totalWorkingHoursRent" control={form.control} render={({ field }) => (
                             <FormItem><FormLabel>Total Working Hours (from Invoice)</FormLabel><FormControl><Input type="number" placeholder="e.g., 120" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
-                        <FormField name="billFile" control={form.control} render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Upload Invoice Document</FormLabel>
-                            <FormControl>
-                              <Input type="file" {...form.register('billFile')} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
+                        <FormField
+                          control={form.control}
+                          name="billFile"
+                          render={({ field: { onChange, value } }) => (
+                            <FormItem>
+                              <FormLabel>Upload Invoice Document</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="file"
+                                  onChange={(e) =>
+                                    onChange(e.target.files ? e.target.files[0] : null)
+                                  }
+                                />
+                              </FormControl>
+                              {value && <p className="text-sm text-muted-foreground mt-2">Selected: {value.name}</p>}
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                     </div>
                   )}
 
