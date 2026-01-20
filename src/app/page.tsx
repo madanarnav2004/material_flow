@@ -11,14 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function LoginPage() {
   const router = useRouter();
-  const [role, setRole] = useState("director");
-  const [site, setSite] = useState("North Site");
+  const [selection, setSelection] = useState("director/Global");
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, you'd handle authentication here.
-    // For this demo, we'll store the role and site in localStorage to simulate a session.
     if (typeof window !== "undefined") {
+      const [role, site] = selection.split('/');
       localStorage.setItem("userRole", role);
       localStorage.setItem("userSite", site);
       localStorage.setItem("lastLogin", new Date().toISOString());
@@ -54,71 +52,50 @@ export default function LoginPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Select onValueChange={setRole} defaultValue={role}>
+                <Label htmlFor="role">Login As</Label>
+                <Select onValueChange={setSelection} defaultValue={selection}>
                   <SelectTrigger id="role" className="w-full">
-                    <SelectValue placeholder="Select your role" />
+                    <SelectValue placeholder="Select your login" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="director">
+                    <SelectItem value="director/Global">
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4" /> Director
                       </div>
                     </SelectItem>
-                    <SelectItem value="site-manager">
+                    <SelectItem value="site-manager/North Site">
                       <div className="flex items-center gap-2">
-                        <UserSquare className="h-4 w-4" /> Site Manager
+                        <UserSquare className="h-4 w-4" /> North Site
                       </div>
                     </SelectItem>
-                    <SelectItem value="coordinator">
+                    <SelectItem value="site-manager/South Site">
+                      <div className="flex items-center gap-2">
+                        <UserSquare className="h-4 w-4" /> South Site
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="site-manager/East Site">
+                      <div className="flex items-center gap-2">
+                        <UserSquare className="h-4 w-4" /> East Site
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="site-manager/West Site">
+                      <div className="flex items-center gap-2">
+                        <UserSquare className="h-4 w-4" /> West Site
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="coordinator/Global">
                       <div className="flex items-center gap-2">
                         <UserCog className="h-4 w-4" /> Coordinator
                       </div>
                     </SelectItem>
-                    <SelectItem value="store-manager">
+                    <SelectItem value="store-manager/MAPI Store">
                       <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4" /> MAPI Store Manager
+                        <Building className="h-4 w-4" /> MAPI Store
                       </div>
                     </SelectItem>
-                    <SelectItem value="purchase-department">
+                    <SelectItem value="purchase-department/Global">
                       <div className="flex items-center gap-2">
                         <ShoppingCart className="h-4 w-4" /> Purchase Department
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="site">Site</Label>
-                <Select onValueChange={setSite} defaultValue={site}>
-                  <SelectTrigger id="site" className="w-full">
-                    <SelectValue placeholder="Select your site" />
-                  </SelectTrigger>
-                  <SelectContent>
-                     <SelectItem value="Global">
-                      <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4" /> Global (All Sites)
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="North Site">
-                      <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4" /> North Site
-                      </div>
-                    </SelectItem>
-                     <SelectItem value="South Site">
-                      <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4" /> South Site
-                      </div>
-                    </SelectItem>
-                     <SelectItem value="East Site">
-                      <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4" /> East Site
-                      </div>
-                    </SelectItem>
-                     <SelectItem value="West Site">
-                      <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4" /> West Site
                       </div>
                     </SelectItem>
                   </SelectContent>
