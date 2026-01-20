@@ -6,7 +6,7 @@ export type UserRole = 'director' | 'site-manager' | 'coordinator' | 'store-mana
 
 const MOCK_USERS = {
   director: { name: 'Dr. Evelyn Reed', email: 'e.reed@materialflow.com' },
-  'site-manager': { name: 'Marcus Kane', email: 'm.kane@materialflow.com' },
+  'site-manager': { name: 'Site Manager', email: 'manager@materialflow.com' }, // Generic
   coordinator: { name: 'Aria Chen', email: 'a.chen@materialflow.com' },
   'store-manager': { name: 'Leo Gomez', email: 'l.gomez@materialflow.com' },
   'purchase-department': { name: 'Samira Khan', email: 's.khan@materialflow.com' },
@@ -15,13 +15,25 @@ const MOCK_USERS = {
 export function useUser() {
   const [role, setRole] = useState<UserRole>(null);
   const [user, setUser] = useState<{name: string, email: string} | null>(null);
+  const [site, setSite] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const storedRole = localStorage.getItem('userRole') as UserRole;
+    const storedSite = localStorage.getItem('userSite');
+    
+    setSite(storedSite);
     if (storedRole && MOCK_USERS[storedRole]) {
       setRole(storedRole);
-      setUser(MOCK_USERS[storedRole]);
+      let currentUser = MOCK_USERS[storedRole];
+      if (storedRole === 'site-manager' && storedSite && storedSite !== 'Global') {
+        // Create a site-specific user object
+        currentUser = {
+          name: `${storedSite} Manager`,
+          email: `${storedSite.toLowerCase().replace(/\s/g,'.')}@materialflow.com`,
+        };
+      }
+      setUser(currentUser);
     } else {
       // Fallback for when no role is set, maybe direct to login
       const defaultRole = 'director';
@@ -32,5 +44,5 @@ export function useUser() {
     setIsLoading(false);
   }, []);
 
-  return { role, user, isLoading };
+  return { role, user, site, isLoading };
 }

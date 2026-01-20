@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useMaterialContext, type IndentStatus } from '@/context/material-context';
+import { useUser } from '@/hooks/use-user';
 
 const materialItemSchema = z.object({
   materialName: z.string().min(1, 'Material name is required.'),
@@ -62,17 +63,19 @@ const generateRequestId = (siteName: string, count: number) => {
 
 export default function RequestsPage() {
   const { toast } = useToast();
+  const { user, site, role } = useUser();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
   const { requests, setRequests } = useMaterialContext();
   const billContentRef = React.useRef<HTMLDivElement>(null);
 
+  const isSiteManager = role === 'site-manager';
 
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(requestSchema),
     defaultValues: {
       requestId: '',
-      requesterName: '',
-      requestingSite: '',
+      requesterName: user?.name || '',
+      requestingSite: isSiteManager && site ? site : '',
       materials: [{ materialName: '', unit: '', quantity: 1, remarks: '' }],
       remarks: '',
     },
@@ -87,6 +90,15 @@ export default function RequestsPage() {
         form.setValue('requestId', '');
     }
   }, [requestingSite, requests.length, form]);
+
+  React.useEffect(() => {
+    if (isSiteManager && site) {
+      form.setValue('requestingSite', site);
+    }
+    if (user) {
+      form.setValue('requesterName', user.name);
+    }
+  }, [isSiteManager, site, user, form]);
 
 
   const { fields, append, remove } = useFieldArray({
@@ -129,7 +141,13 @@ export default function RequestsPage() {
       description: `Your material indent has been sent for processing.`,
     });
     
-    form.reset();
+    form.reset({
+      requestId: '',
+      requesterName: user?.name || '',
+      requestingSite: isSiteManager && site ? site : '',
+      materials: [{ materialName: '', unit: '', quantity: 1, remarks: '' }],
+      remarks: '',
+    });
   }
 
   const handleViewBill = (reqId: string) => {
@@ -202,7 +220,7 @@ export default function RequestsPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Requesting Site</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={isSiteManager}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select a site" />
@@ -240,7 +258,7 @@ export default function RequestsPage() {
                         <FormItem>
                           <FormLabel>Requester Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="e.g., John Doe" {...field} />
+                            <Input placeholder="e.g., John Doe" {...field} readOnly={!!user?.name}/>
                           </FormControl>
                           <FormMessage />
                         </FormItem>

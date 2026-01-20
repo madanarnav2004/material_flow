@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -44,6 +43,7 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { useMaterialContext, type IndentStatus } from '@/context/material-context';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@/hooks/use-user';
 
 
 type RequestFormValues = {
@@ -68,10 +68,22 @@ export default function SiteManagerDashboard() {
   const { toast } = useToast();
   const router = useRouter();
   const { requests, setRequests, inventory } = useMaterialContext();
+  const { site } = useUser();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
 
-  // Assuming site manager is for "North Site" for mock purposes
-  const siteName = "North Site"; 
+  const siteName = site || "Current Site"; 
+
+  const siteRequests = React.useMemo(() => {
+    return requests.filter(req => req.site === siteName);
+  }, [requests, siteName]);
+
+  const sitePendingRequests = React.useMemo(() => {
+    return pendingSiteRequests.filter(req => req.site === siteName);
+  }, [pendingSiteRequests, siteName]);
+
+  const siteRecentActivity = React.useMemo(() => {
+    return recentSiteActivity.filter(act => act.site === siteName);
+  }, [recentSiteActivity, siteName]);
 
   const lowStockCount = React.useMemo(() => {
     return inventory.filter(item => item.site === siteName && item.quantity <= item.minQty).length;
@@ -125,7 +137,7 @@ export default function SiteManagerDashboard() {
 
   return (
     <>
-      <h1 className="text-3xl font-bold font-headline">Site Manager Dashboard</h1>
+      <h1 className="text-3xl font-bold font-headline">{siteName} Dashboard</h1>
       <div className="grid gap-6">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
@@ -139,7 +151,7 @@ export default function SiteManagerDashboard() {
             <DialogTrigger asChild>
               <StatCard
                 title="Pending Indents"
-                value={pendingSiteRequests.length.toString()}
+                value={sitePendingRequests.length.toString()}
                 icon={Package}
                 description="Awaiting approval or issue"
                 onClick={() => {}}
@@ -147,11 +159,11 @@ export default function SiteManagerDashboard() {
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
-                  <DialogTitle>Pending Indents</DialogTitle>
+                  <DialogTitle>Pending Indents for {siteName}</DialogTitle>
                   <DialogDescription>Material indents awaiting action for this site.</DialogDescription>
               </DialogHeader>
               <div className="max-h-[60vh] overflow-y-auto">
-                  {pendingSiteRequests.length > 0 ? (
+                  {sitePendingRequests.length > 0 ? (
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -161,7 +173,7 @@ export default function SiteManagerDashboard() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {pendingSiteRequests.map(req => (
+                            {sitePendingRequests.map(req => (
                                 <TableRow key={req.id}>
                                     <TableCell className="font-medium">{req.material}</TableCell>
                                     <TableCell>{req.quantity}</TableCell>
@@ -200,7 +212,7 @@ export default function SiteManagerDashboard() {
                         <CardDescription>Material indents awaiting action.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      {pendingSiteRequests.length > 0 ? (
+                      {sitePendingRequests.length > 0 ? (
                         <Table>
                               <TableHeader>
                                   <TableRow>
@@ -210,7 +222,7 @@ export default function SiteManagerDashboard() {
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
-                                  {pendingSiteRequests.map(req => (
+                                  {sitePendingRequests.map(req => (
                                       <TableRow key={req.id}>
                                           <TableCell className="font-medium">{req.material}</TableCell>
                                           <TableCell>{req.quantity}</TableCell>
@@ -322,23 +334,21 @@ export default function SiteManagerDashboard() {
                   <CardDescription>Materials due for return or with extended dates for this site.</CardDescription>
               </CardHeader>
               <CardContent>
-                  {requests.length > 0 ? (
+                  {siteRequests.length > 0 ? (
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Material</TableHead>
                                 <TableHead>Quantity</TableHead>
-                                <TableHead>Site</TableHead>
                                 <TableHead>Return Date</TableHead>
                                 <TableHead>Status</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {requests.slice(0, 3).map(req => (
+                            {siteRequests.slice(0, 3).map(req => (
                                 <TableRow key={req.id}>
                                     <TableCell className="font-medium">{req.material}</TableCell>
                                     <TableCell>{req.quantity}</TableCell>
-                                    <TableCell>{req.site}</TableCell>
                                     <TableCell>{req.returnDate}</TableCell>
                                     <TableCell>
                                         <Badge 
@@ -372,28 +382,26 @@ export default function SiteManagerDashboard() {
           </DialogTrigger>
           <DialogContent className="max-w-4xl">
             <DialogHeader>
-              <DialogTitle>All Material Indent Return Reminders</DialogTitle>
+              <DialogTitle>All Material Indent Return Reminders for {siteName}</DialogTitle>
               <DialogDescription>Materials due for return or with extended dates for this site.</DialogDescription>
             </DialogHeader>
             <div className="max-h-[60vh] overflow-y-auto">
-              {requests.length > 0 ? (
+              {siteRequests.length > 0 ? (
                 <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead>Material</TableHead>
                             <TableHead>Issuing Site</TableHead>
-                            <TableHead>Requesting Site</TableHead>
                             <TableHead>Return Date</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {requests.map(req => (
+                        {siteRequests.map(req => (
                             <TableRow key={req.id}>
                                 <TableCell className="font-medium">{req.material}</TableCell>
                                 <TableCell>{req.issuingSite || 'Pending'}</TableCell>
-                                <TableCell>{req.site}</TableCell>
                                 <TableCell>{req.returnDate}</TableCell>
                                 <TableCell>
                                     <Badge 
@@ -489,7 +497,7 @@ export default function SiteManagerDashboard() {
             <CardDescription>A log of recent material movements involving your site.</CardDescription>
           </CardHeader>
           <CardContent>
-            {recentSiteActivity.length > 0 ? (
+            {siteRecentActivity.length > 0 ? (
                 <Table>
                 <TableHeader>
                     <TableRow>
@@ -501,7 +509,7 @@ export default function SiteManagerDashboard() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {recentSiteActivity.map(activity => (
+                    {siteRecentActivity.map(activity => (
                     <TableRow key={activity.id}>
                         <TableCell className="font-medium">{activity.type}</TableCell>
                         <TableCell>{activity.details}</TableCell>
