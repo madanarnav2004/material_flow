@@ -2,6 +2,7 @@
 'use client';
 
 import * as React from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,7 +23,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { useMaterialContext, InventoryItem } from '@/context/material-context';
+import { useMaterialContext, InventoryItem, MaterialReceivedBill, ReceiptStatus } from '@/context/material-context';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -82,14 +83,6 @@ type FromShopFormValues = z.infer<typeof fromShopSchema>;
 type ShopPurchase = FromShopFormValues & { totalAmount: number; receivedBillId: string };
 
 
-type ReceiptStatus = 'Accepted' | 'Mismatch' | 'Completed';
-
-type MaterialReceivedBill = FromSiteFormValues & {
-  receivedBillId: string;
-  receiver: { name: string; } | null;
-  status: ReceiptStatus;
-};
-
 type FullBillDetails = {
     request: {
         id: string;
@@ -107,12 +100,11 @@ type FullBillDetails = {
     receipt: MaterialReceivedBill | null;
 }
 
-const initialPastReceipts: MaterialReceivedBill[] = [];
 
 export default function ReceiptsPage() {
   const { toast } = useToast();
-  const { issuedMaterials, requests, inventory, setInventory } = useMaterialContext();
-  const [pastReceipts, setPastReceipts] = React.useState<MaterialReceivedBill[]>(initialPastReceipts);
+  const { issuedMaterials, requests, inventory, setInventory, receipts: pastReceipts, setReceipts: setPastReceipts } = useMaterialContext();
+  const searchParams = useSearchParams();
   const [activeBillDetails, setActiveBillDetails] = React.useState<FullBillDetails | null>(null);
   const billContentRef = React.useRef<HTMLDivElement>(null);
 
@@ -152,19 +144,40 @@ export default function ReceiptsPage() {
         fromSiteForm.setValue('issuedQuantity', issuedItem.issuedQuantity);
         fromSiteForm.setValue('issuingSite', issuedItem.issuingSite);
         fromSiteForm.setValue('receivingSite', issuedItem.receivingSite);
-        fromSiteForm.setValue('receivedQuantity', issuedItem.issuedQuantity);
         toast({
             title: 'Auto-filled!',
             description: 'Material details have been auto-filled from the Issued ID.',
         });
     } else {
-        fromSiteForm.setValue('requestId', '');
-        fromSiteForm.setValue('materialName', '');
-        fromSiteForm.setValue('issuedQuantity', 0);
-        fromSiteForm.setValue('issuingSite', '');
-        fromSiteForm.setValue('receivingSite', '');
+        fromSiteForm.reset({
+          issuedId: '',
+          receiverName: '',
+          receivedQuantity: 0,
+          isDamaged: false,
+          damageDescription: '',
+          remarks: '',
+          receivedDate: new Date(),
+          requestId: '',
+          issuingSite: '',
+          receivingSite: '',
+          materialName: '',
+          issuedQuantity: 0,
+        });
     }
   };
+
+  React.useEffect(() => {
+    const issuedIdFromQuery = searchParams.get('issuedId');
+    if (issuedIdFromQuery) {
+        handleIssuedIdChange(issuedIdFromQuery);
+    }
+  }, [searchParams]);
+
+  const availableIssuedMaterials = React.useMemo(() => {
+      const receivedIds = new Set(pastReceipts.map(r => r.issuedId));
+      return issuedMaterials.filter(im => !receivedIds.has(im.issuedId));
+  }, [issuedMaterials, pastReceipts]);
+
 
   function onFromSiteSubmit(values: FromSiteFormValues) {
     const today = new Date();
@@ -394,10 +407,10 @@ export default function ReceiptsPage() {
                         <FormField control={fromSiteForm.control} name="issuedId" render={({ field }) => (
                             <FormItem>
                               <FormLabel>Issued ID</FormLabel>
-                              <Select onValueChange={(value) => handleIssuedIdChange(value)} defaultValue={field.value}>
+                              <Select onValueChange={(value) => handleIssuedIdChange(value)} value={field.value}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Select an Issued ID" /></SelectTrigger></FormControl>
                                 <SelectContent>
-                                  {issuedMaterials.map(item => (<SelectItem key={item.issuedId} value={item.issuedId}>{item.issuedId} ({item.materialName})</SelectItem>))}
+                                  {availableIssuedMaterials.map(item => (<SelectItem key={item.issuedId} value={item.issuedId}>{item.issuedId} ({item.materialName})</SelectItem>))}
                                 </SelectContent>
                               </Select>
                               <FormMessage />

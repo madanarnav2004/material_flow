@@ -66,7 +66,7 @@ type MaterialIndentBill = RequestFormValues & {
 export default function SiteManagerDashboard() {
   const { toast } = useToast();
   const router = useRouter();
-  const { requests, inventory } = useMaterialContext();
+  const { requests, inventory, issuedMaterials, receipts: pastReceipts } = useMaterialContext();
   const { site } = useUser();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
 
@@ -92,6 +92,20 @@ export default function SiteManagerDashboard() {
   const currentSiteStock = React.useMemo(() => {
       return inventory.filter(item => item.site === siteName);
   }, [inventory, siteName]);
+
+  const pendingGrns = React.useMemo(() => {
+    if (!site) return [];
+    const receivedIssueIds = new Set(pastReceipts.map(r => r.issuedId));
+    return issuedMaterials.filter(
+        im => im.receivingSite === site && !receivedIssueIds.has(im.issuedId)
+    );
+  }, [issuedMaterials, pastReceipts, site]);
+
+  const pendingGrnCount = pendingGrns.length;
+
+  const handleLogReceipt = (issuedId: string) => {
+    router.push(`/dashboard/receipts?issuedId=${issuedId}`);
+  };
 
 
   const handleViewBill = (reqId: string) => {
@@ -239,7 +253,7 @@ export default function SiteManagerDashboard() {
               <div className="cursor-pointer">
                 <StatCard
                   title="Pending GRNs"
-                  value="1"
+                  value={pendingGrnCount.toString()}
                   icon={PackageCheck}
                   description="Materials in transit to your site"
                 />
@@ -254,14 +268,32 @@ export default function SiteManagerDashboard() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Material</TableHead>
+                    <TableHead>Qty</TableHead>
                     <TableHead>From</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow>
-                    <TableCell>500 Bags of Cement</TableCell>
-                    <TableCell>MAPI Godown</TableCell>
-                  </TableRow>
+                  {pendingGrns.length > 0 ? (
+                    pendingGrns.map(grn => (
+                      <TableRow key={grn.issuedId}>
+                        <TableCell>{grn.materialName}</TableCell>
+                        <TableCell>{grn.issuedQuantity}</TableCell>
+                        <TableCell>{grn.issuingSite}</TableCell>
+                        <TableCell className="text-right">
+                          <Button size="sm" onClick={() => handleLogReceipt(grn.issuedId)}>
+                            Log Receipt
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground">
+                        No pending GRNs.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </DialogContent>

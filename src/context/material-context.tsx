@@ -72,6 +72,28 @@ export interface InventoryItem {
   maxQty: number;
 }
 
+export type ReceiptStatus = 'Accepted' | 'Mismatch' | 'Completed';
+
+export interface MaterialReceivedBill {
+  // from FromSiteFormValues
+  issuedId: string;
+  receiverName: string;
+  requestId: string;
+  issuingSite: string;
+  receivingSite: string;
+  materialName: string;
+  issuedQuantity: number;
+  receivedQuantity: number;
+  isDamaged: boolean;
+  damageDescription?: string;
+  remarks?: string;
+  receivedDate: Date;
+  // added properties
+  receivedBillId: string;
+  receiver: { name: string; } | null;
+  status: ReceiptStatus;
+}
+
 
 interface MaterialContextType {
   requests: MaterialIndent[];
@@ -84,6 +106,8 @@ interface MaterialContextType {
   setLowStockMaterials: React.Dispatch<React.SetStateAction<LowStockMaterial[]>>;
   inventory: InventoryItem[];
   setInventory: React.Dispatch<React.SetStateAction<InventoryItem[]>>;
+  receipts: MaterialReceivedBill[];
+  setReceipts: React.Dispatch<React.SetStateAction<MaterialReceivedBill[]>>;
 }
 
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
@@ -96,10 +120,11 @@ export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [issuedMaterials, setIssuedMaterials] = useState<IssuedMaterial[]>(initialIssuedMaterials);
   const [lowStockMaterials, setLowStockMaterials] = useState<LowStockMaterial[]>(initialLowStockMaterials);
   const [inventory, setInventory] = useState<InventoryItem[]>(initialInventory);
+  const [receipts, setReceipts] = useState<MaterialReceivedBill[]>([]);
 
 
   return (
-    <MaterialContext.Provider value={{ requests, setRequests, pendingRequests, setPendingRequests, issuedMaterials, setIssuedMaterials, lowStockMaterials, setLowStockMaterials, inventory, setInventory }}>
+    <MaterialContext.Provider value={{ requests, setRequests, pendingRequests, setPendingRequests, issuedMaterials, setIssuedMaterials, lowStockMaterials, setLowStockMaterials, inventory, setInventory, receipts, setReceipts }}>
       {children}
     </MaterialContext.Provider>
   );
