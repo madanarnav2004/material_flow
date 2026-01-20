@@ -29,6 +29,7 @@ export interface MaterialIndent {
   status: IndentStatus;
   returnDate: string;
   issuingSite?: string;
+  poDate?: string;
 }
 
 interface PendingIndent {

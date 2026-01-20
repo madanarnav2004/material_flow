@@ -30,12 +30,17 @@ export default function PurchaseDepartmentDashboard() {
   const { requests, setRequests, inventory } = useMaterialContext();
   const [selectedIndent, setSelectedIndent] = React.useState<MaterialIndent | null>(null);
   const [issuingSite, setIssuingSite] = React.useState<string>('');
-  const [generatedPO, setGeneratedPO] = React.useState<PurchaseOrder | null>(null);
-  const poCardContentRef = React.useRef<HTMLDivElement>(null);
-  const [downloadTrigger, setDownloadTrigger] = React.useState<string | null>(null);
-
-
+  
   const indentsForProcessing = requests.filter(req => req.status === 'Director Approved');
+
+  const generatedPOs: PurchaseOrder[] = requests
+    .filter(req => req.status === 'PO Generated' && req.poDate)
+    .map(req => ({
+        ...req,
+        poId: `PO-${req.id}`,
+        poDate: new Date(req.poDate!),
+    }));
+
 
   const lowStockCount = React.useMemo(() => {
     return inventory.filter(item => item.quantity <= item.minQty).length;
@@ -50,7 +55,6 @@ export default function PurchaseDepartmentDashboard() {
   const handleProcessClick = (indent: MaterialIndent) => {
     setSelectedIndent(indent);
     setIssuingSite('');
-    setGeneratedPO(null);
   };
 
   const handleFinalApproval = (decision: 'Issued' | 'Purchase Rejected') => {
@@ -72,34 +76,8 @@ export default function PurchaseDepartmentDashboard() {
     setSelectedIndent(null);
   };
   
-  const handleCreatePO = () => {
-    if (!selectedIndent) return;
-
-    const po: PurchaseOrder = {
-        ...selectedIndent,
-        poId: `PO-${selectedIndent.id}`,
-        poDate: new Date(),
-        status: 'PO Generated',
-    };
-    
-    setGeneratedPO(po);
-    
-    setRequests(prevRequests =>
-        prevRequests.map(req =>
-            req.id === selectedIndent.id ? { ...req, status: 'PO Generated' } : req
-        )
-    );
-
-    setSelectedIndent(null);
-    setDownloadTrigger(po.poId); // Trigger download
-    toast({
-      title: 'Purchase Order Generated',
-      description: `A new PO for ${selectedIndent.material} has been generated.`,
-    });
-  };
-
-  const handleDownloadPO = (poId: string) => {
-    if (!poCardContentRef.current) {
+  const handleDownloadPO = (po: PurchaseOrder) => {
+    if (!po) {
         toast({
             variant: "destructive",
             title: "Download Failed",
@@ -108,13 +86,36 @@ export default function PurchaseDepartmentDashboard() {
         return;
     };
     
-    const billHtml = poCardContentRef.current.innerHTML;
+    const poHtml = `
+        <div class="p-4 border rounded-lg space-y-2">
+            <div class="flex justify-between">
+                <span class="font-semibold">PO Number:</span>
+                <span>${po.poId}</span>
+            </div>
+             <div class="flex justify-between">
+                <span class="font-semibold">PO Date:</span>
+                <span>${po.poDate.toLocaleDateString()}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="font-semibold">Material:</span>
+                <span>${po.material}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="font-semibold">Quantity:</span>
+                <span>${po.quantity}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="font-semibold">Requesting Site:</span>
+                <span>${po.site}</span>
+            </div>
+        </div>
+    `;
 
-    const blob = new Blob([`<html><head><title>PO: ${poId}</title><style>body{font-family:sans-serif;padding:20px}.flex{display:flex}.justify-between{justify-content:space-between}h1{font-size:1.5rem;font-weight:bold;margin-bottom:1rem}.p-4{padding:1rem}.border{border:1px solid #ddd}.rounded-lg{border-radius:0.5rem}.space-y-2>*{margin-top:0.5rem}.font-semibold{font-weight:600}</style></head><body><h1>Purchase Order: ${poId}</h1>${billHtml}</body></html>`], { type: 'text/html' });
+    const blob = new Blob([`<html><head><title>PO: ${po.poId}</title><style>body{font-family:sans-serif;padding:20px}.flex{display:flex}.justify-between{justify-content:space-between}h1{font-size:1.5rem;font-weight:bold;margin-bottom:1rem}.p-4{padding:1rem}.border{border:1px solid #ddd}.rounded-lg{border-radius:0.5rem}.space-y-2>*{margin-top:0.5rem}.font-semibold{font-weight:600}</style></head><body><h1>Purchase Order: ${po.poId}</h1>${poHtml}</body></html>`], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `PO-${poId}.html`;
+    a.download = `PO-${po.poId}.html`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -122,16 +123,34 @@ export default function PurchaseDepartmentDashboard() {
     
     toast({
         title: "Download Started",
-        description: `Purchase Order ${poId} is downloading.`
+        description: `Purchase Order ${po.poId} is downloading.`
     });
   };
 
-  React.useEffect(() => {
-    if (downloadTrigger && generatedPO && poCardContentRef.current) {
-        handleDownloadPO(downloadTrigger);
-        setDownloadTrigger(null);
-    }
-  }, [downloadTrigger, generatedPO]);
+  const handleCreatePO = () => {
+    if (!selectedIndent) return;
+
+    const poDate = new Date();
+    const po: PurchaseOrder = {
+        ...selectedIndent,
+        poId: `PO-${selectedIndent.id}`,
+        poDate: poDate,
+        status: 'PO Generated',
+    };
+    
+    setRequests(prevRequests =>
+        prevRequests.map(req =>
+            req.id === selectedIndent.id ? { ...req, status: 'PO Generated', poDate: poDate.toISOString() } : req
+        )
+    );
+
+    setSelectedIndent(null);
+    handleDownloadPO(po);
+    toast({
+      title: 'Purchase Order Generated',
+      description: `A new PO for ${selectedIndent.material} has been generated.`,
+    });
+  };
 
   // Memoize stock calculations
   const { orgStock, siteStock, storeStock } = React.useMemo(() => {
@@ -171,7 +190,7 @@ export default function PurchaseDepartmentDashboard() {
           />
           <StatCard
             title="Generated POs"
-            value={requests.filter(r => r.status === 'PO Generated').length.toString()}
+            value={generatedPOs.length.toString()}
             icon={FilePlus}
             description="Awaiting fulfillment"
           />
@@ -191,7 +210,7 @@ export default function PurchaseDepartmentDashboard() {
           />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Indents for Processing</CardTitle>
@@ -236,40 +255,57 @@ export default function PurchaseDepartmentDashboard() {
           </CardContent>
         </Card>
 
-        {generatedPO && (
-            <Card>
-                <CardHeader>
-                    <CardTitle>Generated Purchase Order</CardTitle>
-                    <CardDescription>A new PO has been created for an unavailable material.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div ref={poCardContentRef}>
-                        <div className="p-4 border rounded-lg space-y-2">
-                            <div className="flex justify-between">
-                                <span className="font-semibold">PO Number:</span>
-                                <span>{generatedPO.poId}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="font-semibold">Material:</span>
-                                <span>{generatedPO.material}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="font-semibold">Quantity:</span>
-                                <span>{generatedPO.quantity}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="font-semibold">Requesting Site:</span>
-                                <span>{generatedPO.site}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <Button onClick={() => handleDownloadPO(generatedPO.poId)} className="w-full">
-                        <Download className="mr-2 h-4 w-4" />
-                        Download Purchase Order Again
-                    </Button>
-                </CardContent>
-            </Card>
-        )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Generated Purchase Orders</CardTitle>
+            <CardDescription>
+              A list of all generated purchase orders awaiting fulfillment.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {generatedPOs.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>PO Number</TableHead>
+                    <TableHead>Material</TableHead>
+                    <TableHead>Qty</TableHead>
+                    <TableHead>Requesting Site</TableHead>
+                    <TableHead>PO Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {generatedPOs.map(po => (
+                    <TableRow key={po.id}>
+                      <TableCell className="font-medium">{po.poId}</TableCell>
+                      <TableCell>{po.material}</TableCell>
+                      <TableCell>{po.quantity}</TableCell>
+                      <TableCell>{po.site}</TableCell>
+                      <TableCell>{po.poDate.toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownloadPO(po)}
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          Download PO
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="flex items-center justify-center p-8">
+                <p className="text-center text-muted-foreground">
+                  No purchase orders have been generated yet.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
       
        <Card>
