@@ -15,7 +15,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import StatCard from '@/components/dashboard/stat-card';
 import {
-  DollarSign,
   Package,
   AlertTriangle,
   PackageSearch,
@@ -24,7 +23,6 @@ import {
   FileText,
   Download,
   BarChart as BarChartIcon,
-  Building,
   FileSpreadsheet,
 } from 'lucide-react';
 import {
@@ -33,7 +31,6 @@ import {
   detailedMonthlyConsumption,
   detailedStock,
   stockUpdates,
-  detailedMaterialValue
 } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
@@ -50,7 +47,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { useMaterialContext, type IndentStatus } from '@/context/material-context';
+import { useMaterialContext, type IndentStatus, type InventoryItem } from '@/context/material-context';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 
@@ -89,17 +86,6 @@ type MaterialIndentBill = RequestFormValues & {
   totalValue: number;
 };
 
-const totalValue = detailedMaterialValue.reduce((acc, item) => acc + item.quantity * item.rate, 0);
-
-const siteWiseTotal = detailedMaterialValue.reduce((acc, item) => {
-    if (!acc[item.site]) {
-        acc[item.site] = 0;
-    }
-    acc[item.site] += item.quantity * item.rate;
-    return acc;
-}, {} as Record<string, number>);
-
-
 export default function DirectorDashboard() {
   const router = useRouter();
   const { toast } = useToast();
@@ -112,15 +98,16 @@ export default function DirectorDashboard() {
 
   const indentsForApproval = requests.filter(r => r.status === 'Pending Director Approval');
   
+  const lowStockMaterials = React.useMemo(() => {
+    return inventory.filter(item => item.quantity <= item.minQty);
+  }, [inventory]);
+  const lowStockCount = lowStockMaterials.length;
+
   const stockLocations = ['Overall', 'MAPI Godown', ...new Set(inventory.map(s => s.site).filter(s => s !== 'MAPI Godown'))];
   const consumptionSites = ['All', ...new Set(detailedMonthlyConsumption.Jun.siteWise.map((s:any) => s.site))];
 
   const totalMaterials = React.useMemo(() => {
     return inventory.reduce((acc, item) => acc + item.quantity, 0);
-  }, [inventory]);
-  
-  const lowStockCount = React.useMemo(() => {
-    return inventory.filter(item => item.quantity <= item.minQty).length;
   }, [inventory]);
 
   const filteredStockData = React.useMemo(() => {
@@ -213,7 +200,7 @@ export default function DirectorDashboard() {
           <Dialog>
             <DialogTrigger asChild>
                 <div className="cursor-pointer">
-                    <StatCard title="Total Materials" value={`${totalMaterials.toLocaleString()} units`} icon={PackageSearch} description={`Across ${Object.keys(siteWiseTotal).length} sites`} />
+                    <StatCard title="Total Materials" value={`${totalMaterials.toLocaleString()} units`} icon={PackageSearch} description={`Across ${new Set(inventory.map(i => i.site)).size} sites`} />
                 </div>
             </DialogTrigger>
             <DialogContent className="max-w-4xl">
@@ -281,78 +268,120 @@ export default function DirectorDashboard() {
             </DialogContent>
           </Dialog>
 
-          <StatCard
-            title="Pending Your Approval"
-            value={indentsForApproval.length.toString()}
-            icon={Package}
-            description={`From ${new Set(indentsForApproval.map(p => p.site)).size} sites`}
-            className="border-yellow-500/50"
-          />
-
-          <StatCard
-            title="Low Stock Alerts"
-            value={`${lowStockCount} materials`}
-            icon={AlertTriangle}
-            description="Across all sites"
-            className="text-destructive border-destructive/50"
-            onClick={() => router.push('/dashboard/inventory?filter=low-stock')}
-          />
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Indents Awaiting Your Approval</CardTitle>
-            <CardDescription>Review and approve or reject material indents from sites.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {indentsForApproval.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Indent ID</TableHead>
-                    <TableHead>Material</TableHead>
-                    <TableHead>Qty</TableHead>
-                    <TableHead>Site</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {indentsForApproval.map(req => (
-                    <TableRow key={req.id}>
-                      <TableCell className="font-medium">{req.id}</TableCell>
-                      <TableCell>{req.material}</TableCell>
-                      <TableCell>{req.quantity}</TableCell>
-                      <TableCell>{req.site}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              Actions <ChevronDown className="ml-2 h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewBill(req.id)}>
-                              <Eye className="mr-2 h-4 w-4" /> View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Director Approved')}>
-                              Approve
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Director Rejected')} className="text-destructive">
-                              Reject
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+          <Dialog>
+            <DialogTrigger asChild>
+              <div className="cursor-pointer">
+                <StatCard
+                  title="Pending Your Approval"
+                  value={indentsForApproval.length.toString()}
+                  icon={Package}
+                  description={`From ${new Set(indentsForApproval.map(p => p.site)).size} sites`}
+                  className="border-yellow-500/50"
+                />
+              </div>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                <DialogTitle>Indents Awaiting Your Approval</DialogTitle>
+                <DialogDescription>Review and approve or reject material indents from sites.</DialogDescription>
+              </DialogHeader>
+              <div className="max-h-[60vh] overflow-y-auto">
+                {indentsForApproval.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Indent ID</TableHead>
+                      <TableHead>Material</TableHead>
+                      <TableHead>Qty</TableHead>
+                      <TableHead>Site</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <p className="text-center text-muted-foreground p-4">No indents are currently awaiting your approval.</p>
-            )}
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {indentsForApproval.map(req => (
+                      <TableRow key={req.id}>
+                        <TableCell className="font-medium">{req.id}</TableCell>
+                        <TableCell>{req.material}</TableCell>
+                        <TableCell>{req.quantity}</TableCell>
+                        <TableCell>{req.site}</TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                Actions <ChevronDown className="ml-2 h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleViewBill(req.id)}>
+                                <Eye className="mr-2 h-4 w-4" /> View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Director Approved')}>
+                                Approve
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleStatusChange(req.id, 'Director Rejected')} className="text-destructive">
+                                Reject
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-center text-muted-foreground p-4">No indents are currently awaiting your approval.</p>
+              )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog>
+            <DialogTrigger asChild>
+              <div className="cursor-pointer">
+                <StatCard
+                  title="Low Stock Alerts"
+                  value={`${lowStockCount} materials`}
+                  icon={AlertTriangle}
+                  description="Across all sites"
+                  className="text-destructive border-destructive/50"
+                />
+              </div>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Low Stock Material Alerts</DialogTitle>
+                <DialogDescription>Materials that have fallen below their minimum required quantity.</DialogDescription>
+              </DialogHeader>
+               <div className="max-h-[60vh] overflow-y-auto">
+                {lowStockMaterials.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                          <TableRow>
+                          <TableHead>Material</TableHead>
+                          <TableHead>Location</TableHead>
+                          <TableHead className="text-right">Current Qty</TableHead>
+                          <TableHead className="text-right">Min. Threshold</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {lowStockMaterials.map((item: InventoryItem) => (
+                          <TableRow key={item.id} className="text-destructive">
+                              <TableCell className="font-medium">{item.material}</TableCell>
+                              <TableCell>{item.site}</TableCell>
+                              <TableCell className="text-right font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
+                              <TableCell className="text-right">{`${item.minQty} ${item.unit}`}</TableCell>
+                          </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                ) : (
+                    <p className="text-center text-muted-foreground">No low stock alerts.</p>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
         
         <div className="grid gap-6 lg:grid-cols-5">
           <div className="lg:col-span-3 space-y-6">

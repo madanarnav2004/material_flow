@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart, Users, Building, FileText, Eye, ChevronDown, Download, Layers, FileSpreadsheet, AlertTriangle } from 'lucide-react';
+import { Building, FileText, Eye, Download, FileSpreadsheet, AlertTriangle } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -11,12 +11,10 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { useMaterialContext, type IndentStatus } from '@/context/material-context';
-import { boqUsage, engineerUsage, boqVsActual } from '@/lib/mock-data';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { useMaterialContext, type InventoryItem } from '@/context/material-context';
+import { boqUsage, engineerUsage } from '@/lib/mock-data';
 
 
 type RequestFormValues = {
@@ -40,16 +38,16 @@ type MaterialIndentBill = RequestFormValues & {
 export default function CoordinatorDashboard() {
   const { toast } = useToast();
   const router = useRouter();
-  const { requests, setRequests, pendingRequests, inventory } = useMaterialContext();
+  const { requests, pendingRequests, inventory } = useMaterialContext();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
-  const [comparisonSite, setComparisonSite] = React.useState<string>('North Site');
 
-  const filteredComparisonData = React.useMemo(() => {
-    return boqVsActual.filter(d => d.site === comparisonSite);
-  }, [comparisonSite]);
+  const lowStockMaterials = React.useMemo(() => {
+    return inventory.filter(item => item.quantity <= item.minQty);
+  }, [inventory]);
+  const lowStockCount = lowStockMaterials.length;
   
-  const lowStockCount = React.useMemo(() => {
-    return inventory.filter(item => item.quantity <= item.minQty).length;
+  const sites = React.useMemo(() => {
+    return ['All', ...Array.from(new Set(inventory.map(item => item.site)))];
   }, [inventory]);
 
 
@@ -103,26 +101,124 @@ export default function CoordinatorDashboard() {
             className="border-primary/50"
             onClick={() => router.push('/dashboard/boq-analysis')}
           />
-          <StatCard
-            title="Sites Overview"
-            value={`${new Set(requests.map(r => r.site)).size} Sites`}
-            icon={Building}
-            description="Total active project sites"
-          />
-           <StatCard
-            title="Pending Indents"
-            value={pendingRequests.length.toString()}
-            icon={FileText}
-            description="Awaiting action"
-          />
-          <StatCard
-            title="Low Stock Alerts"
-            value={`${lowStockCount} materials`}
-            icon={AlertTriangle}
-            description="Across all sites"
-            className="text-destructive border-destructive/50"
-            onClick={() => router.push('/dashboard/inventory?filter=low-stock')}
-          />
+          <Dialog>
+            <DialogTrigger asChild>
+              <div className="cursor-pointer">
+                <StatCard
+                  title="Sites Overview"
+                  value={`${sites.length - 1} Sites`}
+                  icon={Building}
+                  description="Total active project sites"
+                />
+              </div>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Active Project Sites</DialogTitle>
+              </DialogHeader>
+              <Table>
+                <TableHeader><TableRow><TableHead>Site Name</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {sites.filter(s => s !== 'All' && s !== 'MAPI Godown').map(site => (
+                    <TableRow key={site}><TableCell>{site}</TableCell></TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog>
+            <DialogTrigger asChild>
+               <div className="cursor-pointer">
+                <StatCard
+                  title="Pending Indents"
+                  value={pendingRequests.length.toString()}
+                  icon={FileText}
+                  description="Awaiting action"
+                />
+              </div>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Pending Indents</DialogTitle>
+                <DialogDescription>Material indents from various sites awaiting action.</DialogDescription>
+              </DialogHeader>
+               <div className="max-h-[60vh] overflow-y-auto">
+                  {pendingRequests.length > 0 ? (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Indent ID</TableHead>
+                                <TableHead>Material</TableHead>
+                                <TableHead>Quantity</TableHead>
+                                <TableHead>Site</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {pendingRequests.map(item => (
+                            <TableRow key={item.id}>
+                                <TableCell className="font-medium">{item.id}</TableCell>
+                                <TableCell>{item.material}</TableCell>
+                                <TableCell>{item.quantity}</TableCell>
+                                <TableCell>{item.site}</TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-center text-muted-foreground p-8">No pending indents.</p>
+                  )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog>
+            <DialogTrigger asChild>
+              <div className="cursor-pointer">
+                <StatCard
+                  title="Low Stock Alerts"
+                  value={`${lowStockCount} materials`}
+                  icon={AlertTriangle}
+                  description="Across all sites"
+                  className="text-destructive border-destructive/50"
+                />
+              </div>
+            </DialogTrigger>
+             <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Low Stock Material Alerts</DialogTitle>
+                <DialogDescription>
+                  Materials that have fallen below the minimum required quantity.
+                </DialogDescription>
+              </DialogHeader>
+               <div className="max-h-[60vh] overflow-y-auto">
+                {lowStockMaterials.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                          <TableRow>
+                          <TableHead>Material</TableHead>
+                          <TableHead>Location</TableHead>
+                          <TableHead className="text-right">Current Qty</TableHead>
+                          <TableHead className="text-right">Min. Threshold</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {lowStockMaterials.map((item: InventoryItem) => (
+                          <TableRow key={item.id} className="text-destructive">
+                              <TableCell className="font-medium">{item.material}</TableCell>
+                              <TableCell>{item.site}</TableCell>
+                              <TableCell className="text-right font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
+                              <TableCell className="text-right">{`${item.minQty} ${item.unit}`}</TableCell>
+                          </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                ) : (
+                    <p className="text-center text-muted-foreground p-8">No low stock alerts.</p>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
         
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -225,7 +321,6 @@ export default function CoordinatorDashboard() {
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <p><strong>Issuing Site:</strong> {lastGeneratedBill.issuingSite}</p>
                         <p><strong>Issued ID:</strong> {lastGeneratedBill.issuedId}</p>
-                        <p><strong>Shifting Date:</strong> {format(lastGeneratedBill.shiftingDate, 'PPP')}</p>
                       </div>
                     </div>
                     <div className="space-y-2">

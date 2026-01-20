@@ -1,22 +1,19 @@
 'use client';
 
 import * as React from 'react';
-import { Download, Upload, CheckCircle, Settings, Send, FilePlus, ChevronDown, AlertTriangle } from 'lucide-react';
+import { Download, Upload, CheckCircle, Settings, Send, FilePlus, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { useMaterialContext, MaterialIndent, IndentStatus } from '@/context/material-context';
+import { useMaterialContext, MaterialIndent, InventoryItem } from '@/context/material-context';
 import { Badge } from '../ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { detailedStock } from '@/lib/mock-data';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import StatCard from '../dashboard/stat-card';
-import { useRouter } from 'next/navigation';
 
 type PurchaseOrder = MaterialIndent & {
     poId: string;
@@ -26,7 +23,6 @@ type PurchaseOrder = MaterialIndent & {
 
 export default function PurchaseDepartmentDashboard() {
   const { toast } = useToast();
-  const router = useRouter();
   const { requests, setRequests, inventory } = useMaterialContext();
   const [selectedIndent, setSelectedIndent] = React.useState<MaterialIndent | null>(null);
   const [issuingSite, setIssuingSite] = React.useState<string>('');
@@ -42,9 +38,10 @@ export default function PurchaseDepartmentDashboard() {
     }));
 
 
-  const lowStockCount = React.useMemo(() => {
-    return inventory.filter(item => item.quantity <= item.minQty).length;
+  const lowStockMaterials = React.useMemo(() => {
+    return inventory.filter(item => item.quantity <= item.minQty);
   }, [inventory]);
+  const lowStockCount = lowStockMaterials.length;
 
   const materialAvailability = selectedIndent
     ? inventory.filter(s => s.material.toLowerCase() === selectedIndent.material.toLowerCase())
@@ -184,44 +181,23 @@ export default function PurchaseDepartmentDashboard() {
     <>
       <h1 className="text-3xl font-bold font-headline">Purchase Department Dashboard</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-         <StatCard
-            title="Indents to Process"
-            value={indentsForProcessing.length.toString()}
-            icon={Settings}
-            description="Awaiting site assignment"
-          />
-          <StatCard
-            title="Generated POs"
-            value={generatedPOs.length.toString()}
-            icon={FilePlus}
-            description="Awaiting fulfillment"
-          />
-          <StatCard
-            title="Total Inventory Value"
-            value="$XXX,XXX"
-            icon={CheckCircle}
-            description="Across all locations"
-          />
-           <StatCard
-            title="Low Stock Alerts"
-            value={`${lowStockCount} materials`}
-            icon={AlertTriangle}
-            description="Across all sites"
-            className="text-destructive border-destructive/50"
-            onClick={() => router.push('/dashboard/inventory?filter=low-stock')}
-          />
-      </div>
-
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Indents for Processing</CardTitle>
-            <CardDescription>
-              Assign an issuing site for director-approved indents.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {indentsForProcessing.length > 0 ? (
+        <Dialog>
+          <DialogTrigger asChild>
+            <div className="cursor-pointer">
+              <StatCard
+                  title="Indents to Process"
+                  value={indentsForProcessing.length.toString()}
+                  icon={Settings}
+                  description="Awaiting site assignment"
+                />
+            </div>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Indents for Processing</DialogTitle>
+              <DialogDescription>Assign an issuing site for director-approved indents.</DialogDescription>
+            </DialogHeader>
+             {indentsForProcessing.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -254,18 +230,26 @@ export default function PurchaseDepartmentDashboard() {
                 <p className="text-center text-muted-foreground">No indents are awaiting processing.</p>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </DialogContent>
+        </Dialog>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Generated Purchase Orders</CardTitle>
-            <CardDescription>
-              A list of all generated purchase orders awaiting fulfillment.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {generatedPOs.length > 0 ? (
+        <Dialog>
+          <DialogTrigger asChild>
+            <div className="cursor-pointer">
+              <StatCard
+                title="Generated POs"
+                value={generatedPOs.length.toString()}
+                icon={FilePlus}
+                description="Awaiting fulfillment"
+              />
+            </div>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl">
+             <DialogHeader>
+              <DialogTitle>Generated Purchase Orders</DialogTitle>
+              <DialogDescription>A list of all generated purchase orders awaiting fulfillment.</DialogDescription>
+            </DialogHeader>
+             {generatedPOs.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -306,56 +290,111 @@ export default function PurchaseDepartmentDashboard() {
                 </p>
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
-      
-       <Card>
-            <CardHeader>
-                <CardTitle>Material Stock Overview</CardTitle>
-                <CardDescription>
-                    Live inventory counts across the organization.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Tabs defaultValue="organization" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="organization">Organization-wise</TabsTrigger>
-                        <TabsTrigger value="site">Site-wise</TabsTrigger>
-                        <TabsTrigger value="store">Store-wise</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="organization">
-                        <Table>
-                            <TableHeader><TableRow><TableHead>Material</TableHead><TableHead className="text-right">Total Quantity</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                                {orgStock.map(item => (<TableRow key={item.name}><TableCell>{item.name}</TableCell><TableCell className="text-right">{item.quantity.toLocaleString()} {item.unit}</TableCell></TableRow>))}
-                            </TableBody>
-                        </Table>
-                    </TabsContent>
-                    <TabsContent value="site">
-                        {Object.entries(siteStock).map(([siteName, materials]) => (
-                            <div key={siteName} className="mb-4">
-                                <h3 className="font-semibold mb-2">{siteName}</h3>
-                                <Table>
-                                    <TableHeader><TableRow><TableHead>Material</TableHead><TableHead className="text-right">Quantity</TableHead></TableRow></TableHeader>
-                                    <TableBody>
-                                        {materials.map(item => (<TableRow key={item.name}><TableCell>{item.name}</TableCell><TableCell className="text-right">{item.quantity.toLocaleString()} {item.unit}</TableCell></TableRow>))}
-                                    </TableBody>
-                                </Table>
-                            </div>
+          </DialogContent>
+        </Dialog>
+
+        <StatCard
+          title="Total Inventory Value"
+          value="$XXX,XXX"
+          icon={CheckCircle}
+          description="Across all locations"
+        />
+
+        <Dialog>
+          <DialogTrigger asChild>
+            <div className="cursor-pointer">
+              <StatCard
+                title="Low Stock Alerts"
+                value={`${lowStockCount} materials`}
+                icon={AlertTriangle}
+                description="Across all sites"
+                className="text-destructive border-destructive/50"
+              />
+            </div>
+          </DialogTrigger>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Low Stock Material Alerts</DialogTitle>
+              <DialogDescription>Materials that have fallen below their minimum required quantity.</DialogDescription>
+            </DialogHeader>
+              <div className="max-h-[60vh] overflow-y-auto">
+              {lowStockMaterials.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                        <TableRow>
+                        <TableHead>Material</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead className="text-right">Current Qty</TableHead>
+                        <TableHead className="text-right">Min. Threshold</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {lowStockMaterials.map((item: InventoryItem) => (
+                        <TableRow key={item.id} className="text-destructive">
+                            <TableCell className="font-medium">{item.material}</TableCell>
+                            <TableCell>{item.site}</TableCell>
+                            <TableCell className="text-right font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
+                            <TableCell className="text-right">{`${item.minQty} ${item.unit}`}</TableCell>
+                        </TableRow>
                         ))}
-                    </TabsContent>
-                    <TabsContent value="store">
-                        <Table>
-                            <TableHeader><TableRow><TableHead>Material</TableHead><TableHead className="text-right">Quantity</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                                {storeStock.map(item => (<TableRow key={item.id}><TableCell>{item.material}</TableCell><TableCell className="text-right">{item.quantity.toLocaleString()}</TableCell></TableRow>))}
-                            </TableBody>
-                        </Table>
-                    </TabsContent>
-                </Tabs>
-            </CardContent>
-        </Card>
+                    </TableBody>
+                  </Table>
+              ) : (
+                  <p className="text-center text-muted-foreground p-8">No low stock alerts.</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+              <CardTitle>Material Stock Overview</CardTitle>
+              <CardDescription>
+                  Live inventory counts across the organization.
+              </CardDescription>
+          </CardHeader>
+          <CardContent>
+              <Tabs defaultValue="organization" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3">
+                      <TabsTrigger value="organization">Organization-wise</TabsTrigger>
+                      <TabsTrigger value="site">Site-wise</TabsTrigger>
+                      <TabsTrigger value="store">Store-wise</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="organization">
+                      <Table>
+                          <TableHeader><TableRow><TableHead>Material</TableHead><TableHead className="text-right">Total Quantity</TableHead></TableRow></TableHeader>
+                          <TableBody>
+                              {orgStock.map(item => (<TableRow key={item.name}><TableCell>{item.name}</TableCell><TableCell className="text-right">{item.quantity.toLocaleString()} {item.unit}</TableCell></TableRow>))}
+                          </TableBody>
+                      </Table>
+                  </TabsContent>
+                  <TabsContent value="site">
+                      {Object.entries(siteStock).map(([siteName, materials]) => (
+                          <div key={siteName} className="mb-4">
+                              <h3 className="font-semibold mb-2">{siteName}</h3>
+                              <Table>
+                                  <TableHeader><TableRow><TableHead>Material</TableHead><TableHead className="text-right">Quantity</TableHead></TableRow></TableHeader>
+                                  <TableBody>
+                                      {materials.map(item => (<TableRow key={item.name}><TableCell>{item.name}</TableCell><TableCell className="text-right">{item.quantity.toLocaleString()} {item.unit}</TableCell></TableRow>))}
+                                  </TableBody>
+                              </Table>
+                          </div>
+                      ))}
+                  </TabsContent>
+                  <TabsContent value="store">
+                      <Table>
+                          <TableHeader><TableRow><TableHead>Material</TableHead><TableHead className="text-right">Quantity</TableHead></TableRow></TableHeader>
+                          <TableBody>
+                              {storeStock.map(item => (<TableRow key={item.id}><TableCell>{item.material}</TableCell><TableCell className="text-right">{item.quantity.toLocaleString()}</TableCell></TableRow>))}
+                          </TableBody>
+                      </Table>
+                  </TabsContent>
+              </Tabs>
+          </CardContent>
+      </Card>
+      </div>
 
       <Dialog open={!!selectedIndent} onOpenChange={(isOpen) => !isOpen && setSelectedIndent(null)}>
         <DialogContent className="max-w-4xl">

@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -6,10 +5,8 @@ import {
   PackageSearch,
   AlertTriangle,
   Truck,
-  History,
   Building,
   Eye,
-  ChevronDown,
   FileText,
   Download
 } from 'lucide-react';
@@ -35,10 +32,9 @@ import * as React from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { useMaterialContext, type IndentStatus } from '@/context/material-context';
+import { useMaterialContext, type InventoryItem } from '@/context/material-context';
 import { storeInventory, recentStoreActivity } from '@/lib/mock-data';
 
 
@@ -61,10 +57,17 @@ type MaterialIndentBill = RequestFormValues & {
 
 export default function GodownManagerDashboard() {
   const { toast } = useToast();
-  const { requests, setRequests, pendingRequests, lowStockMaterials } = useMaterialContext();
+  const { requests, pendingRequests, inventory } = useMaterialContext();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
 
-  const materialsIssuedCount = recentStoreActivity.filter(a => a.type === 'Issue' && a.date === format(new Date(), 'yyyy-MM-dd')).length;
+  const materialsIssuedToday = React.useMemo(() => {
+    return recentStoreActivity.filter(a => a.type === 'Issue' && a.date === format(new Date(), 'yyyy-MM-dd'));
+  }, []);
+  const materialsIssuedCount = materialsIssuedToday.length;
+
+  const lowStockMaterials = React.useMemo(() => {
+    return inventory.filter(item => item.site === 'MAPI Godown' && item.quantity <= item.minQty);
+  }, [inventory]);
 
   const handleViewBill = (reqId: string) => {
     const request = requests.find(r => r.id === reqId);
@@ -109,13 +112,14 @@ export default function GodownManagerDashboard() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <Dialog>
               <DialogTrigger asChild>
-                  <StatCard
-                      title="Total Inventory"
-                      value={`${storeInventory.length}+ items`}
-                      icon={PackageSearch}
-                      description="Total distinct material types"
-                      onClick={() => {}}
-                  />
+                  <div className="cursor-pointer">
+                    <StatCard
+                        title="Total Inventory"
+                        value={`${storeInventory.length}+ items`}
+                        icon={PackageSearch}
+                        description="Total distinct material types"
+                    />
+                  </div>
               </DialogTrigger>
               <DialogContent className="max-w-3xl">
                 <DialogHeader>
@@ -143,7 +147,7 @@ export default function GodownManagerDashboard() {
                             </TableBody>
                         </Table>
                     ) : (
-                        <p className="text-center text-muted-foreground">No inventory data available.</p>
+                        <p className="text-center text-muted-foreground p-8">No inventory data available.</p>
                     )}
                 </div>
                 <div className="flex justify-end gap-4 mt-4">
@@ -156,13 +160,14 @@ export default function GodownManagerDashboard() {
           </Dialog>
           <Dialog>
             <DialogTrigger asChild>
-              <StatCard
-                title="Pending Indents"
-                value={pendingRequests.length.toString()}
-                icon={Package}
-                description={`From ${new Set(pendingRequests.map(p => p.site)).size} different sites`}
-                onClick={() => {}}
-              />
+              <div className="cursor-pointer">
+                <StatCard
+                  title="Pending Indents"
+                  value={pendingRequests.length.toString()}
+                  icon={Package}
+                  description={`From ${new Set(pendingRequests.map(p => p.site)).size} different sites`}
+                />
+              </div>
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
@@ -192,33 +197,63 @@ export default function GodownManagerDashboard() {
                         </TableBody>
                     </Table>
                   ) : (
-                    <p className="text-center text-muted-foreground">No pending indents.</p>
+                    <p className="text-center text-muted-foreground p-8">No pending indents.</p>
                   )}
               </div>
             </DialogContent>
           </Dialog>
-          <StatCard
-            title="Materials Issued"
-            value={`${materialsIssuedCount} items`}
-            icon={Truck}
-            description="In the last 24 hours"
-          />
+
           <Dialog>
             <DialogTrigger asChild>
-              <StatCard
-                title="Low Stock Alerts"
-                value={`${lowStockMaterials.length} materials`}
-                icon={AlertTriangle}
-                className="text-destructive border-destructive/50"
-                description="Across godown & sites"
-                onClick={() => {}}
-              />
+              <div className="cursor-pointer">
+                <StatCard
+                  title="Materials Issued Today"
+                  value={`${materialsIssuedCount} items`}
+                  icon={Truck}
+                  description="To various sites"
+                />
+              </div>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Materials Issued Today</DialogTitle>
+              </DialogHeader>
+               <Table>
+                  <TableHeader>
+                      <TableRow>
+                          <TableHead>Details</TableHead>
+                          <TableHead>Site</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      {materialsIssuedToday.map(activity => (
+                          <TableRow key={activity.id}>
+                              <TableCell className="font-medium">{activity.details}</TableCell>
+                              <TableCell>{activity.site}</TableCell>
+                          </TableRow>
+                      ))}
+                  </TableBody>
+              </Table>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog>
+            <DialogTrigger asChild>
+              <div className="cursor-pointer">
+                <StatCard
+                  title="Low Stock Alerts"
+                  value={`${lowStockMaterials.length} materials`}
+                  icon={AlertTriangle}
+                  className="text-destructive border-destructive/50"
+                  description="In the godown"
+                />
+              </div>
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
                 <DialogTitle>Low Stock Material Alerts</DialogTitle>
                 <DialogDescription>
-                  Materials that have fallen below the minimum required quantity in the godown or across sites.
+                  Materials that have fallen below the minimum required quantity in the godown.
                 </DialogDescription>
               </DialogHeader>
               <div className="max-h-[60vh] overflow-y-auto">
@@ -227,31 +262,23 @@ export default function GodownManagerDashboard() {
                     <TableHeader>
                         <TableRow>
                         <TableHead>Material</TableHead>
-                        <TableHead>Location</TableHead>
                         <TableHead className="text-right">Current Qty</TableHead>
                         <TableHead className="text-right">Min. Threshold</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {lowStockMaterials.map((item) => (
+                        {lowStockMaterials.map((item: InventoryItem) => (
                         <TableRow key={item.id} className="text-destructive">
                             <TableCell className="font-medium">{item.material}</TableCell>
-                            <TableCell>{item.site}</TableCell>
                             <TableCell className="text-right font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
-                            <TableCell className="text-right">{`${item.threshold} ${item.unit}`}</TableCell>
+                            <TableCell className="text-right">{`${item.minQty} ${item.unit}`}</TableCell>
                         </TableRow>
                         ))}
                     </TableBody>
                     </Table>
                 ) : (
-                    <p className="text-center text-muted-foreground">No low stock alerts.</p>
+                    <p className="text-center text-muted-foreground p-8">No low stock alerts.</p>
                 )}
-              </div>
-              <div className="flex justify-end mt-4">
-                <Button onClick={handleDownloadExcel}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export Alert List
-                </Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -261,7 +288,7 @@ export default function GodownManagerDashboard() {
             <div className="lg:col-span-3 space-y-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Pending Indents</CardTitle>
+                        <CardTitle>Pending Indents for Issue</CardTitle>
                         <CardDescription>Material indents awaiting issue from the godown.</CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -285,39 +312,8 @@ export default function GodownManagerDashboard() {
                             </TableBody>
                         </Table>
                     ) : (
-                        <p className="text-center text-muted-foreground">No pending indents.</p>
+                        <p className="text-center text-muted-foreground p-8">No pending indents.</p>
                     )}
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Low Stock Materials</CardTitle>
-                        <CardDescription>Materials running low in the godown or across sites.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {lowStockMaterials.length > 0 ? (
-                        <Table>
-                              <TableHeader>
-                                  <TableRow>
-                                      <TableHead>Material</TableHead>
-                                      <TableHead>Quantity</TableHead>
-                                      <TableHead>Location</TableHead>
-                                  </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                  {lowStockMaterials.map(item => (
-                                      <TableRow key={item.id} className="text-destructive">
-                                          <TableCell className="font-medium">{item.material}</TableCell>
-                                          <TableCell className="font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
-                                          <TableCell>{item.site}</TableCell>
-                                      </TableRow>
-                                  ))}
-                              </TableBody>
-                        </Table>
-                      ) : (
-                        <p className="text-center text-muted-foreground">No low stock materials.</p>
-                      )}
                     </CardContent>
                 </Card>
             </div>
@@ -432,7 +428,7 @@ export default function GodownManagerDashboard() {
                         </TableBody>
                     </Table>
                   ) : (
-                    <p className="text-center text-muted-foreground">No return reminders.</p>
+                    <p className="text-center text-muted-foreground p-8">No return reminders.</p>
                   )}
               </CardContent>
             </Card>
@@ -504,80 +500,6 @@ export default function GodownManagerDashboard() {
             </div>
           </DialogContent>
         </Dialog>
-
-        <Card>
-            <CardHeader>
-                <div className="flex items-center gap-2">
-                    <Building className="h-6 w-6" />
-                    <CardTitle>Overall Godown Inventory</CardTitle>
-                </div>
-                <CardDescription>
-                    Live summary of materials available at the central MAPI godown.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-            {storeInventory.length > 0 ? (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Material</TableHead>
-                            <TableHead>Available Quantity</TableHead>
-                            <TableHead>Sites Supplied</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {storeInventory.map((material) => (
-                        <TableRow key={material.id}>
-                            <TableCell className="font-medium">{material.name}</TableCell>
-                            <TableCell>{material.quantity}</TableCell>
-                            <TableCell>{material.siteDistribution}</TableCell>
-                        </TableRow>
-                    ))}
-                    </TableBody>
-                </Table>
-            ) : (
-                <p className="text-center text-muted-foreground">No inventory data available.</p>
-            )}
-            </CardContent>
-        </Card>
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><History /> Recent Godown Activity</CardTitle>
-                <CardDescription>An overview of recent material movements and indents from the godown.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {recentStoreActivity.length > 0 ? (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Details</TableHead>
-                                <TableHead>Site</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Date</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {recentStoreActivity.map(activity => (
-                                <TableRow key={activity.id}>
-                                    <TableCell className="font-medium">{activity.type}</TableCell>
-                                    <TableCell>{activity.details}</TableCell>
-                                    <TableCell>{activity.site}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={activity.status === 'Completed' || activity.status === 'Accepted' || activity.status === 'Processed' ? 'default' : 'secondary'} className={cn((activity.status === 'Completed' || activity.status === 'Accepted') && 'bg-green-600/80')}>
-                                            {activity.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>{activity.date}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                ) : (
-                    <p className="text-center text-muted-foreground">No recent godown activity.</p>
-                )}
-            </CardContent>
-        </Card>
       </div>
     </>
   );

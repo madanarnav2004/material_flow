@@ -29,7 +29,6 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { 
-  siteStock, 
   recentSiteActivity, 
   pendingSiteRequests,
 } from '@/lib/mock-data';
@@ -41,7 +40,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { useMaterialContext, type IndentStatus } from '@/context/material-context';
+import { useMaterialContext } from '@/context/material-context';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/hooks/use-user';
 
@@ -67,7 +66,7 @@ type MaterialIndentBill = RequestFormValues & {
 export default function SiteManagerDashboard() {
   const { toast } = useToast();
   const router = useRouter();
-  const { requests, setRequests, inventory } = useMaterialContext();
+  const { requests, inventory } = useMaterialContext();
   const { site } = useUser();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
 
@@ -85,13 +84,10 @@ export default function SiteManagerDashboard() {
     return recentSiteActivity.filter(act => act.site === siteName);
   }, [recentSiteActivity, siteName]);
 
-  const lowStockCount = React.useMemo(() => {
-    return inventory.filter(item => item.site === siteName && item.quantity <= item.minQty).length;
-  }, [inventory, siteName]);
-
   const lowStockSite = React.useMemo(() => {
     return inventory.filter(item => item.site === siteName && item.quantity <= item.minQty);
   }, [inventory, siteName]);
+  const lowStockCount = lowStockSite.length;
   
   const currentSiteStock = React.useMemo(() => {
       return inventory.filter(item => item.site === siteName);
@@ -140,22 +136,71 @@ export default function SiteManagerDashboard() {
       <h1 className="text-3xl font-bold font-headline">{siteName} Dashboard</h1>
       <div className="grid gap-6">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Available Materials"
-            value={`${currentSiteStock.length} items`}
-            icon={PackageSearch}
-            description="Total distinct materials on site"
-            onClick={() => router.push('/dashboard/inventory')}
-          />
            <Dialog>
             <DialogTrigger asChild>
-              <StatCard
-                title="Pending Indents"
-                value={sitePendingRequests.length.toString()}
-                icon={Package}
-                description="Awaiting approval or issue"
-                onClick={() => {}}
-              />
+               <div className="cursor-pointer">
+                  <StatCard
+                    title="Available Materials"
+                    value={`${currentSiteStock.length} items`}
+                    icon={PackageSearch}
+                    description="Total distinct materials on site"
+                  />
+               </div>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Current Stock at {siteName}</DialogTitle>
+                <DialogDescription>Live inventory of materials available at your site.</DialogDescription>
+              </DialogHeader>
+              <div className="max-h-[60vh] overflow-y-auto">
+                 {currentSiteStock.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Material</TableHead>
+                        <TableHead>Available Quantity</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {currentSiteStock.map((material) => {
+                         const status = material.quantity <= material.minQty ? 'Low Stock' : 'In Stock';
+                         return (
+                          <TableRow key={material.id}>
+                              <TableCell className="font-medium">
+                              {material.material}
+                              </TableCell>
+                              <TableCell>{material.quantity} {material.unit}</TableCell>
+                              <TableCell>
+                              <Badge
+                                  variant={status === 'In Stock' ? 'default' : 'destructive'}
+                                  className={status === 'Low Stock' ? '' : 'bg-green-600/80'}
+                              >
+                                  {status}
+                              </Badge>
+                              </TableCell>
+                          </TableRow>
+                         )
+                      })}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <p className="text-center text-muted-foreground p-8">No stock data available for this site.</p>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+           <Dialog>
+            <DialogTrigger asChild>
+              <div className="cursor-pointer">
+                <StatCard
+                  title="Pending Indents"
+                  value={sitePendingRequests.length.toString()}
+                  icon={Package}
+                  description="Awaiting approval or issue"
+                />
+              </div>
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
@@ -183,33 +228,92 @@ export default function SiteManagerDashboard() {
                         </TableBody>
                     </Table>
                   ): (
-                    <p className="text-center text-muted-foreground">No pending indents for this site.</p>
+                    <p className="text-center text-muted-foreground p-8">No pending indents for this site.</p>
                   )}
               </div>
             </DialogContent>
           </Dialog>
-          <StatCard
-            title="Pending GRNs"
-            value="1"
-            icon={PackageCheck}
-            description="Materials in transit to your site"
-          />
-          <StatCard
-            title="Low Stock"
-            value={`${lowStockCount} material(s)`}
-            icon={AlertTriangle}
-            className="text-destructive border-destructive/50"
-            description="Needs immediate re-ordering"
-            onClick={() => router.push('/dashboard/inventory?filter=low-stock')}
-          />
+
+          <Dialog>
+            <DialogTrigger asChild>
+              <div className="cursor-pointer">
+                <StatCard
+                  title="Pending GRNs"
+                  value="1"
+                  icon={PackageCheck}
+                  description="Materials in transit to your site"
+                />
+              </div>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Pending Goods Received Notes (GRNs)</DialogTitle>
+                <DialogDescription>These materials are currently in transit to your site.</DialogDescription>
+              </DialogHeader>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Material</TableHead>
+                    <TableHead>From</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>500 Bags of Cement</TableCell>
+                    <TableCell>MAPI Godown</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog>
+            <DialogTrigger asChild>
+              <div className="cursor-pointer">
+                <StatCard
+                  title="Low Stock"
+                  value={`${lowStockCount} material(s)`}
+                  icon={AlertTriangle}
+                  className="text-destructive border-destructive/50"
+                  description="Needs immediate re-ordering"
+                />
+              </div>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Low Stock on Site</DialogTitle>
+                <DialogDescription>These materials have fallen below the minimum threshold at {siteName}.</DialogDescription>
+              </DialogHeader>
+               {lowStockSite.length > 0 ? (
+                  <Table>
+                      <TableHeader>
+                          <TableRow>
+                              <TableHead>Material</TableHead>
+                              <TableHead>Available Quantity</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {lowStockSite.map(item => (
+                              <TableRow key={item.id} className="text-destructive">
+                                  <TableCell className="font-medium">{item.material}</TableCell>
+                                  <TableCell className="font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
+                              </TableRow>
+                          ))}
+                      </TableBody>
+                </Table>
+              ) : (
+                  <p className="text-center text-muted-foreground p-8">No low stock materials on this site.</p>
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
         
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
             <div className="lg:col-span-3 space-y-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Pending Indents</CardTitle>
-                        <CardDescription>Material indents awaiting action.</CardDescription>
+                        <CardTitle>Pending Indents for {siteName}</CardTitle>
+                        <CardDescription>Material indents from your site awaiting action.</CardDescription>
                     </CardHeader>
                     <CardContent>
                       {sitePendingRequests.length > 0 ? (
@@ -232,36 +336,8 @@ export default function SiteManagerDashboard() {
                               </TableBody>
                         </Table>
                       ) : (
-                        <p className="text-center text-muted-foreground">No pending indents.</p>
+                        <p className="text-center text-muted-foreground p-8">No pending indents from this site.</p>
                       )}
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Low Stock Materials</CardTitle>
-                        <CardDescription>Materials running low on this site.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                    {lowStockSite.length > 0 ? (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Material</TableHead>
-                                    <TableHead>Available Quantity</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {lowStockSite.map(item => (
-                                    <TableRow key={item.id} className="text-destructive">
-                                        <TableCell className="font-medium">{item.material}</TableCell>
-                                        <TableCell className="font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                      </Table>
-                    ) : (
-                        <p className="text-center text-muted-foreground">No low stock materials.</p>
-                    )}
                     </CardContent>
                 </Card>
             </div>
@@ -375,7 +451,7 @@ export default function SiteManagerDashboard() {
                         </TableBody>
                     </Table>
                   ) : (
-                    <p className="text-center text-muted-foreground">No return reminders for this site.</p>
+                    <p className="text-center text-muted-foreground p-8">No return reminders for this site.</p>
                   )}
               </CardContent>
             </Card>
@@ -434,7 +510,7 @@ export default function SiteManagerDashboard() {
                     </TableBody>
                 </Table>
               ) : (
-                <p className="text-center text-muted-foreground">No return reminders for this site.</p>
+                <p className="text-center text-muted-foreground p-8">No return reminders for this site.</p>
               )}
             </div>
             <div className="flex justify-end mt-4">
@@ -446,51 +522,6 @@ export default function SiteManagerDashboard() {
           </DialogContent>
         </Dialog>
         
-        <Card>
-            <CardHeader>
-              <CardTitle>Current Site Stock</CardTitle>
-              <CardDescription>
-                Live inventory of materials available at your site.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {currentSiteStock.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Material</TableHead>
-                      <TableHead>Available Quantity</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {currentSiteStock.map((material) => {
-                       const status = material.quantity <= material.minQty ? 'Low Stock' : 'In Stock';
-                       return (
-                        <TableRow key={material.id}>
-                            <TableCell className="font-medium">
-                            {material.material}
-                            </TableCell>
-                            <TableCell>{material.quantity} {material.unit}</TableCell>
-                            <TableCell>
-                            <Badge
-                                variant={status === 'In Stock' ? 'default' : 'destructive'}
-                                className={status === 'Low Stock' ? '' : 'bg-green-600/80'}
-                            >
-                                {status}
-                            </Badge>
-                            </TableCell>
-                        </TableRow>
-                       )
-                    })}
-                  </TableBody>
-                </Table>
-              ) : (
-                <p className="text-center text-muted-foreground">No stock data available for this site.</p>
-              )}
-            </CardContent>
-          </Card>
-
           <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><History /> Recent Site Activity</CardTitle>
@@ -525,7 +556,7 @@ export default function SiteManagerDashboard() {
                 </TableBody>
                 </Table>
             ) : (
-                <p className="text-center text-muted-foreground">No recent activity on this site.</p>
+                <p className="text-center text-muted-foreground p-8">No recent activity on this site.</p>
             )}
           </CardContent>
         </Card>
