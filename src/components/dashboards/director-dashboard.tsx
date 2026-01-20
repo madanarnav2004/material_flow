@@ -112,7 +112,7 @@ export default function DirectorDashboard() {
 
   const indentsForApproval = requests.filter(r => r.status === 'Pending Director Approval');
   
-  const stockLocations = ['Overall', 'MAPI Store', ...new Set(inventory.map(s => s.site).filter(s => s !== 'MAPI Store'))];
+  const stockLocations = ['Overall', 'MAPI Godown', ...new Set(inventory.map(s => s.site).filter(s => s !== 'MAPI Godown'))];
   const consumptionSites = ['All', ...new Set(detailedMonthlyConsumption.Jun.siteWise.map((s:any) => s.site))];
 
   const totalMaterials = React.useMemo(() => {
@@ -705,7 +705,7 @@ export default function DirectorDashboard() {
                 <TableRow>
                   <TableHead>Type</TableHead>
                   <TableHead>Details</TableHead>
-                  <TableHead>Site/Store</TableHead>
+                  <TableHead>Site/Godown</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
                 </TableRow>

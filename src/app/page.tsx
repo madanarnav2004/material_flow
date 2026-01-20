@@ -88,9 +88,9 @@ export default function LoginPage() {
                         <UserCog className="h-4 w-4" /> Coordinator
                       </div>
                     </SelectItem>
-                    <SelectItem value="store-manager/MAPI Store">
+                    <SelectItem value="godown-manager/MAPI Godown">
                       <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4" /> MAPI Store
+                        <Building className="h-4 w-4" /> MAPI Godown
                       </div>
                     </SelectItem>
                     <SelectItem value="purchase-department/Global">

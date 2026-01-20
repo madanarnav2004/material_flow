@@ -19,7 +19,7 @@ export const materialStock = [
 
 export const recentActivities = [
     { id: '1', type: 'Indent', site: 'North Site', status: 'Approved', date: '2024-07-20', details: '500 Bags of Cement' },
-    { id: '2', type: 'Issue', site: 'MAPI Store', status: 'In Transit', date: '2024-07-20', details: '500 Bags of Cement to North Site' },
+    { id: '2', type: 'Issue', site: 'MAPI Godown', status: 'In Transit', date: '2024-07-20', details: '500 Bags of Cement to North Site' },
     { id: '3', type: 'GRN', site: 'North Site', status: 'Completed', date: '2024-07-19', details: '10 tons of Steel' },
     { id: '4', type: 'Invoice', site: 'Purchase Dept', status: 'Uploaded', date: '2024-07-18', details: 'Invoice for 10 tons of Steel' },
     { id: '5', type: 'Indent', site: 'West Site', status: 'Pending', date: '2024-07-17', details: '2000 Bricks' },
@@ -36,7 +36,7 @@ export const allMaterials = [
 
 export const lowStockMaterials = [
     { id: 'ls-1', material: 'Gravel', site: 'North Site', quantity: 5, unit: 'cu.m.', threshold: 10 },
-    { id: 'ls-2', material: 'Paint', site: 'MAPI Store', quantity: 20, unit: 'liters', threshold: 50 },
+    { id: 'ls-2', material: 'Paint', site: 'MAPI Godown', quantity: 20, unit: 'liters', threshold: 50 },
     { id: 'ls-3', material: 'Bricks', site: 'West Site', quantity: 900, unit: 'pcs', threshold: 1000 },
 ];
 
@@ -46,15 +46,15 @@ export const pendingRequests = [
 ];
 
 export const materialReturnReminders = [
-    { id: 'REQ-NORTH-20240720-001', material: 'Cement', quantity: 500, site: 'North Site', status: 'Issued' as const, returnDate: '2024-08-15', issuingSite: 'MAPI Store' },
-    { id: 'REQ-EAST-20240718-002', material: 'Steel Rebar', quantity: 10, site: 'East Site', status: 'Completed' as const, returnDate: '2024-08-10', issuingSite: 'MAPI Store' },
+    { id: 'REQ-NORTH-20240720-001', material: 'Cement', quantity: 500, site: 'North Site', status: 'Issued' as const, returnDate: '2024-08-15', issuingSite: 'MAPI Godown' },
+    { id: 'REQ-EAST-20240718-002', material: 'Steel Rebar', quantity: 10, site: 'East Site', status: 'Completed' as const, returnDate: '2024-08-10', issuingSite: 'MAPI Godown' },
     { id: 'REQ-WEST-20240721-004', material: 'Bricks', quantity: 2000, site: 'West Site', status: 'Pending Director Approval' as const, returnDate: '2024-08-20' },
     { id: 'REQ-SOUTH-20240720-003', material: 'Sand', quantity: 50, site: 'South Site', status: 'Director Approved' as const, returnDate: '2024-08-18' },
 ];
 
 export const issuedMaterialsForReceipt = [
-    { requestId: 'REQ-NORTH-20240720-001', issuedId: 'ISS-NORTH-20240720-001', materialName: 'Cement', issuedQuantity: 500, issuingSite: 'MAPI Store', receivingSite: 'North Site' },
-    { requestId: 'REQ-EAST-20240718-002', issuedId: 'ISS-EAST-20240718-002', materialName: 'Steel Rebar', issuedQuantity: 10, issuingSite: 'MAPI Store', receivingSite: 'East Site' },
+    { requestId: 'REQ-NORTH-20240720-001', issuedId: 'ISS-NORTH-20240720-001', materialName: 'Cement', issuedQuantity: 500, issuingSite: 'MAPI Godown', receivingSite: 'North Site' },
+    { requestId: 'REQ-EAST-20240718-002', issuedId: 'ISS-EAST-20240718-002', materialName: 'Steel Rebar', issuedQuantity: 10, issuingSite: 'MAPI Godown', receivingSite: 'East Site' },
 ];
 
 const generateSiteConsumption = (materials: {name: string, unit: string}[], sites: string[]) => {
@@ -100,18 +100,18 @@ export const detailedMonthlyConsumption = generateMonthlyDetailedData(['Jan', 'F
 
 export const detailedStock = [
     { id: 'ds-1', material: 'Cement', site: 'North Site', quantity: 480, type: 'Site Stock', mismatch: false },
-    { id: 'ds-2', material: 'Cement', site: 'MAPI Store', quantity: 1500, type: 'Central Store', mismatch: false },
+    { id: 'ds-2', material: 'Cement', site: 'MAPI Godown', quantity: 1500, type: 'Central Godown', mismatch: false },
     { id: 'ds-3', material: 'Steel Rebar', site: 'North Site', quantity: 9, type: 'Site Stock', mismatch: true, expected: 10 },
     { id: 'ds-4', material: 'Gravel', site: 'North Site', quantity: 5, type: 'Site Stock', mismatch: false },
     { id: 'ds-5', material: 'Bricks', site: 'West Site', quantity: 5000, type: 'Site Stock', mismatch: false },
-    { id: 'ds-6', material: 'Bricks', site: 'MAPI Store', quantity: 10000, type: 'Central Store', mismatch: false },
+    { id: 'ds-6', material: 'Bricks', site: 'MAPI Godown', quantity: 10000, type: 'Central Godown', mismatch: false },
     { id: 'ds-7', material: 'Sand', site: 'South Site', quantity: 120, type: 'Site Stock', mismatch: false },
 ];
 
 export const stockUpdates = [
     { id: 'su-1', material: 'Cement', site: 'North Site', change: '+500 bags', date: '2024-07-20' },
     { id: 'su-2', material: 'Cement', site: 'North Site', change: '-20 bags', date: '2024-07-21' },
-    { id: 'su-3', material: 'Steel Rebar', site: 'MAPI Store', change: '-10 tons', date: '2024-07-18' },
+    { id: 'su-3', material: 'Steel Rebar', site: 'MAPI Godown', change: '-10 tons', date: '2024-07-18' },
     { id: 'su-4', material: 'Steel Rebar', site: 'East Site', change: '+10 tons', date: '2024-07-19' },
     { id: 'su-5', material: 'Bricks', site: 'Purchase', change: '+5000 pcs', date: '2024-07-17' },
 ];
@@ -136,13 +136,13 @@ export const siteStock = [
 ];
 
 export const recentSiteActivity = [
-    { id: 'sa-1', type: 'GRN', details: '500 Bags of Cement', from: 'MAPI Store', status: 'Completed', date: '2024-07-20' },
-    { id: 'sa-2', type: 'Indent', details: '100 cu.m. Sand', to: 'MAPI Store', status: 'Pending', date: '2024-07-21' },
+    { id: 'sa-1', type: 'GRN', details: '500 Bags of Cement', from: 'MAPI Godown', status: 'Completed', date: '2024-07-20' },
+    { id: 'sa-2', type: 'Indent', details: '100 cu.m. Sand', to: 'MAPI Godown', status: 'Pending', date: '2024-07-21' },
     { id: 'sa-3', type: 'Internal Issue', details: '20 bags Cement', to: 'Block A', status: 'Completed', date: '2024-07-21' },
 ];
 
 export const pendingSiteRequests = [
-    { id: 'psr-1', material: 'Sand', quantity: '100 cu.m.', requestedFrom: 'MAPI Store'},
+    { id: 'psr-1', material: 'Sand', quantity: '100 cu.m.', requestedFrom: 'MAPI Godown'},
 ];
 
 export const lowStockSite = [
@@ -166,10 +166,10 @@ export const recentStoreActivity = [
 
 export const detailedMaterialValue = [
     { id: 'dmv-1', name: 'Cement', site: 'North Site', quantity: 480, unit: 'bags', rate: 10 },
-    { id: 'dmv-2', name: 'Cement', site: 'MAPI Store', quantity: 1500, unit: 'bags', rate: 9.5 },
+    { id: 'dmv-2', name: 'Cement', site: 'MAPI Godown', quantity: 1500, unit: 'bags', rate: 9.5 },
     { id: 'dmv-3', name: 'Steel Rebar', site: 'East Site', quantity: 10, unit: 'tons', rate: 800 },
-    { id: 'dmv-4', name: 'Steel Rebar', site: 'MAPI Store', quantity: 80, unit: 'tons', rate: 790 },
-    { id: 'dmv-5', name: 'Sand', site: 'MAPI Store', quantity: 300, unit: 'cu.m.', rate: 20 },
+    { id: 'dmv-4', name: 'Steel Rebar', site: 'MAPI Godown', quantity: 80, unit: 'tons', rate: 790 },
+    { id: 'dmv-5', name: 'Sand', site: 'MAPI Godown', quantity: 300, unit: 'cu.m.', rate: 20 },
     { id: 'dmv-6', name: 'Gravel', site: 'North Site', quantity: 5, unit: 'cu.m.', rate: 22 },
 ];
 
@@ -213,9 +213,9 @@ export const liveInventory = [
   { id: 'inv-3', site: 'North Site', material: 'Gravel', classification: 'Consumable' as const, quantity: 5, unit: 'cu.m.', minQty: 10, maxQty: 50 },
   { id: 'inv-4', site: 'West Site', material: 'Bricks', classification: 'Consumable' as const, quantity: 5000, unit: 'pcs', minQty: 2000, maxQty: 10000 },
   { id: 'inv-5', site: 'South Site', material: 'Sand', classification: 'Consumable' as const, quantity: 120, unit: 'cu.m.', minQty: 50, maxQty: 200 },
-  { id: 'inv-6', site: 'MAPI Store', material: 'Cement', classification: 'Consumable' as const, quantity: 1500, unit: 'bags', minQty: 500, maxQty: 3000 },
-  { id: 'inv-7', site: 'MAPI Store', material: 'Bricks', classification: 'Consumable' as const, quantity: 10000, unit: 'pcs', minQty: 5000, maxQty: 20000 },
-  { id: 'inv-8', site: 'MAPI Store', material: 'Paint', classification: 'Consumable' as const, quantity: 20, unit: 'liters', minQty: 50, maxQty: 200 },
-  { id: 'inv-9', site: 'MAPI Store', material: 'Steel Rebar', classification: 'Asset' as const, ownership: 'Own' as const, quantity: 80, unit: 'tons', minQty: 20, maxQty: 100 },
+  { id: 'inv-6', site: 'MAPI Godown', material: 'Cement', classification: 'Consumable' as const, quantity: 1500, unit: 'bags', minQty: 500, maxQty: 3000 },
+  { id: 'inv-7', site: 'MAPI Godown', material: 'Bricks', classification: 'Consumable' as const, quantity: 10000, unit: 'pcs', minQty: 5000, maxQty: 20000 },
+  { id: 'inv-8', site: 'MAPI Godown', material: 'Paint', classification: 'Consumable' as const, quantity: 20, unit: 'liters', minQty: 50, maxQty: 200 },
+  { id: 'inv-9', site: 'MAPI Godown', material: 'Steel Rebar', classification: 'Asset' as const, ownership: 'Own' as const, quantity: 80, unit: 'tons', minQty: 20, maxQty: 100 },
   { id: 'inv-10', site: 'North Site', material: 'JCB', classification: 'Asset' as const, ownership: 'Rent' as const, vendorName: 'Reliable Rentals Co.', quantity: 1, unit: 'unit', minQty: 1, maxQty: 1 },
 ];

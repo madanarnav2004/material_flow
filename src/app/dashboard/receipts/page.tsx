@@ -339,7 +339,7 @@ export default function ReceiptsPage() {
     values.materials.forEach(purchasedMaterial => {
       setInventory(prevInventory => {
           const existingItemIndex = prevInventory.findIndex(
-              item => item.site === 'MAPI Store' && item.material.toLowerCase() === purchasedMaterial.materialName.toLowerCase()
+              item => item.site === 'MAPI Godown' && item.material.toLowerCase() === purchasedMaterial.materialName.toLowerCase()
           );
 
           if (existingItemIndex > -1) {
@@ -349,7 +349,7 @@ export default function ReceiptsPage() {
           } else {
               const newItem: InventoryItem = {
                   id: `inv-${Date.now()}-${Math.random()}`,
-                  site: 'MAPI Store',
+                  site: 'MAPI Godown',
                   material: purchasedMaterial.materialName,
                   classification: purchasedMaterial.classification,
                   ownership: purchasedMaterial.ownership,
@@ -383,14 +383,14 @@ export default function ReceiptsPage() {
         <div className="lg:col-span-3">
           <Tabs defaultValue="from-site" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="from-site">GRN (other site / store)</TabsTrigger>
+              <TabsTrigger value="from-site">GRN (other site / godown)</TabsTrigger>
               <TabsTrigger value="from-shop">New Purchase Material</TabsTrigger>
             </TabsList>
             
             <TabsContent value="from-site">
               <Card>
                 <CardHeader>
-                  <CardTitle>Log GRN from Other Site / Store</CardTitle>
+                  <CardTitle>Log GRN from Other Site / Godown</CardTitle>
                   <CardDescription>Select an Issued Material ID to log the received goods.</CardDescription>
                 </CardHeader>
                 <CardContent>
