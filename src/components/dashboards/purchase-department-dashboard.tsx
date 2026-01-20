@@ -89,25 +89,25 @@ export default function PurchaseDepartmentDashboard() {
     };
     
     const poHtml = `
-        <div class="p-4 border rounded-lg space-y-2">
-            <div class="flex justify-between">
-                <span class="font-semibold">PO Number:</span>
+        <div className="p-4 border rounded-lg space-y-2">
+            <div className="flex justify-between">
+                <span className="font-semibold">PO Number:</span>
                 <span>${po.poId}</span>
             </div>
-             <div class="flex justify-between">
-                <span class="font-semibold">PO Date:</span>
+             <div className="flex justify-between">
+                <span className="font-semibold">PO Date:</span>
                 <span>${po.poDate.toLocaleDateString()}</span>
             </div>
-            <div class="flex justify-between">
-                <span class="font-semibold">Material:</span>
+            <div className="flex justify-between">
+                <span className="font-semibold">Material:</span>
                 <span>${po.material}</span>
             </div>
-            <div class="flex justify-between">
-                <span class="font-semibold">Quantity:</span>
+            <div className="flex justify-between">
+                <span className="font-semibold">Quantity:</span>
                 <span>${po.quantity}</span>
             </div>
-            <div class="flex justify-between">
-                <span class="font-semibold">Requesting Site:</span>
+            <div className="flex justify-between">
+                <span className="font-semibold">Requesting Site:</span>
                 <span>${po.site}</span>
             </div>
         </div>
@@ -182,8 +182,8 @@ export default function PurchaseDepartmentDashboard() {
 
   return (
     <>
-      <h1 class="text-3xl font-bold font-headline">Purchase Department Dashboard</h1>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <h1 className="text-3xl font-bold font-headline">Purchase Department Dashboard</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
          <StatCard
             title="Indents to Process"
             value={indentsForProcessing.length.toString()}
@@ -212,7 +212,7 @@ export default function PurchaseDepartmentDashboard() {
           />
       </div>
 
-      <div class="space-y-6">
+      <div className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Indents for Processing</CardTitle>
@@ -229,19 +229,19 @@ export default function PurchaseDepartmentDashboard() {
                     <TableHead>Material</TableHead>
                     <TableHead>Qty</TableHead>
                     <TableHead>Requesting Site</TableHead>
-                    <TableHead class="text-right">Actions</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {indentsForProcessing.map(indent => (
                     <TableRow key={indent.id}>
-                      <TableCell class="font-medium">{indent.id}</TableCell>
+                      <TableCell className="font-medium">{indent.id}</TableCell>
                       <TableCell>{indent.material}</TableCell>
                       <TableCell>{indent.quantity}</TableCell>
                       <TableCell>{indent.site}</TableCell>
-                      <TableCell class="text-right space-x-2">
+                      <TableCell className="text-right space-x-2">
                          <Button size="sm" onClick={() => handleProcessClick(indent)}>
-                          <Settings class="mr-2 h-4 w-4" />
+                          <Settings className="mr-2 h-4 w-4" />
                           Process Indent
                         </Button>
                       </TableCell>
@@ -250,8 +250,8 @@ export default function PurchaseDepartmentDashboard() {
                 </TableBody>
               </Table>
             ) : (
-              <div class="flex items-center justify-center p-8">
-                <p class="text-center text-muted-foreground">No indents are awaiting processing.</p>
+              <div className="flex items-center justify-center p-8">
+                <p className="text-center text-muted-foreground">No indents are awaiting processing.</p>
               </div>
             )}
           </CardContent>
@@ -274,24 +274,24 @@ export default function PurchaseDepartmentDashboard() {
                     <TableHead>Qty</TableHead>
                     <TableHead>Requesting Site</TableHead>
                     <TableHead>PO Date</TableHead>
-                    <TableHead class="text-right">Actions</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {generatedPOs.map(po => (
                     <TableRow key={po.id}>
-                      <TableCell class="font-medium">{po.poId}</TableCell>
+                      <TableCell className="font-medium">{po.poId}</TableCell>
                       <TableCell>{po.material}</TableCell>
                       <TableCell>{po.quantity}</TableCell>
                       <TableCell>{po.site}</TableCell>
                       <TableCell>{po.poDate.toLocaleDateString()}</TableCell>
-                      <TableCell class="text-right">
+                      <TableCell className="text-right">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleDownloadPO(po)}
                         >
-                          <Download class="mr-2 h-4 w-4" />
+                          <Download className="mr-2 h-4 w-4" />
                           Download PO
                         </Button>
                       </TableCell>
@@ -300,8 +300,8 @@ export default function PurchaseDepartmentDashboard() {
                 </TableBody>
               </Table>
             ) : (
-              <div class="flex items-center justify-center p-8">
-                <p class="text-center text-muted-foreground">
+              <div className="flex items-center justify-center p-8">
+                <p className="text-center text-muted-foreground">
                   No purchase orders have been generated yet.
                 </p>
               </div>
@@ -318,28 +318,28 @@ export default function PurchaseDepartmentDashboard() {
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <Tabs defaultValue="organization" class="w-full">
-                    <TabsList class="grid w-full grid-cols-3">
+                <Tabs defaultValue="organization" className="w-full">
+                    <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="organization">Organization-wise</TabsTrigger>
                         <TabsTrigger value="site">Site-wise</TabsTrigger>
                         <TabsTrigger value="store">Store-wise</TabsTrigger>
                     </TabsList>
                     <TabsContent value="organization">
                         <Table>
-                            <TableHeader><TableRow><TableHead>Material</TableHead><TableHead class="text-right">Total Quantity</TableHead></TableRow></TableHeader>
+                            <TableHeader><TableRow><TableHead>Material</TableHead><TableHead className="text-right">Total Quantity</TableHead></TableRow></TableHeader>
                             <TableBody>
-                                {orgStock.map(item => (<TableRow key={item.name}><TableCell>{item.name}</TableCell><TableCell class="text-right">{item.quantity.toLocaleString()} {item.unit}</TableCell></TableRow>))}
+                                {orgStock.map(item => (<TableRow key={item.name}><TableCell>{item.name}</TableCell><TableCell className="text-right">{item.quantity.toLocaleString()} {item.unit}</TableCell></TableRow>))}
                             </TableBody>
                         </Table>
                     </TabsContent>
                     <TabsContent value="site">
                         {Object.entries(siteStock).map(([siteName, materials]) => (
-                            <div key={siteName} class="mb-4">
-                                <h3 class="font-semibold mb-2">{siteName}</h3>
+                            <div key={siteName} className="mb-4">
+                                <h3 className="font-semibold mb-2">{siteName}</h3>
                                 <Table>
-                                    <TableHeader><TableRow><TableHead>Material</TableHead><TableHead class="text-right">Quantity</TableHead></TableRow></TableHeader>
+                                    <TableHeader><TableRow><TableHead>Material</TableHead><TableHead className="text-right">Quantity</TableHead></TableRow></TableHeader>
                                     <TableBody>
-                                        {materials.map(item => (<TableRow key={item.name}><TableCell>{item.name}</TableCell><TableCell class="text-right">{item.quantity.toLocaleString()} {item.unit}</TableCell></TableRow>))}
+                                        {materials.map(item => (<TableRow key={item.name}><TableCell>{item.name}</TableCell><TableCell className="text-right">{item.quantity.toLocaleString()} {item.unit}</TableCell></TableRow>))}
                                     </TableBody>
                                 </Table>
                             </div>
@@ -347,9 +347,9 @@ export default function PurchaseDepartmentDashboard() {
                     </TabsContent>
                     <TabsContent value="store">
                         <Table>
-                            <TableHeader><TableRow><TableHead>Material</TableHead><TableHead class="text-right">Quantity</TableHead></TableRow></TableHeader>
+                            <TableHeader><TableRow><TableHead>Material</TableHead><TableHead className="text-right">Quantity</TableHead></TableRow></TableHeader>
                             <TableBody>
-                                {storeStock.map(item => (<TableRow key={item.id}><TableCell>{item.material}</TableCell><TableCell class="text-right">{item.quantity.toLocaleString()}</TableCell></TableRow>))}
+                                {storeStock.map(item => (<TableRow key={item.id}><TableCell>{item.material}</TableCell><TableCell className="text-right">{item.quantity.toLocaleString()}</TableCell></TableRow>))}
                             </TableBody>
                         </Table>
                     </TabsContent>
@@ -358,32 +358,32 @@ export default function PurchaseDepartmentDashboard() {
         </Card>
 
       <Dialog open={!!selectedIndent} onOpenChange={(isOpen) => !isOpen && setSelectedIndent(null)}>
-        <DialogContent class="max-w-4xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Process Indent: {selectedIndent?.id}</DialogTitle>
             <DialogDescription>
-              Assign an issuing site for <span class="font-semibold">{selectedIndent?.quantity} units</span> of <span class="font-semibold">{selectedIndent?.material}</span> for <span class="font-semibold">{selectedIndent?.site}</span>.
+              Assign an issuing site for <span className="font-semibold">{selectedIndent?.quantity} units</span> of <span className="font-semibold">{selectedIndent?.material}</span> for <span className="font-semibold">{selectedIndent?.site}</span>.
             </DialogDescription>
           </DialogHeader>
 
           {materialAvailability.length > 0 ? (
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-                <div class="space-y-4">
-                    <h3 class="font-semibold text-lg">Material Availability</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                <div className="space-y-4">
+                    <h3 className="font-semibold text-lg">Material Availability</h3>
                     <Card>
-                        <CardContent class="p-0">
+                        <CardContent className="p-0">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Location</TableHead>
-                                    <TableHead class="text-right">Available Quantity</TableHead>
+                                    <TableHead className="text-right">Available Quantity</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {materialAvailability.map(stock => (
                                     <TableRow key={stock.id}>
                                         <TableCell>{stock.site}</TableCell>
-                                        <TableCell class="text-right">{stock.quantity}</TableCell>
+                                        <TableCell className="text-right">{stock.quantity}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -391,11 +391,11 @@ export default function PurchaseDepartmentDashboard() {
                         </CardContent>
                     </Card>
                 </div>
-                <div class="space-y-4">
-                    <h3 class="font-semibold text-lg">Assign Site & Action</h3>
-                    <div class="p-4 border rounded-lg space-y-4">
+                <div className="space-y-4">
+                    <h3 className="font-semibold text-lg">Assign Site & Action</h3>
+                    <div className="p-4 border rounded-lg space-y-4">
                         <div>
-                            <Label htmlFor="issuing-site-select" class="text-sm font-normal text-muted-foreground">Option 1: Issue from existing stock</Label>
+                            <Label htmlFor="issuing-site-select" className="text-sm font-normal text-muted-foreground">Option 1: Issue from existing stock</Label>
                             <Select onValueChange={setIssuingSite} value={issuingSite}>
                                 <SelectTrigger id="issuing-site-select">
                                     <SelectValue placeholder="Choose a site..." />
@@ -408,46 +408,46 @@ export default function PurchaseDepartmentDashboard() {
                                 </SelectContent>
                             </Select>
 
-                            <Button onClick={() => handleFinalApproval('Issued')} disabled={!issuingSite} class="w-full mt-2">
-                                <Send class="mr-2 h-4 w-4" /> Issue from Selected Site
+                            <Button onClick={() => handleFinalApproval('Issued')} disabled={!issuingSite} className="w-full mt-2">
+                                <Send className="mr-2 h-4 w-4" /> Issue from Selected Site
                             </Button>
                         </div>
 
-                        <div class="relative">
-                            <div class="absolute inset-0 flex items-center">
-                                <span class="w-full border-t" />
+                        <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t" />
                             </div>
-                            <div class="relative flex justify-center text-xs uppercase">
-                                <span class="bg-background px-2 text-muted-foreground">
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-background px-2 text-muted-foreground">
                                     Or
                                 </span>
                             </div>
                         </div>
 
                         <div>
-                            <Label class="text-sm font-normal text-muted-foreground">Option 2: Purchase new material</Label>
-                            <Button onClick={handleCreatePO} variant="secondary" class="w-full">
-                                <FilePlus class="mr-2 h-4 w-4" /> Purchase New (Generate PO)
+                            <Label className="text-sm font-normal text-muted-foreground">Option 2: Purchase new material</Label>
+                            <Button onClick={handleCreatePO} variant="secondary" className="w-full">
+                                <FilePlus className="mr-2 h-4 w-4" /> Purchase New (Generate PO)
                             </Button>
                         </div>
 
                         <Separator />
 
-                        <Button onClick={() => handleFinalApproval('Purchase Rejected')} variant="destructive" class="w-full">
+                        <Button onClick={() => handleFinalApproval('Purchase Rejected')} variant="destructive" className="w-full">
                              Reject Indent
                         </Button>
                     </div>
                 </div>
             </div>
           ) : (
-             <div class="py-4">
-                <div class="text-center p-8 border rounded-lg bg-secondary/50">
-                    <h3 class="font-semibold text-lg">No Stock Found</h3>
-                    <p class="text-muted-foreground mb-4">
+             <div className="py-4">
+                <div className="text-center p-8 border rounded-lg bg-secondary/50">
+                    <h3 className="font-semibold text-lg">No Stock Found</h3>
+                    <p className="text-muted-foreground mb-4">
                         This material is not available at any site or the central store.
                     </p>
                     <Button onClick={handleCreatePO}>
-                        <FilePlus class="mr-2 h-4 w-4" />
+                        <FilePlus className="mr-2 h-4 w-4" />
                         Purchase New (Generate &amp; Download PO)
                     </Button>
                 </div>
