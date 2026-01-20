@@ -5,7 +5,8 @@ import {
     materialReturnReminders as initialRequests, 
     pendingRequests as initialPendingRequests,
     issuedMaterialsForReceipt as initialIssuedMaterials,
-    lowStockMaterials as initialLowStockMaterials
+    lowStockMaterials as initialLowStockMaterials,
+    liveInventory as initialInventory,
 } from '@/lib/mock-data';
 
 export type IndentStatus = 
@@ -57,6 +58,17 @@ interface LowStockMaterial {
     threshold: number;
 }
 
+export interface InventoryItem {
+  id: string;
+  site: string;
+  material: string;
+  classification: 'Asset' | 'Consumable';
+  quantity: number;
+  unit: string;
+  minQty: number;
+  maxQty: number;
+}
+
 
 interface MaterialContextType {
   requests: MaterialIndent[];
@@ -67,6 +79,8 @@ interface MaterialContextType {
   setIssuedMaterials: React.Dispatch<React.SetStateAction<IssuedMaterial[]>>;
   lowStockMaterials: LowStockMaterial[];
   setLowStockMaterials: React.Dispatch<React.SetStateAction<LowStockMaterial[]>>;
+  inventory: InventoryItem[];
+  setInventory: React.Dispatch<React.SetStateAction<InventoryItem[]>>;
 }
 
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
@@ -78,10 +92,11 @@ export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   );
   const [issuedMaterials, setIssuedMaterials] = useState<IssuedMaterial[]>(initialIssuedMaterials);
   const [lowStockMaterials, setLowStockMaterials] = useState<LowStockMaterial[]>(initialLowStockMaterials);
+  const [inventory, setInventory] = useState<InventoryItem[]>(initialInventory);
 
 
   return (
-    <MaterialContext.Provider value={{ requests, setRequests, pendingRequests, setPendingRequests, issuedMaterials, setIssuedMaterials, lowStockMaterials, setLowStockMaterials }}>
+    <MaterialContext.Provider value={{ requests, setRequests, pendingRequests, setPendingRequests, issuedMaterials, setIssuedMaterials, lowStockMaterials, setLowStockMaterials, inventory, setInventory }}>
       {children}
     </MaterialContext.Provider>
   );

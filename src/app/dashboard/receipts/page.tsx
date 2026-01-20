@@ -22,7 +22,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { useMaterialContext } from '@/context/material-context';
+import { useMaterialContext, InventoryItem } from '@/context/material-context';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -102,7 +102,7 @@ const initialPastReceipts: MaterialReceivedBill[] = [];
 
 export default function ReceiptsPage() {
   const { toast } = useToast();
-  const { issuedMaterials, requests } = useMaterialContext();
+  const { issuedMaterials, requests, inventory, setInventory } = useMaterialContext();
   const [pastReceipts, setPastReceipts] = React.useState<MaterialReceivedBill[]>(initialPastReceipts);
   const [activeBillDetails, setActiveBillDetails] = React.useState<FullBillDetails | null>(null);
   const billContentRef = React.useRef<HTMLDivElement>(null);
@@ -173,6 +173,31 @@ export default function ReceiptsPage() {
     };
     
     setPastReceipts(prev => [bill, ...prev]);
+
+    setInventory(prevInventory => {
+      const newInventory = [...prevInventory];
+      const receivingItemIndex = newInventory.findIndex(item => item.site === values.receivingSite && item.material === values.materialName);
+      if(receivingItemIndex > -1) {
+        newInventory[receivingItemIndex].quantity += values.receivedQuantity;
+      } else {
+         const issuingItem = prevInventory.find(item => item.site === values.issuingSite && item.material === values.materialName);
+         if(issuingItem) {
+           const newItem: InventoryItem = {
+             id: `inv-${Date.now()}`,
+             site: values.receivingSite,
+             material: values.materialName,
+             classification: issuingItem.classification,
+             quantity: values.receivedQuantity,
+             unit: issuingItem.unit,
+             minQty: 10,
+             maxQty: 100,
+           };
+           newInventory.push(newItem);
+         }
+      }
+      return newInventory;
+    });
+
 
     const requestDetails = requests.find(r => r.id === bill.requestId) || null;
     const issueDetails = issuedMaterials.find(i => i.issuedId === bill.issuedId) || null;
@@ -297,6 +322,33 @@ export default function ReceiptsPage() {
       title: 'Shop Purchase Logged!',
       description: `Invoice ${values.invoiceNumber} has been successfully logged.`,
     });
+
+    values.materials.forEach(purchasedMaterial => {
+      setInventory(prevInventory => {
+          const existingItemIndex = prevInventory.findIndex(
+              item => item.site === 'MAPI Store' && item.material.toLowerCase() === purchasedMaterial.materialName.toLowerCase()
+          );
+
+          if (existingItemIndex > -1) {
+              const newInventory = [...prevInventory];
+              newInventory[existingItemIndex].quantity += purchasedMaterial.quantity;
+              return newInventory;
+          } else {
+              const newItem: InventoryItem = {
+                  id: `inv-${Date.now()}-${Math.random()}`,
+                  site: 'MAPI Store',
+                  material: purchasedMaterial.materialName,
+                  classification: 'Consumable',
+                  quantity: purchasedMaterial.quantity,
+                  unit: purchasedMaterial.unit,
+                  minQty: 10,
+                  maxQty: 100,
+              };
+              return [...prevInventory, newItem];
+          }
+      });
+    });
+    
     fromShopForm.reset({
         purchaseType: 'without-po',
         poNumber: '',
@@ -305,7 +357,7 @@ export default function ReceiptsPage() {
         invoiceDate: new Date(),
         materials: [{ materialName: '', unit: '', quantity: 0, rate: 0 }],
     });
-    setActiveBillDetails(null); // Clear detailed 3-way view
+    setActiveBillDetails(null);
   }
 
 
@@ -606,5 +658,3 @@ export default function ReceiptsPage() {
     </TooltipProvider>
   );
 }
-
-    

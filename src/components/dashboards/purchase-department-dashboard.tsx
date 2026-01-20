@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Download, Upload, CheckCircle, Settings, Send, FilePlus, ChevronDown } from 'lucide-react';
+import { Download, Upload, CheckCircle, Settings, Send, FilePlus, ChevronDown, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import StatCard from '../dashboard/stat-card';
+import { useRouter } from 'next/navigation';
 
 type PurchaseOrder = MaterialIndent & {
     poId: string;
@@ -24,15 +26,20 @@ type PurchaseOrder = MaterialIndent & {
 
 export default function PurchaseDepartmentDashboard() {
   const { toast } = useToast();
-  const { requests, setRequests } = useMaterialContext();
+  const router = useRouter();
+  const { requests, setRequests, inventory } = useMaterialContext();
   const [selectedIndent, setSelectedIndent] = React.useState<MaterialIndent | null>(null);
   const [issuingSite, setIssuingSite] = React.useState<string>('');
   const [generatedPO, setGeneratedPO] = React.useState<PurchaseOrder | null>(null);
 
   const indentsForProcessing = requests.filter(req => req.status === 'Director Approved');
 
+  const lowStockCount = React.useMemo(() => {
+    return inventory.filter(item => item.quantity <= item.minQty).length;
+  }, [inventory]);
+
   const materialAvailability = selectedIndent
-    ? detailedStock.filter(s => s.material.toLowerCase() === selectedIndent.material.toLowerCase())
+    ? inventory.filter(s => s.material.toLowerCase() === selectedIndent.material.toLowerCase())
     : [];
 
   const availableSites = [...new Set(materialAvailability.map(s => s.site))];
@@ -99,32 +106,59 @@ export default function PurchaseDepartmentDashboard() {
     const org: { [key: string]: { quantity: number; unit: string } } = {};
     const site: { [key: string]: {name: string, quantity: number, unit: string}[] } = {};
     
-    detailedStock.forEach(item => {
-      // Org-wide aggregation
+    inventory.forEach(item => {
       if (org[item.material]) {
         org[item.material].quantity += item.quantity;
       } else {
-        org[item.material] = { quantity: item.quantity, unit: 'units' }; // Example unit
+        org[item.material] = { quantity: item.quantity, unit: item.unit };
       }
       
-      // Site-wise grouping
       if (!site[item.site]) {
         site[item.site] = [];
       }
-      site[item.site].push({ name: item.material, quantity: item.quantity, unit: 'units' });
+      site[item.site].push({ name: item.material, quantity: item.quantity, unit: item.unit });
     });
 
     const orgStock = Object.entries(org).map(([name, data]) => ({ name, ...data }));
     const siteStock = site;
-    const storeStock = detailedStock.filter(s => s.site === 'MAPI Store');
+    const storeStock = inventory.filter(s => s.site === 'MAPI Store');
 
     return { orgStock, siteStock, storeStock };
-  }, []);
+  }, [inventory]);
 
 
   return (
     <>
       <h1 className="text-3xl font-bold font-headline">Purchase Department Dashboard</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+         <StatCard
+            title="Indents to Process"
+            value={indentsForProcessing.length.toString()}
+            icon={Settings}
+            description="Awaiting site assignment"
+          />
+          <StatCard
+            title="Generated POs"
+            value={requests.filter(r => r.status === 'PO Generated').length.toString()}
+            icon={FilePlus}
+            description="Awaiting fulfillment"
+          />
+          <StatCard
+            title="Total Inventory Value"
+            value="$XXX,XXX"
+            icon={CheckCircle}
+            description="Across all locations"
+          />
+           <StatCard
+            title="Low Stock Alerts"
+            value={`${lowStockCount} materials`}
+            icon={AlertTriangle}
+            description="Across all sites"
+            className="text-destructive border-destructive/50"
+            onClick={() => router.push('/dashboard/inventory?filter=low-stock')}
+          />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>

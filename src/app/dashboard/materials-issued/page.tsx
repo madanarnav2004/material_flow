@@ -47,7 +47,7 @@ export default function MaterialsIssuedPage() {
   const { toast } = useToast();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<GeneratedBill | null>(null);
   const billContentRef = React.useRef<HTMLDivElement>(null);
-  const { requests, setIssuedMaterials } = useMaterialContext();
+  const { requests, setIssuedMaterials, setInventory } = useMaterialContext();
 
   // Form
   const form = useForm<IssueBillFormValues>({
@@ -114,10 +114,22 @@ export default function MaterialsIssuedPage() {
             issuedId: newBillId,
             materialName: material.materialName,
             issuedQuantity: material.issuedQuantity,
-            issuingSite: 'MAPI Store', // Assuming store issues it
+            issuingSite: selectedRequest.issuingSite || 'MAPI Store',
             receivingSite: selectedRequest.site,
         };
         setIssuedMaterials(prev => [...prev, issuedMaterial]);
+
+        // Decrement inventory from issuing site
+        setInventory(prevInventory => {
+            const issuingSite = selectedRequest.issuingSite || 'MAPI Store';
+            const itemIndex = prevInventory.findIndex(item => item.site === issuingSite && item.material.toLowerCase() === material.materialName.toLowerCase());
+            if(itemIndex > -1) {
+                const newInventory = [...prevInventory];
+                newInventory[itemIndex].quantity -= material.issuedQuantity;
+                return newInventory;
+            }
+            return prevInventory;
+        })
     });
 
     toast({
@@ -175,7 +187,7 @@ export default function MaterialsIssuedPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {requests.filter(r => r.status === 'Approved').map(req => (
+                              {requests.filter(r => r.status === 'Issued').map(req => (
                                 <SelectItem key={req.id} value={req.id}>
                                   {req.id} - {req.material}
                                 </SelectItem>

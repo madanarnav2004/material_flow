@@ -1,313 +1,199 @@
 'use client';
 
 import * as React from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { CalendarIcon, PlusCircle, Trash, Upload } from 'lucide-react';
-import { format } from 'date-fns';
-
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useMaterialContext, InventoryItem } from '@/context/material-context';
+import { cn } from '@/lib/utils';
+import { Settings, Save, AlertTriangle, ArrowUp, ArrowDown } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
-// Schemas
-const materialItemSchema = z.object({
-  materialName: z.string().min(1, 'Material name is required.'),
-  unit: z.string().min(1, 'Unit is required.'),
-  quantity: z.coerce.number().min(0.1, 'Quantity must be > 0.'),
-  rate: z.coerce.number().min(0.01, 'Rate must be > 0.'),
-});
+function getStatus(item: InventoryItem) {
+  if (item.quantity <= item.minQty) return 'Low Stock';
+  if (item.quantity > item.maxQty) return 'Overstock';
+  return 'In Stock';
+}
 
-const invoiceSchema = z.object({
-  invoiceNumber: z.string().min(1, 'Invoice number is required.'),
-  vendorName: z.string().min(1, 'Vendor name is required.'),
-  invoiceDate: z.date({ required_error: 'Invoice date is required.' }),
-  receivedDate: z.date({ required_error: 'The date the material was received is required.' }),
-  materials: z.array(materialItemSchema).min(1, 'Please add at least one material.'),
-});
-
-type InvoiceFormValues = z.infer<typeof invoiceSchema>;
-
-// Mock data for uploaded invoices - CLEARED
-const initialInvoices: { invoiceNumber: string; vendorName: string; invoiceDate: Date; receivedDate: Date; totalAmount: number }[] = [];
+function getStatusColor(status: string) {
+  switch (status) {
+    case 'Low Stock':
+      return 'bg-destructive/80 text-destructive-foreground';
+    case 'Overstock':
+      return 'bg-yellow-500/80 text-yellow-foreground';
+    default:
+      return 'bg-green-600/80 text-green-foreground';
+  }
+}
 
 export default function InventoryPage() {
+  const { inventory, setInventory } = useMaterialContext();
+  const searchParams = useSearchParams();
+  const initialFilter = searchParams.get('filter');
+
+  const [siteFilter, setSiteFilter] = React.useState('All');
+  const [statusFilter, setStatusFilter] = React.useState(initialFilter || 'All');
+  const [editingItem, setEditingItem] = React.useState<InventoryItem | null>(null);
+  const [minQty, setMinQty] = React.useState(0);
+  const [maxQty, setMaxQty] = React.useState(0);
   const { toast } = useToast();
-  const [uploadedInvoices, setUploadedInvoices] = React.useState(initialInvoices);
 
-  // Invoice Form
-  const invoiceForm = useForm<InvoiceFormValues>({
-    resolver: zodResolver(invoiceSchema),
-    defaultValues: {
-      invoiceNumber: '',
-      vendorName: '',
-      materials: [{ materialName: '', unit: '', quantity: 0, rate: 0 }],
-    },
-  });
+  const sites = ['All', ...Array.from(new Set(inventory.map(item => item.site)))];
 
-  const { fields, append, remove } = useFieldArray({
-    control: invoiceForm.control,
-    name: 'materials',
-  });
-
-  function onInvoiceSubmit(values: InvoiceFormValues) {
-    console.log(values);
-    const totalAmount = values.materials.reduce((acc, item) => acc + (item.quantity * item.rate), 0);
-    setUploadedInvoices(prev => [...prev, { ...values, invoiceDate: values.invoiceDate, receivedDate: values.receivedDate, totalAmount }]);
-    toast({
-      title: 'Invoice Submitted!',
-      description: `Invoice ${values.invoiceNumber} has been successfully uploaded.`,
+  const filteredInventory = React.useMemo(() => {
+    return inventory.filter(item => {
+      const siteMatch = siteFilter === 'All' || item.site === siteFilter;
+      const status = getStatus(item);
+      const statusMatch = statusFilter === 'All' || (statusFilter === 'low-stock' && status === 'Low Stock');
+      return siteMatch && statusMatch;
     });
-    invoiceForm.reset();
-  }
+  }, [inventory, siteFilter, statusFilter]);
+
+  const handleEditClick = (item: InventoryItem) => {
+    setEditingItem(item);
+    setMinQty(item.minQty);
+    setMaxQty(item.maxQty);
+  };
+
+  const handleSaveChanges = () => {
+    if (!editingItem) return;
+
+    setInventory(prevInventory =>
+      prevInventory.map(item =>
+        item.id === editingItem.id ? { ...item, minQty, maxQty } : item
+      )
+    );
+
+    toast({
+      title: 'Limits Updated',
+      description: `Min/Max limits for ${editingItem.material} at ${editingItem.site} have been saved.`,
+    });
+    setEditingItem(null);
+  };
 
   return (
-    <div className="space-y-6">
-        <h1 className="text-3xl font-bold font-headline">Inventory Management</h1>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-            <div className="lg:col-span-3">
-                <Card>
-                    <CardHeader>
-                    <CardTitle>Upload Invoice</CardTitle>
-                    <CardDescription>Fill in the details below to upload a new material invoice.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                    <Form {...invoiceForm}>
-                        <form onSubmit={invoiceForm.handleSubmit(onInvoiceSubmit)} className="space-y-6">
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                            <FormField
-                            control={invoiceForm.control}
-                            name="invoiceNumber"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Invoice Number</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="e.g., INV-2024-001" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                            <FormField
-                            control={invoiceForm.control}
-                            name="vendorName"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Vendor Name</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="e.g., Acme Suppliers" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                        </div>
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                            <FormField
-                            control={invoiceForm.control}
-                            name="invoiceDate"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                <FormLabel>Invoice Date</FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                    <FormControl>
-                                        <Button
-                                        variant={'outline'}
-                                        className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                                        >
-                                        {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                        </Button>
-                                    </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                            <FormField
-                            control={invoiceForm.control}
-                            name="receivedDate"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                <FormLabel>Date Material Received</FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                    <FormControl>
-                                        <Button
-                                        variant={'outline'}
-                                        className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                                        >
-                                        {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                        </Button>
-                                    </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                        </div>
-
-                        <div>
-                            <Label>Materials</Label>
-                            <div className="mt-2 rounded-md border">
-                            <Table>
-                                <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-2/6">Material Name</TableHead>
-                                    <TableHead>Unit</TableHead>
-                                    <TableHead>Quantity</TableHead>
-                                    <TableHead>Rate</TableHead>
-                                    <TableHead className="w-12"></TableHead>
-                                </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                {fields.map((field, index) => (
-                                    <TableRow key={field.id}>
-                                    <TableCell>
-                                        <FormField
-                                        control={invoiceForm.control}
-                                        name={`materials.${index}.materialName`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormControl>
-                                                    <Input placeholder="e.g., Cement" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                       <FormField
-                                        control={invoiceForm.control}
-                                        name={`materials.${index}.unit`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                            <FormControl>
-                                                <Input placeholder="e.g., bag" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                            </FormItem>
-                                        )}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <FormField
-                                        control={invoiceForm.control}
-                                        name={`materials.${index}.quantity`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                            <FormControl>
-                                                <Input type="number" placeholder="e.g., 100" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                            </FormItem>
-                                        )}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <FormField
-                                        control={invoiceForm.control}
-                                        name={`materials.${index}.rate`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                            <FormControl>
-                                                <Input type="number" placeholder="e.g., 12.50" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                            </FormItem>
-                                        )}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Button variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
-                                        <Trash className="h-4 w-4" />
-                                        </Button>
-                                    </TableCell>
-                                    </TableRow>
-                                ))}
-                                </TableBody>
-                            </Table>
-                            </div>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => append({ materialName: '', unit: '', quantity: 0, rate: 0 })}
-                                className="mt-4"
-                            >
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Add Material
-                            </Button>
-                            <FormMessage>{invoiceForm.formState.errors.materials?.message}</FormMessage>
-                        </div>
-
-                        <Button type="submit" size="lg" disabled={invoiceForm.formState.isSubmitting}>
-                            <Upload className="mr-2 h-4 w-4" />
-                            {invoiceForm.formState.isSubmitting ? 'Uploading...' : 'Upload and Clear for Next'}
-                        </Button>
-                        </form>
-                    </Form>
-                    </CardContent>
-                </Card>
+    <>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Material Inventory</CardTitle>
+            <CardDescription>Real-time view of material stock across all sites and stores.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <Select value={siteFilter} onValueChange={setSiteFilter}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Filter by site..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {sites.map(site => (
+                    <SelectItem key={site} value={site}>{site}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+               <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Filter by status..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Statuses</SelectItem>
+                  <SelectItem value="low-stock">Low Stock</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div className="lg:col-span-2 space-y-6">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Uploaded Invoices</CardTitle>
-                        <CardDescription>A list of previously uploaded invoices.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {uploadedInvoices.length > 0 ? (
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                    <TableHead>Invoice #</TableHead>
-                                    <TableHead>Vendor</TableHead>
-                                    <TableHead>Invoice Date</TableHead>
-                                    <TableHead>Received Date</TableHead>
-                                    <TableHead className="text-right">Amount</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {uploadedInvoices.map((invoice) => (
-                                    <TableRow key={invoice.invoiceNumber}>
-                                        <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                                        <TableCell>{invoice.vendorName}</TableCell>
-                                        <TableCell>{format(invoice.invoiceDate, 'PPP')}</TableCell>
-                                        <TableCell>{format(invoice.receivedDate, 'PPP')}</TableCell>
-                                        <TableCell className="text-right">${invoice.totalAmount.toFixed(2)}</TableCell>
-                                    </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        ) : (
-                            <div className="flex items-center justify-center p-8">
-                                <p className="text-center text-muted-foreground">No invoices uploaded yet.</p>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Site</TableHead>
+                    <TableHead>Material</TableHead>
+                    <TableHead>Classification</TableHead>
+                    <TableHead className="text-right">Available Qty</TableHead>
+                    <TableHead className="text-center">Min/Max Limits</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredInventory.map(item => {
+                    const status = getStatus(item);
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.site}</TableCell>
+                        <TableCell>{item.material}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{item.classification}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">{item.quantity.toLocaleString()} {item.unit}</TableCell>
+                        <TableCell className="text-center">{item.minQty.toLocaleString()} / {item.maxQty.toLocaleString()}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge className={cn(getStatusColor(status))}>
+                            {status === 'Low Stock' && <AlertTriangle className="mr-1 h-3 w-3" />}
+                            {status === 'Overstock' && <ArrowUp className="mr-1 h-3 w-3" />}
+                            {status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => handleEditClick(item)}>
+                            <Settings className="h-4 w-4" />
+                            <span className="sr-only">Set Limits</span>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
-        </div>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Dialog open={!!editingItem} onOpenChange={(isOpen) => !isOpen && setEditingItem(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set Min/Max Stock Limits</DialogTitle>
+            <DialogDescription>
+              For <span className="font-semibold">{editingItem?.material}</span> at <span className="font-semibold">{editingItem?.site}</span>.
+              Current quantity is {editingItem?.quantity.toLocaleString()} {editingItem?.unit}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="min-qty" className="text-right">Min Quantity</Label>
+              <Input
+                id="min-qty"
+                type="number"
+                value={minQty}
+                onChange={(e) => setMinQty(Number(e.target.value))}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="max-qty" className="text-right">Max Quantity</Label>
+              <Input
+                id="max-qty"
+                type="number"
+                value={maxQty}
+                onChange={(e) => setMaxQty(Number(e.target.value))}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingItem(null)}>Cancel</Button>
+            <Button onClick={handleSaveChanges}>
+              <Save className="mr-2 h-4 w-4" /> Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

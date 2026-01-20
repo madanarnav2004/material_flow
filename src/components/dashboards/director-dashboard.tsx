@@ -103,7 +103,7 @@ const siteWiseTotal = detailedMaterialValue.reduce((acc, item) => {
 export default function DirectorDashboard() {
   const router = useRouter();
   const { toast } = useToast();
-  const { requests, setRequests, lowStockMaterials } = useMaterialContext();
+  const { requests, setRequests, inventory } = useMaterialContext();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
   const [selectedMonth, setSelectedMonth] = React.useState<string | null>(null);
   const [isConsumptionDialogOpen, setIsConsumptionDialogOpen] = React.useState(false);
@@ -112,19 +112,23 @@ export default function DirectorDashboard() {
 
   const indentsForApproval = requests.filter(r => r.status === 'Pending Director Approval');
   
-  const stockLocations = ['Overall', ...new Set(detailedStock.map(s => s.site))];
+  const stockLocations = ['Overall', 'MAPI Store', ...new Set(inventory.map(s => s.site).filter(s => s !== 'MAPI Store'))];
   const consumptionSites = ['All', ...new Set(detailedMonthlyConsumption.Jun.siteWise.map((s:any) => s.site))];
 
   const totalMaterials = React.useMemo(() => {
-    return detailedStock.reduce((acc, item) => acc + item.quantity, 0);
-  }, []);
+    return inventory.reduce((acc, item) => acc + item.quantity, 0);
+  }, [inventory]);
+  
+  const lowStockCount = React.useMemo(() => {
+    return inventory.filter(item => item.quantity <= item.minQty).length;
+  }, [inventory]);
 
   const filteredStockData = React.useMemo(() => {
-    const stock = stockSite === 'Overall'
-        ? detailedStock
-        : detailedStock.filter(s => s.site === stockSite);
+    const stockSource = stockSite === 'Overall'
+        ? inventory
+        : inventory.filter(s => s.site === stockSite);
     
-    const aggregated = stock.reduce((acc, item) => {
+    const aggregated = stockSource.reduce((acc, item) => {
         if (acc[item.material]) {
             acc[item.material] += item.quantity;
         } else {
@@ -134,7 +138,7 @@ export default function DirectorDashboard() {
     }, {} as Record<string, number>);
 
     return Object.entries(aggregated).map(([name, value]) => ({ name, value }));
-  }, [stockSite]);
+  }, [stockSite, inventory]);
 
   const handleStatusChange = (reqId: string, newStatus: IndentStatus) => {
     setRequests(requests.map(req => (req.id === reqId ? { ...req, status: newStatus } : req)));
@@ -203,13 +207,13 @@ export default function DirectorDashboard() {
             icon={FileSpreadsheet}
             description="Compare planned vs actuals"
             className="border-primary/50"
-            onClick={() => router.push('/dashboard/boq-comparison')}
+            onClick={() => router.push('/dashboard/boq-analysis')}
           />
 
           <Dialog>
             <DialogTrigger asChild>
                 <div className="cursor-pointer">
-                    <StatCard title="Total Materials" value={`${totalMaterials} units`} icon={PackageSearch} description={`Across ${Object.keys(siteWiseTotal).length} sites`} />
+                    <StatCard title="Total Materials" value={`${totalMaterials.toLocaleString()} units`} icon={PackageSearch} description={`Across ${Object.keys(siteWiseTotal).length} sites`} />
                 </div>
             </DialogTrigger>
             <DialogContent className="max-w-4xl">
@@ -285,53 +289,14 @@ export default function DirectorDashboard() {
             className="border-yellow-500/50"
           />
 
-          <Dialog>
-            <DialogTrigger asChild>
-              <div className="cursor-pointer">
-                <StatCard
-                  title="Low Stock Alerts"
-                  value={`${lowStockMaterials.length} materials`}
-                  icon={AlertTriangle}
-                  description={`At ${new Set(lowStockMaterials.map(m => m.site)).size} sites`}
-                  className="text-destructive border-destructive/50"
-                />
-              </div>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl">
-              <DialogHeader>
-                <DialogTitle>Low Stock Material Alerts</DialogTitle>
-                <DialogDescription>Materials that have fallen below the minimum required quantity.</DialogDescription>
-              </DialogHeader>
-              <div className="max-h-[60vh] overflow-y-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Material</TableHead>
-                      <TableHead>Site</TableHead>
-                      <TableHead className="text-right">Current Qty</TableHead>
-                      <TableHead className="text-right">Min. Threshold</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {lowStockMaterials.map(item => (
-                      <TableRow key={item.id} className="text-destructive">
-                        <TableCell className="font-medium">{item.material}</TableCell>
-                        <TableCell>{item.site}</TableCell>
-                        <TableCell className="text-right font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
-                        <TableCell className="text-right">{`${item.threshold} ${item.unit}`}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              <div className="flex justify-end mt-4">
-                <Button onClick={handleDownloadExcel}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export Alert List
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <StatCard
+            title="Low Stock Alerts"
+            value={`${lowStockCount} materials`}
+            icon={AlertTriangle}
+            description="Across all sites"
+            className="text-destructive border-destructive/50"
+            onClick={() => router.push('/dashboard/inventory?filter=low-stock')}
+          />
         </div>
 
         <Card>

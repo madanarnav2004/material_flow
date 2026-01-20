@@ -33,7 +33,6 @@ import {
   siteStock, 
   recentSiteActivity, 
   pendingSiteRequests,
-  lowStockSite,
 } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
@@ -44,6 +43,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { useMaterialContext, type IndentStatus } from '@/context/material-context';
+import { useRouter } from 'next/navigation';
 
 
 type RequestFormValues = {
@@ -66,8 +66,25 @@ type MaterialIndentBill = RequestFormValues & {
 
 export default function SiteManagerDashboard() {
   const { toast } = useToast();
-  const { requests, setRequests } = useMaterialContext();
+  const router = useRouter();
+  const { requests, setRequests, inventory } = useMaterialContext();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
+
+  // Assuming site manager is for "North Site" for mock purposes
+  const siteName = "North Site"; 
+
+  const lowStockCount = React.useMemo(() => {
+    return inventory.filter(item => item.site === siteName && item.quantity <= item.minQty).length;
+  }, [inventory, siteName]);
+
+  const lowStockSite = React.useMemo(() => {
+    return inventory.filter(item => item.site === siteName && item.quantity <= item.minQty);
+  }, [inventory, siteName]);
+  
+  const currentSiteStock = React.useMemo(() => {
+      return inventory.filter(item => item.site === siteName);
+  }, [inventory, siteName]);
+
 
   const handleViewBill = (reqId: string) => {
     const request = requests.find(r => r.id === reqId);
@@ -111,51 +128,13 @@ export default function SiteManagerDashboard() {
       <h1 className="text-3xl font-bold font-headline">Site Manager Dashboard</h1>
       <div className="grid gap-6">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Dialog>
-            <DialogTrigger asChild>
-              <StatCard
-                title="Available Materials"
-                value={`${siteStock.length} items`}
-                icon={PackageSearch}
-                description="Total distinct materials on site"
-                onClick={() => {}}
-              />
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl">
-              <DialogHeader>
-                  <DialogTitle>Available Materials on Site</DialogTitle>
-                  <DialogDescription>A detailed breakdown of all materials available on this site.</DialogDescription>
-              </DialogHeader>
-              <div className="max-h-[60vh] overflow-y-auto">
-                  {siteStock.length > 0 ? (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Material</TableHead>
-                                <TableHead className="text-right">Quantity</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {siteStock.map(item => (
-                                <TableRow key={item.id}>
-                                    <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell className="text-right">{item.quantity}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                  ) : (
-                    <p className="text-center text-muted-foreground">No materials available on this site.</p>
-                  )}
-              </div>
-              <div className="flex justify-end gap-4 mt-4">
-                  <Button onClick={handleDownloadExcel}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Excel
-                  </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <StatCard
+            title="Available Materials"
+            value={`${currentSiteStock.length} items`}
+            icon={PackageSearch}
+            description="Total distinct materials on site"
+            onClick={() => router.push('/dashboard/inventory')}
+          />
            <Dialog>
             <DialogTrigger asChild>
               <StatCard
@@ -203,56 +182,14 @@ export default function SiteManagerDashboard() {
             icon={PackageCheck}
             description="Materials in transit to your site"
           />
-          <Dialog>
-            <DialogTrigger asChild>
-              <StatCard
-                title="Low Stock"
-                value={`${lowStockSite.length} material(s)`}
-                icon={AlertTriangle}
-                className="text-destructive border-destructive/50"
-                description="Needs immediate re-ordering"
-                onClick={() => {}}
-              />
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl">
-              <DialogHeader>
-                <DialogTitle>Low Stock Material Alerts</DialogTitle>
-                <DialogDescription>
-                  Materials on this site that have fallen below the minimum required quantity.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="max-h-[60vh] overflow-y-auto">
-                {lowStockSite.length > 0 ? (
-                    <Table>
-                    <TableHeader>
-                        <TableRow>
-                        <TableHead>Material</TableHead>
-                        <TableHead className="text-right">Current Qty</TableHead>
-                        <TableHead className="text-right">Min. Threshold</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {lowStockSite.map((item) => (
-                        <TableRow key={item.id} className="text-destructive">
-                            <TableCell className="font-medium">{item.material}</TableCell>
-                            <TableCell className="text-right font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
-                            <TableCell className="text-right">{`${item.threshold} ${item.unit}`}</TableCell>
-                        </TableRow>
-                        ))}
-                    </TableBody>
-                    </Table>
-                ) : (
-                    <p className="text-center text-muted-foreground">No low stock materials on this site.</p>
-                )}
-              </div>
-              <div className="flex justify-end mt-4">
-                <Button onClick={handleDownloadExcel}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export Alert List
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <StatCard
+            title="Low Stock"
+            value={`${lowStockCount} material(s)`}
+            icon={AlertTriangle}
+            className="text-destructive border-destructive/50"
+            description="Needs immediate re-ordering"
+            onClick={() => router.push('/dashboard/inventory?filter=low-stock')}
+          />
         </div>
         
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
@@ -509,7 +446,7 @@ export default function SiteManagerDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {siteStock.length > 0 ? (
+              {currentSiteStock.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -519,26 +456,25 @@ export default function SiteManagerDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {siteStock.map((material) => (
-                      <TableRow key={material.id}>
-                        <TableCell className="font-medium">
-                          {material.name}
-                        </TableCell>
-                        <TableCell>{material.quantity}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              material.status === 'In Stock'
-                                ? 'default'
-                                : 'destructive'
-                            }
-                            className={material.status === 'Low Stock' ? '' : 'bg-green-600/80'}
-                          >
-                            {material.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {currentSiteStock.map((material) => {
+                       const status = material.quantity <= material.minQty ? 'Low Stock' : 'In Stock';
+                       return (
+                        <TableRow key={material.id}>
+                            <TableCell className="font-medium">
+                            {material.material}
+                            </TableCell>
+                            <TableCell>{material.quantity} {material.unit}</TableCell>
+                            <TableCell>
+                            <Badge
+                                variant={status === 'In Stock' ? 'default' : 'destructive'}
+                                className={status === 'Low Stock' ? '' : 'bg-green-600/80'}
+                            >
+                                {status}
+                            </Badge>
+                            </TableCell>
+                        </TableRow>
+                       )
+                    })}
                   </TableBody>
                 </Table>
               ) : (

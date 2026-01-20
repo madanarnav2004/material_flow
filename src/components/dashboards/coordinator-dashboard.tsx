@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart, Users, Building, FileText, Eye, ChevronDown, Download, Layers, FileSpreadsheet } from 'lucide-react';
+import { BarChart, Users, Building, FileText, Eye, ChevronDown, Download, Layers, FileSpreadsheet, AlertTriangle } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -40,13 +40,17 @@ type MaterialIndentBill = RequestFormValues & {
 export default function CoordinatorDashboard() {
   const { toast } = useToast();
   const router = useRouter();
-  const { requests, setRequests, pendingRequests } = useMaterialContext();
+  const { requests, setRequests, pendingRequests, inventory } = useMaterialContext();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
   const [comparisonSite, setComparisonSite] = React.useState<string>('North Site');
 
   const filteredComparisonData = React.useMemo(() => {
     return boqVsActual.filter(d => d.site === comparisonSite);
   }, [comparisonSite]);
+  
+  const lowStockCount = React.useMemo(() => {
+    return inventory.filter(item => item.quantity <= item.minQty).length;
+  }, [inventory]);
 
 
   const handleViewBill = (reqId: string) => {
@@ -91,123 +95,34 @@ export default function CoordinatorDashboard() {
       <h1 className="text-3xl font-bold font-headline">Coordinator Dashboard</h1>
       <div className="grid gap-6">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Dialog>
-            <DialogTrigger asChild>
-                <div className="cursor-pointer">
-                    <StatCard
-                        title="Total Usage (BOQ)"
-                        value={`${boqUsage.filter(b => b.status === 'Over Budget').length} Over Budget`}
-                        icon={BarChart}
-                        description="Across active projects"
-                        className="text-destructive border-destructive/50"
-                    />
-                </div>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl">
-              <DialogHeader>
-                  <DialogTitle>BOQ Item-Wise Material Usage</DialogTitle>
-                  <DialogDescription>Comparison of actual vs. budgeted material consumption.</DialogDescription>
-              </DialogHeader>
-              <div className="max-h-[60vh] overflow-y-auto">
-                  {boqUsage.length > 0 ? (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>BOQ Item</TableHead>
-                                <TableHead>Consumed</TableHead>
-                                <TableHead>Budget</TableHead>
-                                <TableHead>Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {boqUsage.map(item => (
-                                <TableRow key={item.item}>
-                                    <TableCell className="font-medium">{item.item}</TableCell>
-                                    <TableCell>{item.consumed}</TableCell>
-                                    <TableCell>{item.budget}</TableCell>
-                                    <TableCell className={item.status === 'Over Budget' ? 'text-destructive' : ''}>{item.status}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                  ) : (
-                    <p className="text-center text-muted-foreground">No BOQ usage data available.</p>
-                  )}
-              </div>
-              <div className="flex justify-end gap-4 mt-4">
-                  <Button onClick={() => handleDownloadExcel('BOQ Usage Report')}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Excel
-                  </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-           <StatCard
-              title="BOQ Analysis"
-              value="Open Analyzer"
-              icon={FileSpreadsheet}
-              description="Compare planned vs actuals"
-              className="border-primary/50"
-              onClick={() => router.push('/dashboard/boq-comparison')}
-            />
+          <StatCard
+            title="BOQ Analysis"
+            value="Open Analyzer"
+            icon={FileSpreadsheet}
+            description="Compare planned vs actuals"
+            className="border-primary/50"
+            onClick={() => router.push('/dashboard/boq-analysis')}
+          />
           <StatCard
             title="Sites Overview"
             value={`${new Set(requests.map(r => r.site)).size} Sites`}
             icon={Building}
             description="Total active project sites"
           />
-
-          <Dialog>
-            <DialogTrigger asChild>
-                <div className="cursor-pointer">
-                    <StatCard
-                        title="Pending Indents"
-                        value={pendingRequests.length.toString()}
-                        icon={FileText}
-                        description="Awaiting action"
-                    />
-                </div>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl">
-              <DialogHeader>
-                  <DialogTitle>Pending Indents</DialogTitle>
-                  <DialogDescription>Material indents awaiting action across all sites.</DialogDescription>
-              </DialogHeader>
-              <div className="max-h-[60vh] overflow-y-auto">
-                {pendingRequests.length > 0 ? (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Material</TableHead>
-                                <TableHead>Qty</TableHead>
-                                <TableHead>Site</TableHead>
-                                <TableHead>Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {pendingRequests.map((item) => (
-                                <TableRow key={item.id} className="text-sm">
-                                    <TableCell className="font-medium">{item.material}</TableCell>
-                                    <TableCell>{item.quantity}</TableCell>
-                                    <TableCell>{item.site}</TableCell>
-                                    <TableCell>
-                                    <Badge 
-                                        variant={item.status === 'Partially Issued' ? 'destructive' : 'secondary'}
-                                        className={cn(item.status === 'Partially Issued' && 'bg-orange-500/80 text-white')}
-                                    >
-                                        {item.status}
-                                    </Badge>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                ) : (
-                    <p className="text-center text-muted-foreground">No pending indents.</p>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
+           <StatCard
+            title="Pending Indents"
+            value={pendingRequests.length.toString()}
+            icon={FileText}
+            description="Awaiting action"
+          />
+          <StatCard
+            title="Low Stock Alerts"
+            value={`${lowStockCount} materials`}
+            icon={AlertTriangle}
+            description="Across all sites"
+            className="text-destructive border-destructive/50"
+            onClick={() => router.push('/dashboard/inventory?filter=low-stock')}
+          />
         </div>
         
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
