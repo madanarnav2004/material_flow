@@ -31,6 +31,9 @@ export default function PurchaseDepartmentDashboard() {
   const [selectedIndent, setSelectedIndent] = React.useState<MaterialIndent | null>(null);
   const [issuingSite, setIssuingSite] = React.useState<string>('');
   const [generatedPO, setGeneratedPO] = React.useState<PurchaseOrder | null>(null);
+  const poCardContentRef = React.useRef<HTMLDivElement>(null);
+  const [downloadTrigger, setDownloadTrigger] = React.useState<string | null>(null);
+
 
   const indentsForProcessing = requests.filter(req => req.status === 'Director Approved');
 
@@ -88,6 +91,7 @@ export default function PurchaseDepartmentDashboard() {
     );
 
     setSelectedIndent(null);
+    setDownloadTrigger(po.poId); // Trigger download
     toast({
       title: 'Purchase Order Generated',
       description: `A new PO for ${selectedIndent.material} has been generated.`,
@@ -95,11 +99,39 @@ export default function PurchaseDepartmentDashboard() {
   };
 
   const handleDownloadPO = (poId: string) => {
-      toast({
-          title: "Download Started",
-          description: `Purchase Order ${poId} is downloading.`
-      });
-  }
+    if (!poCardContentRef.current) {
+        toast({
+            variant: "destructive",
+            title: "Download Failed",
+            description: "Could not find the PO content to download."
+        });
+        return;
+    };
+    
+    const billHtml = poCardContentRef.current.innerHTML;
+
+    const blob = new Blob([`<html><head><title>PO: ${poId}</title><style>body{font-family:sans-serif;padding:20px}.flex{display:flex}.justify-between{justify-content:space-between}h1{font-size:1.5rem;font-weight:bold;margin-bottom:1rem}.p-4{padding:1rem}.border{border:1px solid #ddd}.rounded-lg{border-radius:0.5rem}.space-y-2>*{margin-top:0.5rem}.font-semibold{font-weight:600}</style></head><body><h1>Purchase Order: ${poId}</h1>${billHtml}</body></html>`], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `PO-${poId}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast({
+        title: "Download Started",
+        description: `Purchase Order ${poId} is downloading.`
+    });
+  };
+
+  React.useEffect(() => {
+    if (downloadTrigger && generatedPO && poCardContentRef.current) {
+        handleDownloadPO(downloadTrigger);
+        setDownloadTrigger(null);
+    }
+  }, [downloadTrigger, generatedPO]);
 
   // Memoize stock calculations
   const { orgStock, siteStock, storeStock } = React.useMemo(() => {
@@ -121,7 +153,7 @@ export default function PurchaseDepartmentDashboard() {
 
     const orgStock = Object.entries(org).map(([name, data]) => ({ name, ...data }));
     const siteStock = site;
-    const storeStock = inventory.filter(s => s.site === 'MAPI Store');
+    const storeStock = inventory.filter(s => s.site === 'MAPI Godown');
 
     return { orgStock, siteStock, storeStock };
   }, [inventory]);
@@ -211,27 +243,29 @@ export default function PurchaseDepartmentDashboard() {
                     <CardDescription>A new PO has been created for an unavailable material.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="p-4 border rounded-lg space-y-2">
-                        <div className="flex justify-between">
-                            <span className="font-semibold">PO Number:</span>
-                            <span>{generatedPO.poId}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Material:</span>
-                            <span>{generatedPO.material}</span>
-                        </div>
-                         <div className="flex justify-between">
-                            <span className="font-semibold">Quantity:</span>
-                            <span>{generatedPO.quantity}</span>
-                        </div>
-                         <div className="flex justify-between">
-                            <span className="font-semibold">Requesting Site:</span>
-                            <span>{generatedPO.site}</span>
+                    <div ref={poCardContentRef}>
+                        <div className="p-4 border rounded-lg space-y-2">
+                            <div className="flex justify-between">
+                                <span className="font-semibold">PO Number:</span>
+                                <span>{generatedPO.poId}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="font-semibold">Material:</span>
+                                <span>{generatedPO.material}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="font-semibold">Quantity:</span>
+                                <span>{generatedPO.quantity}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="font-semibold">Requesting Site:</span>
+                                <span>{generatedPO.site}</span>
+                            </div>
                         </div>
                     </div>
                     <Button onClick={() => handleDownloadPO(generatedPO.poId)} className="w-full">
                         <Download className="mr-2 h-4 w-4" />
-                        Download Purchase Order
+                        Download Purchase Order Again
                     </Button>
                 </CardContent>
             </Card>
@@ -320,7 +354,7 @@ export default function PurchaseDepartmentDashboard() {
                     </Card>
                 </div>
                 <div className="space-y-4">
-                    <h3 className="font-semibold text-lg">Assign Site & Action</h3>
+                    <h3 className="font-semibold text-lg">Assign Site &amp; Action</h3>
                     <div className="p-4 border rounded-lg space-y-4">
                         <Label htmlFor="issuing-site-select">Select Issuing Site</Label>
                         <Select onValueChange={setIssuingSite} value={issuingSite}>
@@ -362,7 +396,7 @@ export default function PurchaseDepartmentDashboard() {
                     </p>
                     <Button onClick={handleCreatePO}>
                         <FilePlus className="mr-2 h-4 w-4" />
-                        Create Purchase Order
+                        Purchase New (Generate &amp; Download PO)
                     </Button>
                 </div>
             </div>
