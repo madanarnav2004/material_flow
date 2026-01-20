@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,14 +12,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useMaterialContext, InventoryItem } from '@/context/material-context';
 import { cn } from '@/lib/utils';
-import { Settings, Save, AlertTriangle, ArrowUp, PlusCircle } from 'lucide-react';
+import { Settings, Save, AlertTriangle, ArrowUp, PlusCircle, Trash } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 function getStatus(item: InventoryItem) {
   if (item.quantity <= item.minQty) return 'Low Stock';
@@ -38,13 +37,17 @@ function getStatusColor(status: string) {
   }
 }
 
-const adjustmentSchema = z.object({
-  site: z.string().min(1, "Site is required."),
+const materialEntrySchema = z.object({
   material: z.string().min(2, "Material name must be at least 2 characters."),
   classification: z.enum(['Asset', 'Consumable'], { required_error: 'Classification is required.' }),
   unit: z.string().min(1, "Unit is required."),
   quantity: z.coerce.number().min(0, "Quantity must be a non-negative number."),
   remarks: z.string().optional(),
+});
+
+const adjustmentSchema = z.object({
+  site: z.string().min(1, "Site is required."),
+  materials: z.array(materialEntrySchema).min(1, 'Please add at least one material.'),
 });
 type AdjustmentFormValues = z.infer<typeof adjustmentSchema>;
 
@@ -62,7 +65,6 @@ export default function InventoryPage() {
   const { toast } = useToast();
 
   const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = React.useState(false);
-  const [currentStock, setCurrentStock] = React.useState<{ quantity: number; unit: string } | null>(null);
 
   const sites = ['All', ...Array.from(new Set(inventory.map(item => item.site)))];
 
@@ -70,69 +72,64 @@ export default function InventoryPage() {
     resolver: zodResolver(adjustmentSchema),
     defaultValues: {
       site: '',
-      material: '',
-      unit: '',
-      quantity: 0,
-      remarks: '',
+      materials: [{
+        material: '',
+        classification: 'Consumable',
+        unit: '',
+        quantity: 0,
+        remarks: ''
+      }],
     },
   });
 
-  const watchedSite = adjustmentForm.watch('site');
-  const watchedMaterial = adjustmentForm.watch('material');
+  const { fields, append, remove } = useFieldArray({
+    control: adjustmentForm.control,
+    name: "materials"
+  });
 
-  React.useEffect(() => {
-    if (watchedSite && watchedMaterial) {
-      const item = inventory.find(i => i.site === watchedSite && i.material.toLowerCase() === watchedMaterial.toLowerCase());
-      if (item) {
-        setCurrentStock({ quantity: item.quantity, unit: item.unit });
-        adjustmentForm.setValue('unit', item.unit);
-        adjustmentForm.setValue('classification', item.classification);
-      } else {
-        setCurrentStock(null);
-        adjustmentForm.resetField('unit');
-        adjustmentForm.resetField('classification');
-      }
-    } else {
-      setCurrentStock(null);
-    }
-  }, [watchedSite, watchedMaterial, inventory, adjustmentForm]);
 
   const onAdjustmentSubmit = (values: AdjustmentFormValues) => {
     setInventory(prevInventory => {
-        const itemIndex = prevInventory.findIndex(i => i.site === values.site && i.material.toLowerCase() === values.material.toLowerCase());
+        let newInventory = [...prevInventory];
 
-        if (itemIndex > -1) {
-            // Update existing item
-            const newInventory = [...prevInventory];
-            newInventory[itemIndex] = {
-                ...newInventory[itemIndex],
-                quantity: values.quantity,
-                classification: values.classification,
-                unit: values.unit,
-            };
-            return newInventory;
-        } else {
-            // Add new item
-            const newItem: InventoryItem = {
-                id: `inv-${Date.now()}`,
-                site: values.site,
-                material: values.material,
-                classification: values.classification,
-                quantity: values.quantity,
-                unit: values.unit,
-                minQty: 10, // Default min/max, can be changed later
-                maxQty: 100,
-            };
-            return [...prevInventory, newItem];
-        }
+        values.materials.forEach(material => {
+            const itemIndex = newInventory.findIndex(i => i.site === values.site && i.material.toLowerCase() === material.material.toLowerCase());
+
+            if (itemIndex > -1) {
+                // Update existing item
+                newInventory[itemIndex] = {
+                    ...newInventory[itemIndex],
+                    quantity: material.quantity,
+                    classification: material.classification,
+                    unit: material.unit,
+                };
+            } else {
+                // Add new item
+                const newItem: InventoryItem = {
+                    id: `inv-${Date.now()}-${Math.random()}`,
+                    site: values.site,
+                    material: material.material,
+                    classification: material.classification,
+                    quantity: material.quantity,
+                    unit: material.unit,
+                    minQty: 10, // Default min/max, can be changed later
+                    maxQty: 100,
+                };
+                newInventory.push(newItem);
+            }
+        });
+        return newInventory;
     });
 
     toast({
       title: 'Inventory Updated',
-      description: `${values.quantity} units of ${values.material} have been recorded for ${values.site}.`,
+      description: `${values.materials.length} material entries have been recorded for ${values.site}.`,
     });
     setIsAdjustmentDialogOpen(false);
-    adjustmentForm.reset();
+    adjustmentForm.reset({
+      site: values.site,
+      materials: [{ material: '', classification: 'Consumable', unit: '', quantity: 0, remarks: '' }],
+    });
   };
 
   const filteredInventory = React.useMemo(() => {
@@ -289,21 +286,20 @@ export default function InventoryPage() {
       </Dialog>
       
       <Dialog open={isAdjustmentDialogOpen} onOpenChange={(isOpen) => {if (!isOpen) { setIsAdjustmentDialogOpen(false); adjustmentForm.reset();}}}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Manual Stock Entry</DialogTitle>
             <DialogDescription>
-              Add a new material to a site's inventory or adjust the quantity of an existing item.
+              Add one or more new materials to a site's inventory or adjust the quantity of existing items.
             </DialogDescription>
           </DialogHeader>
           <Form {...adjustmentForm}>
             <form onSubmit={adjustmentForm.handleSubmit(onAdjustmentSubmit)} className="space-y-6 pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
+               <FormField
                   control={adjustmentForm.control}
                   name="site"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="max-w-sm">
                       <FormLabel>Site</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
@@ -319,93 +315,80 @@ export default function InventoryPage() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={adjustmentForm.control}
-                  name="material"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Material Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Cement" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
 
-              {currentStock && (
-                  <Alert variant="default" className="bg-blue-50 dark:bg-blue-900/30 border-blue-500/50">
-                    <AlertDescription>
-                      Existing Stock: <span className="font-bold">{currentStock.quantity.toLocaleString()} {currentStock.unit}</span>
-                    </AlertDescription>
-                  </Alert>
-              )}
-              
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={adjustmentForm.control}
-                  name="classification"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Material Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Consumable">Consumable</SelectItem>
-                          <SelectItem value="Asset">Asset</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={adjustmentForm.control}
-                  name="unit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Unit</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., bags, tons" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-               </div>
-               <FormField
-                  control={adjustmentForm.control}
-                  name="quantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>New Total Quantity</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="Enter the final quantity" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={adjustmentForm.control}
-                  name="remarks"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Remarks</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="e.g., Initial stock count" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Material</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Unit</TableHead>
+                        <TableHead>New Total Qty</TableHead>
+                        <TableHead>Remarks</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {fields.map((item, index) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="min-w-[150px]">
+                            <FormField control={adjustmentForm.control} name={`materials.${index}.material`} render={({ field }) => (
+                                <FormItem><FormControl><Input placeholder="e.g., Cement" {...field} /></FormControl><FormMessage /></FormItem>
+                              )}
+                            />
+                          </TableCell>
+                          <TableCell className="min-w-[150px]">
+                            <FormField control={adjustmentForm.control} name={`materials.${index}.classification`} render={({ field }) => (
+                                <FormItem>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="Consumable">Consumable</SelectItem>
+                                      <SelectItem value="Asset">Asset</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </TableCell>
+                           <TableCell className="min-w-[120px]">
+                             <FormField control={adjustmentForm.control} name={`materials.${index}.unit`} render={({ field }) => (
+                                <FormItem><FormControl><Input placeholder="e.g., bags" {...field} /></FormControl><FormMessage /></FormItem>
+                              )}
+                            />
+                           </TableCell>
+                           <TableCell className="min-w-[120px]">
+                            <FormField control={adjustmentForm.control} name={`materials.${index}.quantity`} render={({ field }) => (
+                                <FormItem><FormControl><Input type="number" placeholder="0" {...field} /></FormControl><FormMessage /></FormItem>
+                              )}
+                            />
+                           </TableCell>
+                           <TableCell className="min-w-[150px]">
+                             <FormField control={adjustmentForm.control} name={`materials.${index}.remarks`} render={({ field }) => (
+                                <FormItem><FormControl><Input placeholder="Initial stock count" {...field} /></FormControl><FormMessage /></FormItem>
+                              )}
+                            />
+                           </TableCell>
+                           <TableCell>
+                            <Button variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                           </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                 <Button type="button" variant="outline" size="sm" onClick={() => append({ material: '', classification: 'Consumable', unit: '', quantity: 0, remarks: '' })}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add Another Material
+                </Button>
+
+
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAdjustmentDialogOpen(false)}>Cancel</Button>
                 <Button type="submit">
-                  <Save className="mr-2 h-4 w-4" /> Save Entry
+                  <Save className="mr-2 h-4 w-4" /> Save Entries
                 </Button>
               </DialogFooter>
             </form>
