@@ -89,6 +89,8 @@ export default function InventoryPage() {
         adjustmentForm.setValue('classification', item.classification);
       } else {
         setCurrentStock(null);
+        adjustmentForm.resetField('unit');
+        adjustmentForm.resetField('classification');
       }
     } else {
       setCurrentStock(null);
@@ -195,7 +197,7 @@ export default function InventoryPage() {
               </Select>
               <Button onClick={() => setIsAdjustmentDialogOpen(true)} className="ml-auto">
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Old Material Entry
+                Manual Stock Entry
               </Button>
             </div>
             <div className="rounded-md border">
@@ -289,9 +291,9 @@ export default function InventoryPage() {
       <Dialog open={isAdjustmentDialogOpen} onOpenChange={(isOpen) => {if (!isOpen) { setIsAdjustmentDialogOpen(false); adjustmentForm.reset();}}}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>Old Material Entry</DialogTitle>
+            <DialogTitle>Manual Stock Entry</DialogTitle>
             <DialogDescription>
-              Add new materials or adjust quantities for existing stock.
+              Add a new material to a site's inventory or adjust the quantity of an existing item.
             </DialogDescription>
           </DialogHeader>
           <Form {...adjustmentForm}>
