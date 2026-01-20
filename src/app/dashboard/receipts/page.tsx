@@ -50,9 +50,18 @@ type FromSiteFormValues = z.infer<typeof fromSiteSchema>;
 // Schema for direct shop purchase
 const shopMaterialItemSchema = z.object({
   materialName: z.string().min(1, 'Material name is required.'),
+  classification: z.enum(['Asset', 'Consumable'], { required_error: 'Classification is required.' }),
+  ownership: z.enum(['Own', 'Rent']).optional(),
+  vendorName: z.string().optional(),
   unit: z.string().min(1, 'Unit is required.'),
   quantity: z.coerce.number().min(0.1, 'Quantity must be > 0.'),
   rate: z.coerce.number().min(0.01, 'Rate must be > 0.01'),
+}).refine(data => data.classification !== 'Asset' || !!data.ownership, {
+    message: 'Ownership is required for assets.',
+    path: ['ownership'],
+}).refine(data => !(data.classification === 'Asset' && data.ownership === 'Rent') || (data.vendorName && data.vendorName.length > 0), {
+    message: 'Vendor name is required for rented assets.',
+    path: ['vendorName'],
 });
 
 const fromShopSchema = z.object({
@@ -175,18 +184,21 @@ export default function ReceiptsPage() {
     setPastReceipts(prev => [bill, ...prev]);
 
     setInventory(prevInventory => {
-      const newInventory = [...prevInventory];
-      const receivingItemIndex = newInventory.findIndex(item => item.site === values.receivingSite && item.material === values.materialName);
+      let newInventory = [...prevInventory];
+      const receivingItemIndex = newInventory.findIndex(item => item.site === values.receivingSite && item.material.toLowerCase() === values.materialName.toLowerCase());
+      
       if(receivingItemIndex > -1) {
         newInventory[receivingItemIndex].quantity += values.receivedQuantity;
       } else {
-         const issuingItem = prevInventory.find(item => item.site === values.issuingSite && item.material === values.materialName);
+         const issuingItem = prevInventory.find(item => item.site === values.issuingSite && item.material.toLowerCase() === values.materialName.toLowerCase());
          if(issuingItem) {
            const newItem: InventoryItem = {
              id: `inv-${Date.now()}`,
              site: values.receivingSite,
              material: values.materialName,
              classification: issuingItem.classification,
+             ownership: issuingItem.ownership,
+             vendorName: issuingItem.vendorName,
              quantity: values.receivedQuantity,
              unit: issuingItem.unit,
              minQty: 10,
@@ -296,7 +308,7 @@ export default function ReceiptsPage() {
       invoiceNumber: '',
       vendorName: '',
       invoiceDate: new Date(),
-      materials: [{ materialName: '', unit: '', quantity: 0, rate: 0 }],
+      materials: [{ materialName: '', classification: 'Consumable', unit: '', quantity: 0, rate: 0 }],
     },
   });
 
@@ -306,6 +318,7 @@ export default function ReceiptsPage() {
   });
 
   const purchaseType = fromShopForm.watch('purchaseType');
+  const shopMaterials = fromShopForm.watch('materials');
 
   function onFromShopSubmit(values: FromShopFormValues) {
     const totalAmount = values.materials.reduce((acc, item) => acc + (item.quantity * item.rate), 0);
@@ -338,7 +351,9 @@ export default function ReceiptsPage() {
                   id: `inv-${Date.now()}-${Math.random()}`,
                   site: 'MAPI Store',
                   material: purchasedMaterial.materialName,
-                  classification: 'Consumable',
+                  classification: purchasedMaterial.classification,
+                  ownership: purchasedMaterial.ownership,
+                  vendorName: purchasedMaterial.vendorName,
                   quantity: purchasedMaterial.quantity,
                   unit: purchasedMaterial.unit,
                   minQty: 10,
@@ -355,7 +370,7 @@ export default function ReceiptsPage() {
         invoiceNumber: '',
         vendorName: '',
         invoiceDate: new Date(),
-        materials: [{ materialName: '', unit: '', quantity: 0, rate: 0 }],
+        materials: [{ materialName: '', classification: 'Consumable', unit: '', quantity: 0, rate: 0 }],
     });
     setActiveBillDetails(null);
   }
@@ -504,23 +519,26 @@ export default function ReceiptsPage() {
                       
                       <div>
                         <Label>Purchased Materials</Label>
-                        <div className="mt-2 rounded-md border">
+                        <div className="mt-2 rounded-md border overflow-x-auto">
                           <Table>
-                            <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Unit</TableHead><TableHead>Qty</TableHead><TableHead>Rate</TableHead><TableHead /></TableRow></TableHeader>
+                            <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Type</TableHead><TableHead>Ownership</TableHead><TableHead>Vendor</TableHead><TableHead>Unit</TableHead><TableHead>Qty</TableHead><TableHead>Rate</TableHead><TableHead /></TableRow></TableHeader>
                             <TableBody>
                               {shopFields.map((field, index) => (
                                 <TableRow key={field.id}>
-                                  <TableCell><FormField control={fromShopForm.control} name={`materials.${index}.materialName`} render={({ field }) => (<FormItem><FormControl><Input placeholder="Cement" {...field}/></FormControl><FormMessage/></FormItem>)}/></TableCell>
-                                  <TableCell><FormField control={fromShopForm.control} name={`materials.${index}.unit`} render={({ field }) => (<FormItem><FormControl><Input placeholder="bag" {...field}/></FormControl><FormMessage/></FormItem>)}/></TableCell>
-                                  <TableCell><FormField control={fromShopForm.control} name={`materials.${index}.quantity`} render={({ field }) => (<FormItem><FormControl><Input type="number" placeholder="50" {...field}/></FormControl><FormMessage/></FormItem>)}/></TableCell>
-                                  <TableCell><FormField control={fromShopForm.control} name={`materials.${index}.rate`} render={({ field }) => (<FormItem><FormControl><Input type="number" placeholder="10" {...field}/></FormControl><FormMessage/></FormItem>)}/></TableCell>
+                                  <TableCell className="min-w-[150px]"><FormField control={fromShopForm.control} name={`materials.${index}.materialName`} render={({ field }) => (<FormItem><FormControl><Input placeholder="Cement" {...field}/></FormControl><FormMessage/></FormItem>)}/></TableCell>
+                                  <TableCell className="min-w-[150px]"><FormField control={fromShopForm.control} name={`materials.${index}.classification`} render={({ field }) => (<FormItem><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Type"/></SelectTrigger></FormControl><SelectContent><SelectItem value="Consumable">Consumable</SelectItem><SelectItem value="Asset">Asset</SelectItem></SelectContent></Select><FormMessage/></FormItem>)}/></TableCell>
+                                  <TableCell className="min-w-[150px]">{shopMaterials[index]?.classification === 'Asset' && <FormField control={fromShopForm.control} name={`materials.${index}.ownership`} render={({ field }) => (<FormItem><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ownership"/></SelectTrigger></FormControl><SelectContent><SelectItem value="Own">Own</SelectItem><SelectItem value="Rent">Rent</SelectItem></SelectContent></Select><FormMessage/></FormItem>)} />}</TableCell>
+                                  <TableCell className="min-w-[150px]">{shopMaterials[index]?.ownership === 'Rent' && <FormField control={fromShopForm.control} name={`materials.${index}.vendorName`} render={({ field }) => (<FormItem><FormControl><Input placeholder="Vendor Name" {...field} /></FormControl><FormMessage/></FormItem>)} />}</TableCell>
+                                  <TableCell className="min-w-[100px]"><FormField control={fromShopForm.control} name={`materials.${index}.unit`} render={({ field }) => (<FormItem><FormControl><Input placeholder="bag" {...field}/></FormControl><FormMessage/></FormItem>)}/></TableCell>
+                                  <TableCell className="min-w-[100px]"><FormField control={fromShopForm.control} name={`materials.${index}.quantity`} render={({ field }) => (<FormItem><FormControl><Input type="number" placeholder="50" {...field}/></FormControl><FormMessage/></FormItem>)}/></TableCell>
+                                  <TableCell className="min-w-[100px]"><FormField control={fromShopForm.control} name={`materials.${index}.rate`} render={({ field }) => (<FormItem><FormControl><Input type="number" placeholder="10" {...field}/></FormControl><FormMessage/></FormItem>)}/></TableCell>
                                   <TableCell><Button variant="ghost" size="icon" onClick={() => removeShopMaterial(index)} disabled={shopFields.length <= 1}><Trash className="h-4 w-4" /></Button></TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
                           </Table>
                         </div>
-                        <Button type="button" variant="outline" size="sm" onClick={() => appendShopMaterial({ materialName: '', unit: '', quantity: 0, rate: 0 })} className="mt-4"><PlusCircle className="mr-2 h-4 w-4" /> Add Material</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => appendShopMaterial({ materialName: '', classification: 'Consumable', unit: '', quantity: 0, rate: 0 })} className="mt-4"><PlusCircle className="mr-2 h-4 w-4" /> Add Material</Button>
                       </div>
 
                       <FormField control={fromShopForm.control} name="invoiceFile" render={({ field }) => (<FormItem><FormLabel>Upload Invoice Copy</FormLabel><FormControl><Input type="file" onChange={(e) => field.onChange(e.target.files)} /></FormControl><FormMessage /></FormItem>)}/>

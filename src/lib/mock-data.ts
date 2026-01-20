@@ -209,12 +209,13 @@ export const boqVsActual = [
 
 export const liveInventory = [
   { id: 'inv-1', site: 'North Site', material: 'Cement', classification: 'Consumable' as const, quantity: 480, unit: 'bags', minQty: 100, maxQty: 1000 },
-  { id: 'inv-2', site: 'North Site', material: 'Steel Rebar', classification: 'Asset' as const, quantity: 9, unit: 'tons', minQty: 5, maxQty: 20 },
+  { id: 'inv-2', site: 'North Site', material: 'Steel Rebar', classification: 'Asset' as const, ownership: 'Own' as const, quantity: 9, unit: 'tons', minQty: 5, maxQty: 20 },
   { id: 'inv-3', site: 'North Site', material: 'Gravel', classification: 'Consumable' as const, quantity: 5, unit: 'cu.m.', minQty: 10, maxQty: 50 },
   { id: 'inv-4', site: 'West Site', material: 'Bricks', classification: 'Consumable' as const, quantity: 5000, unit: 'pcs', minQty: 2000, maxQty: 10000 },
   { id: 'inv-5', site: 'South Site', material: 'Sand', classification: 'Consumable' as const, quantity: 120, unit: 'cu.m.', minQty: 50, maxQty: 200 },
   { id: 'inv-6', site: 'MAPI Store', material: 'Cement', classification: 'Consumable' as const, quantity: 1500, unit: 'bags', minQty: 500, maxQty: 3000 },
   { id: 'inv-7', site: 'MAPI Store', material: 'Bricks', classification: 'Consumable' as const, quantity: 10000, unit: 'pcs', minQty: 5000, maxQty: 20000 },
   { id: 'inv-8', site: 'MAPI Store', material: 'Paint', classification: 'Consumable' as const, quantity: 20, unit: 'liters', minQty: 50, maxQty: 200 },
-  { id: 'inv-9', site: 'MAPI Store', material: 'Steel Rebar', classification: 'Asset' as const, quantity: 80, unit: 'tons', minQty: 20, maxQty: 100 },
+  { id: 'inv-9', site: 'MAPI Store', material: 'Steel Rebar', classification: 'Asset' as const, ownership: 'Own' as const, quantity: 80, unit: 'tons', minQty: 20, maxQty: 100 },
+  { id: 'inv-10', site: 'North Site', material: 'JCB', classification: 'Asset' as const, ownership: 'Rent' as const, vendorName: 'Reliable Rentals Co.', quantity: 1, unit: 'unit', minQty: 1, maxQty: 1 },
 ];

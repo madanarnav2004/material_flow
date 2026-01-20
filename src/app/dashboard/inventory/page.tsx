@@ -18,7 +18,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Textarea } from '@/components/ui/textarea';
 
 function getStatus(item: InventoryItem) {
   if (item.quantity <= item.minQty) return 'Low Stock';
@@ -40,9 +39,27 @@ function getStatusColor(status: string) {
 const materialEntrySchema = z.object({
   material: z.string().min(2, "Material name must be at least 2 characters."),
   classification: z.enum(['Asset', 'Consumable'], { required_error: 'Classification is required.' }),
+  ownership: z.enum(['Own', 'Rent']).optional(),
+  vendorName: z.string().optional(),
   unit: z.string().min(1, "Unit is required."),
   quantity: z.coerce.number().min(0, "Quantity must be a non-negative number."),
   remarks: z.string().optional(),
+}).refine(data => {
+    if (data.classification === 'Asset') {
+        return !!data.ownership;
+    }
+    return true;
+}, {
+    message: 'Ownership type is required for assets.',
+    path: ['ownership'],
+}).refine(data => {
+    if (data.classification === 'Asset' && data.ownership === 'Rent') {
+        return data.vendorName && data.vendorName.length > 0;
+    }
+    return true;
+}, {
+    message: 'Vendor name is required for rented assets.',
+    path: ['vendorName'],
 });
 
 const adjustmentSchema = z.object({
@@ -75,6 +92,8 @@ export default function InventoryPage() {
       materials: [{
         material: '',
         classification: 'Consumable',
+        ownership: undefined,
+        vendorName: '',
         unit: '',
         quantity: 0,
         remarks: ''
@@ -102,6 +121,8 @@ export default function InventoryPage() {
                     quantity: material.quantity,
                     classification: material.classification,
                     unit: material.unit,
+                    ownership: material.ownership,
+                    vendorName: material.vendorName,
                 };
             } else {
                 // Add new item
@@ -110,6 +131,8 @@ export default function InventoryPage() {
                     site: values.site,
                     material: material.material,
                     classification: material.classification,
+                    ownership: material.ownership,
+                    vendorName: material.vendorName,
                     quantity: material.quantity,
                     unit: material.unit,
                     minQty: 10, // Default min/max, can be changed later
@@ -204,6 +227,8 @@ export default function InventoryPage() {
                     <TableHead>Site</TableHead>
                     <TableHead>Material</TableHead>
                     <TableHead>Classification</TableHead>
+                    <TableHead>Ownership</TableHead>
+                    <TableHead>Vendor</TableHead>
                     <TableHead className="text-right">Available Qty</TableHead>
                     <TableHead className="text-center">Min/Max Limits</TableHead>
                     <TableHead className="text-center">Status</TableHead>
@@ -220,6 +245,8 @@ export default function InventoryPage() {
                         <TableCell>
                           <Badge variant="outline">{item.classification}</Badge>
                         </TableCell>
+                        <TableCell>{item.classification === 'Asset' ? item.ownership : 'N/A'}</TableCell>
+                        <TableCell>{item.ownership === 'Rent' ? item.vendorName : 'N/A'}</TableCell>
                         <TableCell className="text-right font-semibold">{item.quantity.toLocaleString()} {item.unit}</TableCell>
                         <TableCell className="text-center">{item.minQty.toLocaleString()} / {item.maxQty.toLocaleString()}</TableCell>
                         <TableCell className="text-center">
@@ -286,7 +313,7 @@ export default function InventoryPage() {
       </Dialog>
       
       <Dialog open={isAdjustmentDialogOpen} onOpenChange={(isOpen) => {if (!isOpen) { setIsAdjustmentDialogOpen(false); adjustmentForm.reset();}}}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-6xl">
           <DialogHeader>
             <DialogTitle>Manual Stock Entry</DialogTitle>
             <DialogDescription>
@@ -322,6 +349,8 @@ export default function InventoryPage() {
                       <TableRow>
                         <TableHead>Material</TableHead>
                         <TableHead>Type</TableHead>
+                        <TableHead>Ownership</TableHead>
+                        <TableHead>Vendor Name</TableHead>
                         <TableHead>Unit</TableHead>
                         <TableHead>New Total Qty</TableHead>
                         <TableHead>Remarks</TableHead>
@@ -352,6 +381,32 @@ export default function InventoryPage() {
                               )}
                             />
                           </TableCell>
+                          <TableCell className="min-w-[150px]">
+                            {adjustmentForm.watch(`materials.${index}.classification`) === 'Asset' && (
+                                <FormField control={adjustmentForm.control} name={`materials.${index}.ownership`} render={({ field }) => (
+                                    <FormItem>
+                                      <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Select ownership" /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                          <SelectItem value="Own">Own</SelectItem>
+                                          <SelectItem value="Rent">Rent</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                            )}
+                          </TableCell>
+                           <TableCell className="min-w-[150px]">
+                            {adjustmentForm.watch(`materials.${index}.classification`) === 'Asset' &&
+                             adjustmentForm.watch(`materials.${index}.ownership`) === 'Rent' && (
+                                <FormField control={adjustmentForm.control} name={`materials.${index}.vendorName`} render={({ field }) => (
+                                    <FormItem><FormControl><Input placeholder="Vendor Name" {...field} /></FormControl><FormMessage /></FormItem>
+                                  )}
+                                />
+                            )}
+                           </TableCell>
                            <TableCell className="min-w-[120px]">
                              <FormField control={adjustmentForm.control} name={`materials.${index}.unit`} render={({ field }) => (
                                 <FormItem><FormControl><Input placeholder="e.g., bags" {...field} /></FormControl><FormMessage /></FormItem>

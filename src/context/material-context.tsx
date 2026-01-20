@@ -63,6 +63,8 @@ export interface InventoryItem {
   site: string;
   material: string;
   classification: 'Asset' | 'Consumable';
+  ownership?: 'Own' | 'Rent';
+  vendorName?: string;
   quantity: number;
   unit: string;
   minQty: number;
