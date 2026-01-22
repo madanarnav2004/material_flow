@@ -87,19 +87,24 @@ export default function UserManagementPage() {
   }
 
   const handleToggleLoginStatus = (loginId: string) => {
+    const loginToUpdate = logins.find(l => l.id === loginId);
+    if (!loginToUpdate) return;
+    
+    const newStatus = loginToUpdate.status === 'Active' ? 'Closed' : 'Active';
+
     setLogins(currentLogins =>
-        currentLogins.map(login => {
-            if (login.id === loginId) {
-                const newStatus = login.status === 'Active' ? 'Closed' : 'Active';
-                toast({
-                    title: `Login ${newStatus}`,
-                    description: `Login for ${login.email} has been ${newStatus.toLowerCase()}.`,
-                });
-                return { ...login, status: newStatus };
-            }
-            return login;
-        })
+      currentLogins.map(login => {
+        if (login.id === loginId) {
+          return { ...login, status: newStatus };
+        }
+        return login;
+      })
     );
+    
+    toast({
+      title: `Login ${newStatus}`,
+      description: `Login for ${loginToUpdate.email} has been ${newStatus.toLowerCase()}.`,
+    });
   };
 
   return (
