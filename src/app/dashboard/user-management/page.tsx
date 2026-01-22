@@ -4,17 +4,20 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Trash, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/hooks/use-user';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const newUserSchema = z.object({
   siteName: z.string().min(1, 'Site name is required.'),
+  siteInchargeName: z.string().min(1, 'Site Incharge name is required.'),
   loginName: z.string().email('Please enter a valid email.'),
   password: z.string().min(8, 'Password must be at least 8 characters.'),
   role: z.string().min(1, 'Role is required.'),
@@ -22,13 +25,24 @@ const newUserSchema = z.object({
 
 type NewUserFormValues = z.infer<typeof newUserSchema>;
 
+const mockUserActivity = [
+  { id: '1', email: 'manager@northsite.com', loginTime: '2024-07-29 09:05 AM', logoutTime: '2024-07-29 05:15 PM', totalHours: '8h 10m' },
+  { id: '2', email: 'manager@southsite.com', loginTime: '2024-07-29 08:55 AM', logoutTime: '2024-07-29 06:00 PM', totalHours: '9h 5m' },
+  { id: '3', email: 'l.gomez@materialflow.com', loginTime: '2024-07-29 09:30 AM', logoutTime: '2024-07-29 05:30 PM', totalHours: '8h 0m' },
+  { id: '4', email: 's.khan@materialflow.com', loginTime: '2024-07-29 09:00 AM', logoutTime: 'Not logged out', totalHours: '-' },
+];
+
+
 export default function UserManagementPage() {
   const { toast } = useToast();
+  const { role: currentUserRole } = useUser();
+  const [userActivity, setUserActivity] = React.useState(mockUserActivity);
 
   const form = useForm<NewUserFormValues>({
     resolver: zodResolver(newUserSchema),
     defaultValues: {
       siteName: '',
+      siteInchargeName: '',
       loginName: '',
       password: '',
       role: '',
@@ -37,13 +51,20 @@ export default function UserManagementPage() {
 
   function onSubmit(values: NewUserFormValues) {
     console.log('Creating new user with values:', values);
-    // Here you would typically call an API to create the user
-    // and add the new site manager role to the login page options.
     toast({
       title: 'New Login Created!',
-      description: `A new login for ${values.loginName} at ${values.siteName} has been created.`,
+      description: `A new login for ${values.loginName} has been created for ${values.siteInchargeName}.`,
     });
     form.reset();
+  }
+
+  const handleDeleteUser = (userId: string) => {
+    setUserActivity(currentActivity => currentActivity.filter(user => user.id !== userId));
+    toast({
+        title: 'User Deleted',
+        description: 'The user login has been removed.',
+        variant: 'destructive',
+    });
   }
 
   return (
@@ -56,7 +77,7 @@ export default function UserManagementPage() {
         <CardHeader>
           <CardTitle>Create New Site Login</CardTitle>
           <CardDescription>
-            Add a new site and create the initial login credentials for the Site Manager.
+            Add a new site and create the initial login credentials.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -70,6 +91,19 @@ export default function UserManagementPage() {
                     <FormLabel>New Site Name</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g., Central Site" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="siteInchargeName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Site Incharge Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., John Doe" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -133,6 +167,49 @@ export default function UserManagementPage() {
           </Form>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users /> User Activity
+          </CardTitle>
+          <CardDescription>
+            Overview of user login times and activity.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User Email</TableHead>
+                <TableHead>Login Time</TableHead>
+                <TableHead>Logout Time</TableHead>
+                <TableHead>Total Hours</TableHead>
+                {currentUserRole === 'director' && <TableHead className="text-right">Actions</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {userActivity.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.loginTime}</TableCell>
+                  <TableCell>{user.logoutTime}</TableCell>
+                  <TableCell>{user.totalHours}</TableCell>
+                  {currentUserRole === 'director' && (
+                    <TableCell className="text-right">
+                      <Button variant="destructive" size="sm" onClick={() => handleDeleteUser(user.id)}>
+                        <Trash className="mr-2 h-4 w-4" />
+                        Delete
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
     </div>
   );
 }
