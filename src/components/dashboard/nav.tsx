@@ -56,6 +56,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard/boq-management', icon: FileUp, label: 'BOQ Management', roles: ['coordinator', 'director'] },
   { href: '/dashboard/rate-fixing', icon: DollarSign, label: 'Rate Fixing', roles: ['director', 'coordinator', 'purchase-department'] },
   { href: '/dashboard/boq-analysis', icon: FileSpreadsheet, label: 'BOQ Analysis', roles: ['coordinator', 'director'] },
+  { href: '/dashboard/reports', icon: AreaChart, label: 'Reports', roles: ['director', 'site-manager', 'coordinator', 'purchase-department'] },
   { href: '/dashboard/ai-review', icon: BrainCircuit, label: 'AI Bill Review', roles: ['director', 'coordinator', 'site-manager', 'godown-manager', 'purchase-department'] },
 ];
 
