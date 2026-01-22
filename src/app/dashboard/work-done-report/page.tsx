@@ -43,6 +43,7 @@ const workforceSchema = z.object({
   hours: z.coerce.number().min(0.1, 'Hours are required'),
   otHours: z.coerce.number().min(0, 'OT hours must be a non-negative number.').optional(),
   rate: z.coerce.number().min(0, 'Rate must be a positive number.').optional(),
+  otRate: z.coerce.number().min(0, 'OT rate must be a positive number.').optional(),
 });
 
 const workDoneSchema = z.object({
@@ -93,7 +94,7 @@ export default function WorkDoneReportPage() {
       quantityOfWork: 0,
       materials: [{ type: '', quantity: 0, unit: '', rate: 0 }],
       equipment: [{ source: '', name: '', usage: 0, unit: '', rate: 0 }],
-      workforce: [{ skill: '', designation: '', count: 0, hours: 0, otHours: 0, rate: 0 }],
+      workforce: [{ skill: '', designation: '', count: 0, hours: 0, otHours: 0, rate: 0, otRate: 0 }],
     },
   });
 
@@ -175,7 +176,11 @@ export default function WorkDoneReportPage() {
   function onSubmit(values: WorkDoneFormValues) {
     const materialCost = values.materials?.reduce((acc, mat) => acc + (mat.quantity * (mat.rate || 0)), 0) || 0;
     const equipmentCost = values.equipment?.reduce((acc, eq) => acc + (eq.usage * (eq.rate || 0)), 0) || 0;
-    const workforceCost = values.workforce?.reduce((acc, wf) => acc + (wf.count * (wf.hours + (wf.otHours || 0)) * (wf.rate || 0)), 0) || 0;
+    const workforceCost = values.workforce?.reduce((acc, wf) => {
+      const regularCost = wf.count * wf.hours * (wf.rate || 0);
+      const otCost = wf.count * (wf.otHours || 0) * (wf.otRate || wf.rate || 0); // Fallback to regular rate for OT if OT rate is not provided
+      return acc + regularCost + otCost;
+    }, 0) || 0;
     const totalCost = materialCost + equipmentCost + workforceCost;
 
     setSubmittedReport({
@@ -613,6 +618,7 @@ export default function WorkDoneReportPage() {
                                     <TableHead>Hours</TableHead>
                                     <TableHead>OT Hours</TableHead>
                                     <TableHead>Rate/hr ($)</TableHead>
+                                    <TableHead>OT Rate/hr ($)</TableHead>
                                     <TableHead className="w-12"></TableHead>
                                 </TableRow>
                                 </TableHeader>
@@ -694,6 +700,15 @@ export default function WorkDoneReportPage() {
                                         />
                                     </TableCell>
                                     <TableCell>
+                                        <FormField
+                                            control={form.control}
+                                            name={`workforce.${index}.otRate`}
+                                            render={({ field }) => (
+                                                <FormItem><FormControl><Input type="number" placeholder="OT Rate" {...field} /></FormControl><FormMessage /></FormItem>
+                                            )}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
                                         <Button variant="ghost" size="icon" onClick={() => removeWorkforce(index)} disabled={workforceFields.length <= 1}>
                                         <Trash className="h-4 w-4" />
                                         </Button>
@@ -703,7 +718,7 @@ export default function WorkDoneReportPage() {
                                 </TableBody>
                             </Table>
                         </div>
-                        <Button type="button" variant="outline" size="sm" onClick={() => appendWorkforce({ skill: '', designation: '', count: 0, hours: 0, otHours: 0, rate: 0 })} className="mt-4">
+                        <Button type="button" variant="outline" size="sm" onClick={() => appendWorkforce({ skill: '', designation: '', count: 0, hours: 0, otHours: 0, rate: 0, otRate: 0 })} className="mt-4">
                             <PlusCircle className="mr-2 h-4 w-4" /> Add Workforce
                         </Button>
                     </CardContent>
