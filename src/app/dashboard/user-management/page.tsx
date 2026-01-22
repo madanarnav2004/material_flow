@@ -4,9 +4,10 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { UserPlus, Trash, Users } from 'lucide-react';
+import { UserPlus, Users, Power, PowerOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/hooks/use-user';
+import { cn } from '@/lib/utils';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 
 const newUserSchema = z.object({
   siteName: z.string().min(1, 'Site name is required.'),
@@ -25,18 +27,35 @@ const newUserSchema = z.object({
 
 type NewUserFormValues = z.infer<typeof newUserSchema>;
 
-const mockUserActivity = [
-  { id: '1', email: 'manager@northsite.com', loginTime: '2024-07-29 09:05 AM', logoutTime: '2024-07-29 05:15 PM', totalHours: '8h 10m' },
-  { id: '2', email: 'manager@southsite.com', loginTime: '2024-07-29 08:55 AM', logoutTime: '2024-07-29 06:00 PM', totalHours: '9h 5m' },
-  { id: '3', email: 'l.gomez@materialflow.com', loginTime: '2024-07-29 09:30 AM', logoutTime: '2024-07-29 05:30 PM', totalHours: '8h 0m' },
-  { id: '4', email: 's.khan@materialflow.com', loginTime: '2024-07-29 09:00 AM', logoutTime: 'Not logged out', totalHours: '-' },
+type Login = {
+    id: string;
+    email: string;
+    site: string;
+    role: string;
+    status: 'Active' | 'Closed';
+};
+
+const initialLogins: Login[] = [
+  { id: '1', email: 'manager@northsite.com', site: 'North Site', role: 'site-manager', status: 'Active' },
+  { id: '2', email: 'manager@southsite.com', site: 'South Site', role: 'site-manager', status: 'Active' },
+  { id: '3', email: 'l.gomez@materialflow.com', site: 'MAPI Godown', role: 'godown-manager', status: 'Active' },
+  { id: '4', email: 's.khan@materialflow.com', site: 'Global', role: 'purchase-department', status: 'Active' },
+  { id: '5', email: 'manager@oldsite.com', site: 'Old Site', role: 'site-manager', status: 'Closed' },
 ];
+
+const roleDisplayNames: { [key: string]: string } = {
+  'site-manager': 'Site Manager',
+  'godown-manager': 'Godown Manager',
+  'coordinator': 'Coordinator',
+  'purchase-department': 'Purchase Department',
+  'director': 'Director',
+};
 
 
 export default function UserManagementPage() {
   const { toast } = useToast();
   const { role: currentUserRole } = useUser();
-  const [userActivity, setUserActivity] = React.useState(mockUserActivity);
+  const [logins, setLogins] = React.useState<Login[]>(initialLogins);
 
   const form = useForm<NewUserFormValues>({
     resolver: zodResolver(newUserSchema),
@@ -50,7 +69,16 @@ export default function UserManagementPage() {
   });
 
   function onSubmit(values: NewUserFormValues) {
-    console.log('Creating new user with values:', values);
+    const newLogin: Login = {
+      id: (logins.length + 1).toString(),
+      email: values.loginName,
+      site: values.siteName,
+      role: values.role,
+      status: 'Active',
+    };
+
+    setLogins(prev => [newLogin, ...prev]);
+
     toast({
       title: 'New Login Created!',
       description: `A new login for ${values.loginName} has been created for ${values.siteInchargeName}.`,
@@ -58,14 +86,21 @@ export default function UserManagementPage() {
     form.reset();
   }
 
-  const handleDeleteUser = (userId: string) => {
-    setUserActivity(currentActivity => currentActivity.filter(user => user.id !== userId));
-    toast({
-        title: 'User Deleted',
-        description: 'The user login has been removed.',
-        variant: 'destructive',
-    });
-  }
+  const handleToggleLoginStatus = (loginId: string) => {
+    setLogins(currentLogins =>
+        currentLogins.map(login => {
+            if (login.id === loginId) {
+                const newStatus = login.status === 'Active' ? 'Closed' : 'Active';
+                toast({
+                    title: `Login ${newStatus}`,
+                    description: `Login for ${login.email} has been ${newStatus.toLowerCase()}.`,
+                });
+                return { ...login, status: newStatus };
+            }
+            return login;
+        })
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -171,36 +206,47 @@ export default function UserManagementPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users /> User Activity
+            <Users /> Manage Site Logins
           </CardTitle>
           <CardDescription>
-            Overview of user login times and activity.
+            Activate or close logins for different sites. Closed logins cannot be used.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Site</TableHead>
                 <TableHead>User Email</TableHead>
-                <TableHead>Login Time</TableHead>
-                <TableHead>Logout Time</TableHead>
-                <TableHead>Total Hours</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
                 {currentUserRole === 'director' && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {userActivity.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.loginTime}</TableCell>
-                  <TableCell>{user.logoutTime}</TableCell>
-                  <TableCell>{user.totalHours}</TableCell>
+              {logins.map((login) => (
+                <TableRow key={login.id}>
+                  <TableCell>{login.site}</TableCell>
+                  <TableCell>{login.email}</TableCell>
+                  <TableCell>{roleDisplayNames[login.role] || login.role}</TableCell>
+                  <TableCell>
+                    <Badge variant={login.status === 'Active' ? 'default' : 'destructive'} className={cn(login.status === 'Active' && 'bg-green-600')}>
+                      {login.status}
+                    </Badge>
+                  </TableCell>
                   {currentUserRole === 'director' && (
                     <TableCell className="text-right">
-                      <Button variant="destructive" size="sm" onClick={() => handleDeleteUser(user.id)}>
-                        <Trash className="mr-2 h-4 w-4" />
-                        Delete
-                      </Button>
+                      {login.status === 'Active' ? (
+                        <Button variant="destructive" size="sm" onClick={() => handleToggleLoginStatus(login.id)}>
+                          <PowerOff className="mr-2 h-4 w-4" />
+                          Close Login
+                        </Button>
+                      ) : (
+                        <Button variant="secondary" size="sm" onClick={() => handleToggleLoginStatus(login.id)}>
+                          <Power className="mr-2 h-4 w-4" />
+                          Re-open Login
+                        </Button>
+                      )}
                     </TableCell>
                   )}
                 </TableRow>
