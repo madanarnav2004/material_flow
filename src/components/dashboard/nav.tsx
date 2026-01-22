@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -22,6 +23,7 @@ import {
   Layers,
   FileSpreadsheet,
   Upload,
+  DollarSign,
 } from 'lucide-react';
 
 import { 
@@ -50,9 +52,9 @@ const navItems: NavItem[] = [
   { href: '/dashboard/receipts', icon: PackageCheck, label: 'Goods Received Note', roles: ['director', 'site-manager', 'godown-manager', 'coordinator', 'purchase-department'] },
   { href: '/dashboard/godown-actions', icon: Upload, label: 'Godown Actions', roles: ['godown-manager'] },
   { href: '/dashboard/vehicle-entry', icon: Car, label: 'Vehicle Entry', roles: ['site-manager'] },
-  { href: '/dashboard/work-done-report', icon: ClipboardCheck, label: 'Work Done Report', roles: ['site-manager'] },
-  { href: '/dashboard/reports', icon: AreaChart, label: 'Reports', roles: ['director', 'coordinator'] },
-  { href: '/dashboard/boq-management', icon: FileUp, label: 'BOQ Management', roles: ['coordinator'] },
+  { href: '/dashboard/work-done-report', icon: ClipboardCheck, label: 'Work Done Report', roles: ['site-manager', 'coordinator', 'director'] },
+  { href: '/dashboard/boq-management', icon: FileUp, label: 'BOQ Management', roles: ['coordinator', 'director'] },
+  { href: '/dashboard/rate-fixing', icon: DollarSign, label: 'Rate Fixing', roles: ['director', 'coordinator', 'purchase-department'] },
   { href: '/dashboard/boq-analysis', icon: FileSpreadsheet, label: 'BOQ Analysis', roles: ['coordinator', 'director'] },
   { href: '/dashboard/ai-review', icon: BrainCircuit, label: 'AI Bill Review', roles: ['director', 'coordinator', 'site-manager', 'godown-manager', 'purchase-department'] },
 ];

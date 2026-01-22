@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -23,6 +24,8 @@ export default function LoginPage() {
     }
     router.push("/dashboard");
   };
+
+  const sites = ["North Site", "South Site", "East Site", "West Site"];
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -57,47 +60,51 @@ export default function LoginPage() {
                   <SelectTrigger id="role" className="w-full">
                     <SelectValue placeholder="Select your login" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-72">
                     <SelectItem value="director/Global">
                       <div className="flex items-center gap-2">
-                        <User className="h-4 w-4" /> Director
+                        <User className="h-4 w-4" /> Director (Global)
                       </div>
                     </SelectItem>
-                    <SelectItem value="site-manager/North Site">
-                      <div className="flex items-center gap-2">
-                        <UserSquare className="h-4 w-4" /> North Site
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="site-manager/South Site">
-                      <div className="flex items-center gap-2">
-                        <UserSquare className="h-4 w-4" /> South Site
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="site-manager/East Site">
-                      <div className="flex items-center gap-2">
-                        <UserSquare className="h-4 w-4" /> East Site
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="site-manager/West Site">
-                      <div className="flex items-center gap-2">
-                        <UserSquare className="h-4 w-4" /> West Site
-                      </div>
-                    </SelectItem>
+                    {sites.map(site => (
+                       <SelectItem key={`director-${site}`} value={`director/${site}`}>
+                        <div className="flex items-center gap-2"><User className="h-4 w-4" /> Director ({site})</div>
+                      </SelectItem>
+                    ))}
+
+                    {sites.map(site => (
+                      <SelectItem key={`site-manager-${site}`} value={`site-manager/${site}`}>
+                        <div className="flex items-center gap-2"><UserSquare className="h-4 w-4" /> {site} Manager</div>
+                      </SelectItem>
+                    ))}
+
                     <SelectItem value="coordinator/Global">
                       <div className="flex items-center gap-2">
-                        <UserCog className="h-4 w-4" /> Coordinator
+                        <UserCog className="h-4 w-4" /> Coordinator (Global)
                       </div>
                     </SelectItem>
+                     {sites.map(site => (
+                       <SelectItem key={`coordinator-${site}`} value={`coordinator/${site}`}>
+                        <div className="flex items-center gap-2"><UserCog className="h-4 w-4" /> Coordinator ({site})</div>
+                      </SelectItem>
+                    ))}
+
                     <SelectItem value="godown-manager/MAPI Godown">
                       <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4" /> MAPI Godown
+                        <Building className="h-4 w-4" /> Godown Login
                       </div>
                     </SelectItem>
+                    
                     <SelectItem value="purchase-department/Global">
                       <div className="flex items-center gap-2">
-                        <ShoppingCart className="h-4 w-4" /> Purchase Department
+                        <ShoppingCart className="h-4 w-4" /> Purchase Dept. (Global)
                       </div>
                     </SelectItem>
+                     {sites.map(site => (
+                       <SelectItem key={`purchase-department-${site}`} value={`purchase-department/${site}`}>
+                        <div className="flex items-center gap-2"><ShoppingCart className="h-4 w-4" /> Purchase Dept. ({site})</div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
