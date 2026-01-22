@@ -1,6 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Download, Upload, CheckCircle, Settings, Send, FilePlus, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,12 +17,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import StatCard from '../dashboard/stat-card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
+import { Input } from '../ui/input';
 
 type PurchaseOrder = MaterialIndent & {
     poId: string;
     poDate: Date;
+    vendorName?: string;
+    vendorContact?: string;
+    billNumber?: string;
 };
 
+const poDetailsSchema = z.object({
+  vendorName: z.string().min(2, 'Vendor name is required.'),
+  vendorContact: z.string().optional(),
+  billNumber: z.string().optional(),
+});
+type PoDetailsFormValues = z.infer<typeof poDetailsSchema>;
 
 export default function PurchaseDepartmentDashboard() {
   const { toast } = useToast();
@@ -37,7 +51,6 @@ export default function PurchaseDepartmentDashboard() {
         poDate: new Date(req.poDate!),
     }));
 
-
   const lowStockMaterials = React.useMemo(() => {
     return inventory.filter(item => item.quantity <= item.minQty);
   }, [inventory]);
@@ -49,9 +62,14 @@ export default function PurchaseDepartmentDashboard() {
 
   const availableSites = [...new Set(materialAvailability.map(s => s.site))];
 
+  const poForm = useForm<PoDetailsFormValues>({
+    resolver: zodResolver(poDetailsSchema),
+  });
+
   const handleProcessClick = (indent: MaterialIndent) => {
     setSelectedIndent(indent);
     setIssuingSite('');
+    poForm.reset();
   };
 
   const handleFinalApproval = (decision: 'Issued' | 'Purchase Rejected') => {
@@ -86,27 +104,30 @@ export default function PurchaseDepartmentDashboard() {
     };
     
     const poHtml = `
-        <div className="p-4 border rounded-lg space-y-2">
-            <div className="flex justify-between">
-                <span className="font-semibold">PO Number:</span>
+        <div class="p-4 border rounded-lg space-y-2">
+            <div class="flex justify-between">
+                <span class="font-semibold">PO Number:</span>
                 <span>${po.poId}</span>
             </div>
-             <div className="flex justify-between">
-                <span className="font-semibold">PO Date:</span>
+             <div class="flex justify-between">
+                <span class="font-semibold">PO Date:</span>
                 <span>${po.poDate.toLocaleDateString()}</span>
             </div>
-            <div className="flex justify-between">
-                <span className="font-semibold">Material:</span>
+            <div class="flex justify-between">
+                <span class="font-semibold">Material:</span>
                 <span>${po.material}</span>
             </div>
-            <div className="flex justify-between">
-                <span className="font-semibold">Quantity:</span>
+            <div class="flex justify-between">
+                <span class="font-semibold">Quantity:</span>
                 <span>${po.quantity}</span>
             </div>
-            <div className="flex justify-between">
-                <span className="font-semibold">Requesting Site:</span>
+            <div class="flex justify-between">
+                <span class="font-semibold">Requesting Site:</span>
                 <span>${po.site}</span>
             </div>
+            ${po.vendorName ? `<div class="flex justify-between"><span class="font-semibold">Vendor:</span><span>${po.vendorName}</span></div>` : ''}
+            ${po.vendorContact ? `<div class="flex justify-between"><span class="font-semibold">Vendor Contact:</span><span>${po.vendorContact}</span></div>` : ''}
+            ${po.billNumber ? `<div class="flex justify-between"><span class="font-semibold">Bill/Ref #:</span><span>${po.billNumber}</span></div>` : ''}
         </div>
     `;
 
@@ -126,12 +147,13 @@ export default function PurchaseDepartmentDashboard() {
     });
   };
 
-  const handleCreatePO = () => {
+  const onGeneratePo = (values: PoDetailsFormValues) => {
     if (!selectedIndent) return;
 
     const poDate = new Date();
     const po: PurchaseOrder = {
         ...selectedIndent,
+        ...values,
         poId: `PO-${selectedIndent.id}`,
         poDate: poDate,
         status: 'PO Generated',
@@ -292,13 +314,28 @@ export default function PurchaseDepartmentDashboard() {
             )}
           </DialogContent>
         </Dialog>
+        
+        <Dialog>
+          <DialogTrigger asChild>
+            <div className="cursor-pointer">
+              <StatCard
+                title="Total Inventory Value"
+                value="$XXX,XXX"
+                icon={CheckCircle}
+                description="Across all locations"
+              />
+            </div>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Inventory Value Breakdown</DialogTitle>
+            </DialogHeader>
+            <p className="text-center text-muted-foreground p-8">
+              Detailed value breakdown is not yet implemented.
+            </p>
+          </DialogContent>
+        </Dialog>
 
-        <StatCard
-          title="Total Inventory Value"
-          value="$XXX,XXX"
-          icon={CheckCircle}
-          description="Across all locations"
-        />
 
         <Dialog>
           <DialogTrigger asChild>
@@ -465,9 +502,57 @@ export default function PurchaseDepartmentDashboard() {
 
                         <div>
                             <Label className="text-sm font-normal text-muted-foreground">Option 2: Purchase new material</Label>
-                            <Button onClick={handleCreatePO} variant="secondary" className="w-full">
-                                <FilePlus className="mr-2 h-4 w-4" /> Purchase New (Generate PO)
-                            </Button>
+                             <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="secondary" className="w-full">
+                                        <FilePlus className="mr-2 h-4 w-4" /> Purchase New (Generate PO)
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>New Purchase Order Details</DialogTitle>
+                                        <DialogDescription>Enter vendor details for this new purchase.</DialogDescription>
+                                    </DialogHeader>
+                                    <Form {...poForm}>
+                                        <form onSubmit={poForm.handleSubmit(onGeneratePo)} className="space-y-4">
+                                            <FormField
+                                                control={poForm.control}
+                                                name="vendorName"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Vendor Name</FormLabel>
+                                                        <FormControl><Input placeholder="e.g., Acme Suppliers" {...field} /></FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={poForm.control}
+                                                name="vendorContact"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Vendor Contact (Optional)</FormLabel>
+                                                        <FormControl><Input placeholder="Phone or Email" {...field} /></FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={poForm.control}
+                                                name="billNumber"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Reference/Bill Number (Optional)</FormLabel>
+                                                        <FormControl><Input placeholder="e.g., Q-12345" {...field} /></FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <Button type="submit">Generate & Download PO</Button>
+                                        </form>
+                                    </Form>
+                                </DialogContent>
+                             </Dialog>
                         </div>
 
                         <Separator />
@@ -483,12 +568,49 @@ export default function PurchaseDepartmentDashboard() {
                 <div className="text-center p-8 border rounded-lg bg-secondary/50">
                     <h3 className="font-semibold text-lg">No Stock Found</h3>
                     <p className="text-muted-foreground mb-4">
-                        This material is not available at any site or the central store.
+                        This material is not available at any site or the central store. Please enter purchase details to generate a PO.
                     </p>
-                    <Button onClick={handleCreatePO}>
-                        <FilePlus className="mr-2 h-4 w-4" />
-                        Purchase New (Generate &amp; Download PO)
-                    </Button>
+                    <Form {...poForm}>
+                      <form onSubmit={poForm.handleSubmit(onGeneratePo)} className="space-y-4 max-w-sm mx-auto text-left">
+                          <FormField
+                              control={poForm.control}
+                              name="vendorName"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Vendor Name</FormLabel>
+                                      <FormControl><Input placeholder="e.g., Acme Suppliers" {...field} /></FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                           <FormField
+                              control={poForm.control}
+                              name="vendorContact"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Vendor Contact (Optional)</FormLabel>
+                                      <FormControl><Input placeholder="Phone or Email" {...field} /></FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <FormField
+                              control={poForm.control}
+                              name="billNumber"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Reference/Bill Number (Optional)</FormLabel>
+                                      <FormControl><Input placeholder="e.g., Q-12345" {...field} /></FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <Button type="submit" className="w-full">
+                              <FilePlus className="mr-2 h-4 w-4" />
+                              Generate & Download PO
+                          </Button>
+                      </form>
+                    </Form>
                 </div>
             </div>
           )}

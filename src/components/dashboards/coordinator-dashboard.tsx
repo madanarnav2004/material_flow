@@ -1,6 +1,6 @@
 'use client';
 
-import { Building, FileText, Eye, Download, FileSpreadsheet, AlertTriangle } from 'lucide-react';
+import { Building, FileText, Eye, Download, FileSpreadsheet, AlertTriangle, ChevronDown, Package } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -11,9 +11,10 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { useMaterialContext, type InventoryItem } from '@/context/material-context';
+import { useMaterialContext, type InventoryItem, type IndentStatus } from '@/context/material-context';
 import { boqUsage, engineerUsage } from '@/lib/mock-data';
 
 
@@ -38,8 +39,18 @@ type MaterialIndentBill = RequestFormValues & {
 export default function CoordinatorDashboard() {
   const { toast } = useToast();
   const router = useRouter();
-  const { requests, pendingRequests, inventory } = useMaterialContext();
+  const { requests, setRequests, inventory } = useMaterialContext();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
+
+  const indentsForApproval = requests.filter(r => r.status === 'Pending Director Approval');
+
+  const handleStatusChange = (reqId: string, newStatus: IndentStatus) => {
+    setRequests(requests.map(req => (req.id === reqId ? { ...req, status: newStatus } : req)));
+    toast({
+      title: `Indent ${newStatus}`,
+      description: `Indent ID ${reqId} has been updated. A notification has been sent.`,
+    });
+  };
 
   const lowStockMaterials = React.useMemo(() => {
     return inventory.filter(item => item.quantity <= item.minQty);
@@ -132,35 +143,58 @@ export default function CoordinatorDashboard() {
                <div className="cursor-pointer">
                 <StatCard
                   title="Pending Indents"
-                  value={pendingRequests.length.toString()}
-                  icon={FileText}
+                  value={indentsForApproval.length.toString()}
+                  icon={Package}
                   description="Awaiting action"
+                  className="border-yellow-500/50"
                 />
               </div>
             </DialogTrigger>
-            <DialogContent className="max-w-3xl">
+            <DialogContent className="max-w-4xl">
               <DialogHeader>
-                <DialogTitle>Pending Indents</DialogTitle>
-                <DialogDescription>Material indents from various sites awaiting action.</DialogDescription>
+                <DialogTitle>Indents Awaiting Approval</DialogTitle>
+                <DialogDescription>Review and approve or reject material indents from sites.</DialogDescription>
               </DialogHeader>
                <div className="max-h-[60vh] overflow-y-auto">
-                  {pendingRequests.length > 0 ? (
+                  {indentsForApproval.length > 0 ? (
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Indent ID</TableHead>
                                 <TableHead>Material</TableHead>
-                                <TableHead>Quantity</TableHead>
+                                <TableHead>Qty</TableHead>
                                 <TableHead>Site</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                        {pendingRequests.map(item => (
+                        {indentsForApproval.map(item => (
                             <TableRow key={item.id}>
                                 <TableCell className="font-medium">{item.id}</TableCell>
                                 <TableCell>{item.material}</TableCell>
                                 <TableCell>{item.quantity}</TableCell>
                                 <TableCell>{item.site}</TableCell>
+                                <TableCell className="text-right">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="outline" size="sm">
+                                        Actions <ChevronDown className="ml-2 h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleViewBill(item.id)}>
+                                        <Eye className="mr-2 h-4 w-4" /> View Details
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem onClick={() => handleStatusChange(item.id, 'Director Approved')}>
+                                        Approve
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleStatusChange(item.id, 'Director Rejected')} className="text-destructive">
+                                        Reject
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </TableCell>
                             </TableRow>
                         ))}
                         </TableBody>
@@ -257,11 +291,11 @@ export default function CoordinatorDashboard() {
                 </Card>
                 <Card>
                   <CardHeader>
-                    <CardTitle>Pending Indents</CardTitle>
+                    <CardTitle>Indents for Approval</CardTitle>
                     <CardDescription>Material indents awaiting action across all sites.</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {pendingRequests.length > 0 ? (
+                    {indentsForApproval.length > 0 ? (
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -272,15 +306,15 @@ export default function CoordinatorDashboard() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {pendingRequests.map((item) => (
+                                {indentsForApproval.map((item) => (
                                     <TableRow key={item.id} className="text-sm">
                                         <TableCell className="font-medium">{item.material}</TableCell>
                                         <TableCell>{item.quantity}</TableCell>
                                         <TableCell>{item.site}</TableCell>
                                         <TableCell>
                                         <Badge 
-                                            variant={item.status === 'Partially Issued' ? 'destructive' : 'secondary'}
-                                            className={cn(item.status === 'Partially Issued' && 'bg-orange-500/80 text-white')}
+                                            variant={'secondary'}
+                                            className={cn('bg-yellow-500/80 text-white')}
                                         >
                                             {item.status}
                                         </Badge>
@@ -290,7 +324,7 @@ export default function CoordinatorDashboard() {
                             </TableBody>
                         </Table>
                     ) : (
-                        <p className="text-center text-muted-foreground">No pending indents.</p>
+                        <p className="text-center text-muted-foreground p-4">No indents are awaiting approval.</p>
                     )}
                   </CardContent>
                 </Card>
