@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building, Lock, Mail, User, UserCog, UserSquare, Warehouse, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,48 +10,34 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const ROLES = [
-  { value: 'director', label: 'Director', icon: User },
-  { value: 'site-manager', label: 'Site Manager', icon: UserSquare },
-  { value: 'coordinator', label: 'Coordinator', icon: UserCog },
-  { value: 'godown-manager', label: 'Godown Manager', icon: Building },
-  { value: 'purchase-department', label: 'Purchase Department', icon: ShoppingCart },
+  { value: 'director', label: 'Director', icon: User, site: 'Global', role: 'director' },
+  { value: 'coordinator', label: 'Coordinator', icon: UserCog, site: 'Global', role: 'coordinator' },
+  { value: 'purchase-department', label: 'Purchase Department', icon: ShoppingCart, site: 'Global', role: 'purchase-department' },
+  { value: 'godown-manager', label: 'Godown Manager', icon: Building, site: 'MAPI Godown', role: 'godown-manager' },
+  { value: 'site-manager-north', label: 'Site Manager (North)', icon: UserSquare, site: 'North Site', role: 'site-manager' },
+  { value: 'site-manager-south', label: 'Site Manager (South)', icon: UserSquare, site: 'South Site', role: 'site-manager' },
+  { value: 'site-manager-east', label: 'Site Manager (East)', icon: UserSquare, site: 'East Site', role: 'site-manager' },
+  { value: 'site-manager-west', label: 'Site Manager (West)', icon: UserSquare, site: 'West Site', role: 'site-manager' },
 ];
-
-const ALL_SITES = ["North Site", "South Site", "East Site", "West Site"];
-
-const SITE_OPTIONS: Record<string, string[]> = {
-  director: ["Global", ...ALL_SITES],
-  'site-manager': ALL_SITES,
-  coordinator: ["Global", ...ALL_SITES],
-  'godown-manager': ["MAPI Godown"],
-  'purchase-department': ["Global", ...ALL_SITES],
-};
 
 
 export default function LoginPage() {
   const router = useRouter();
-  const [role, setRole] = useState("director");
-  const [site, setSite] = useState("Global");
-
-  useEffect(() => {
-    // When role changes, update site to a valid default for that role
-    const availableSites = SITE_OPTIONS[role] || [];
-    if (!availableSites.includes(site)) {
-        setSite(availableSites[0]);
-    }
-  }, [role, site]);
+  const [selectedRoleValue, setSelectedRoleValue] = useState("director");
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const selectedRole = ROLES.find(r => r.value === selectedRoleValue);
+    if (!selectedRole) return;
+
     if (typeof window !== "undefined") {
-      localStorage.setItem("userRole", role);
-      localStorage.setItem("userSite", site);
+      localStorage.setItem("userRole", selectedRole.role);
+      localStorage.setItem("userSite", selectedRole.site);
       localStorage.setItem("lastLogin", new Date().toISOString());
     }
     router.push("/dashboard");
   };
-  
-  const availableSitesForRole = SITE_OPTIONS[role] || [];
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -80,42 +66,26 @@ export default function LoginPage() {
                   <Input id="password" type="password" required className="pl-10" defaultValue="password" />
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role</Label>
-                  <Select onValueChange={setRole} value={role}>
-                    <SelectTrigger id="role" className="w-full">
-                      <SelectValue placeholder="Select your role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ROLES.map((r) => {
-                        const Icon = r.icon;
-                        return (
-                          <SelectItem key={r.value} value={r.value}>
-                            <div className="flex items-center gap-2">
-                              <Icon className="h-4 w-4" /> {r.label}
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="site">Site</Label>
-                  <Select onValueChange={setSite} value={site} disabled={availableSitesForRole.length <= 1}>
-                    <SelectTrigger id="site" className="w-full">
-                      <SelectValue placeholder="Select your site" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableSitesForRole.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {s}
+              
+              <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
+                <Select onValueChange={setSelectedRoleValue} value={selectedRoleValue}>
+                  <SelectTrigger id="role" className="w-full">
+                    <SelectValue placeholder="Select your role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLES.map((r) => {
+                      const Icon = r.icon;
+                      return (
+                        <SelectItem key={r.value} value={r.value}>
+                          <div className="flex items-center gap-2">
+                            <Icon className="h-4 w-4" /> {r.label}
+                          </div>
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
               </div>
 
               <Button type="submit" className="w-full text-lg">
