@@ -18,7 +18,8 @@ const fileSchema = (typeof window !== 'undefined' ? z.instanceof(File) : z.any()
 const rateUploadSchema = z.object({
   materialFile: fileSchema,
   equipmentFile: fileSchema,
-  workforceFile: fileSchema,
+  skilledWorkforceFile: fileSchema,
+  unskilledWorkforceFile: fileSchema,
 });
 
 type RateUploadFormValues = z.infer<typeof rateUploadSchema>;
@@ -35,7 +36,8 @@ export default function RateFixingPage() {
     let uploadedFiles = 0;
     if (values.materialFile) uploadedFiles++;
     if (values.equipmentFile) uploadedFiles++;
-    if (values.workforceFile) uploadedFiles++;
+    if (values.skilledWorkforceFile) uploadedFiles++;
+    if (values.unskilledWorkforceFile) uploadedFiles++;
 
     if (uploadedFiles > 0) {
       toast({
@@ -45,7 +47,8 @@ export default function RateFixingPage() {
       form.reset({
         materialFile: undefined,
         equipmentFile: undefined,
-        workforceFile: undefined,
+        skilledWorkforceFile: undefined,
+        unskilledWorkforceFile: undefined,
       });
     } else {
       toast({
@@ -102,10 +105,11 @@ export default function RateFixingPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {renderUploadCard('materialFile', 'Material Rates', 'Upload Excel for material types, units, and rates.')}
                 {renderUploadCard('equipmentFile', 'Equipment Rates', 'Upload Excel for equipment names, units, and rates.')}
-                {renderUploadCard('workforceFile', 'Workforce Rates', 'Upload Excel for worker skills, designations, and rates.')}
+                {renderUploadCard('skilledWorkforceFile', 'Skilled Worker Rates', 'Upload Excel for skilled worker designations, rates, and OT hours.')}
+                {renderUploadCard('unskilledWorkforceFile', 'Unskilled Worker Rates', 'Upload Excel for unskilled worker designations, rates, and OT hours.')}
               </div>
               <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
                 <Upload className="mr-2 h-4 w-4" />
