@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { engineerUsage, boqUsage, recentActivities } from '@/lib/mock-data';
+import { engineerUsage, boqUsage, recentActivities, materialReturnReminders as indents, liveInventory } from '@/lib/mock-data';
 
 
 type SearchCategory = {
@@ -21,23 +21,27 @@ type SearchCategory = {
 };
 
 const searchCategories: SearchCategory[] = [
-    // Site Manager
-    { value: 'engineer-usage', label: 'Engineer-wise Usage', placeholder: 'Search by engineer name...', roles: ['site-manager', 'director', 'coordinator'] },
-    { value: 'boq-usage-engineer', label: 'BOQ Item-wise Usage (by Engineer)', placeholder: 'Search by BOQ item or engineer...', roles: ['site-manager', 'director', 'coordinator'] },
-    { value: 'building-usage', label: 'Building-wise Usage', placeholder: 'Search by building name...', roles: ['site-manager', 'director', 'coordinator'] },
-    { value: 'month-usage-site', label: 'Month-wise Usage (Site)', placeholder: 'Search by month (e.g., July)...', roles: ['site-manager', 'director', 'coordinator'] },
+    // Director, Coordinator, Site Manager
+    { value: 'engineer-usage', label: 'Engineer-wise Usage', placeholder: 'Search by engineer...', roles: ['director', 'coordinator', 'site-manager'] },
+    { value: 'boq-usage', label: 'BOQ Item Usage', placeholder: 'Search by BOQ item...', roles: ['director', 'coordinator', 'site-manager'] },
+    { value: 'building-usage', label: 'Building-wise Usage', placeholder: 'Search by building...', roles: ['director', 'coordinator', 'site-manager'] },
+    { value: 'month-usage', label: 'Monthly Usage', placeholder: 'Search by month (e.g., July)...', roles: ['director', 'coordinator', 'site-manager'] },
+
+    // Director, Coordinator
+    { value: 'site-activity', label: 'Site Activity', placeholder: 'Search by site name...', roles: ['director', 'coordinator'] },
+
+    // Director, Purchase Dept, Coordinator
+    { value: 'org-stock', label: 'Material Stock (Org)', placeholder: 'Search material name...', roles: ['director', 'purchase-department', 'coordinator'] },
     
-    // Director
-    { value: 'org-usage', label: 'Organization-wise Usage', placeholder: 'Search material...', roles: ['director'] },
-    { value: 'all-stock', label: 'Material Stock (All)', placeholder: 'Search material...', roles: ['director'] },
+    // Godown Manager, Purchase Dept, Director, Coordinator
+    { value: 'indent-by-material', label: 'Indents by Material', placeholder: 'Search material name...', roles: ['godown-manager', 'purchase-department', 'director', 'coordinator'] },
+    { value: 'indent-by-site', label: 'Indents by Site', placeholder: 'Search site name...', roles: ['godown-manager', 'purchase-department', 'director', 'coordinator'] },
     
-    // Coordinator
-    { value: 'coordinator-usage', label: 'Coordinator-wise Usage', placeholder: 'Search material...', roles: ['coordinator'] },
-    
-    // Store Manager
-    { value: 'stock-search', label: 'Stock Search (Item/Site)', placeholder: 'Search material or site...', roles: ['store-manager', 'director'] },
-    { value: 'request-search-material', label: 'Request Search (by Material)', placeholder: 'Search material name...', roles: ['store-manager', 'director', 'coordinator'] },
-    { value: 'request-search-site', label: 'Request Search (by Site)', placeholder: 'Search site name...', roles: ['store-manager', 'director', 'coordinator'] },
+    // Godown Manager
+    { value: 'godown-stock', label: 'Godown Stock', placeholder: 'Search for a material...', roles: ['godown-manager'] },
+
+    // Purchase Department, Director, Coordinator
+    { value: 'indent-by-status', label: 'Indents by Status', placeholder: 'Search status (e.g., Approved)...', roles: ['purchase-department', 'director', 'coordinator'] },
 ];
 
 const mockBuildingUsage = [
@@ -62,7 +66,7 @@ export default function DashboardSearch({ role }: { role: UserRole }) {
     const [searchTitle, setSearchTitle] = React.useState('');
 
     const availableCategories = React.useMemo(() => {
-        return searchCategories.filter(cat => cat.roles.includes(role));
+        return searchCategories.filter(cat => cat.roles.includes(role!));
     }, [role]);
 
     React.useEffect(() => {
@@ -90,7 +94,7 @@ export default function DashboardSearch({ role }: { role: UserRole }) {
                 results = engineerUsage.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()));
                 title = `Engineer-wise Usage for "${searchTerm}"`;
                 break;
-            case 'boq-usage-engineer':
+            case 'boq-usage':
                 results = boqUsage.filter(u => u.item.toLowerCase().includes(searchTerm.toLowerCase()));
                 title = `BOQ Item-wise Usage for "${searchTerm}"`;
                 break;
@@ -98,9 +102,33 @@ export default function DashboardSearch({ role }: { role: UserRole }) {
                  results = mockBuildingUsage.filter(u => u.building.toLowerCase().includes(searchTerm.toLowerCase()));
                 title = `Building-wise Usage for "${searchTerm}"`;
                 break;
-            case 'month-usage-site':
+            case 'month-usage':
                 results = mockMonthUsage.filter(u => u.month.toLowerCase().includes(searchTerm.toLowerCase()));
                 title = `Month-wise Usage for "${searchTerm}"`;
+                break;
+            case 'site-activity':
+                results = recentActivities.filter(u => u.site.toLowerCase().includes(searchTerm.toLowerCase()));
+                title = `Activity for Site: "${searchTerm}"`;
+                break;
+            case 'org-stock':
+                results = liveInventory.filter(u => u.material.toLowerCase().includes(searchTerm.toLowerCase()));
+                title = `Organization Stock for "${searchTerm}"`;
+                break;
+            case 'indent-by-material':
+                results = indents.filter(u => u.material.toLowerCase().includes(searchTerm.toLowerCase()));
+                title = `Indents for Material: "${searchTerm}"`;
+                break;
+            case 'indent-by-site':
+                results = indents.filter(u => u.site.toLowerCase().includes(searchTerm.toLowerCase()));
+                title = `Indents from Site: "${searchTerm}"`;
+                break;
+            case 'godown-stock':
+                results = liveInventory.filter(u => u.site === 'MAPI Godown' && u.material.toLowerCase().includes(searchTerm.toLowerCase()));
+                title = `Godown Stock for "${searchTerm}"`;
+                break;
+            case 'indent-by-status':
+                results = indents.filter(u => u.status.toLowerCase().includes(searchTerm.toLowerCase()));
+                title = `Indents with Status: "${searchTerm}"`;
                 break;
             default:
                 toast({ title: 'Not Implemented', description: 'This search category is not yet implemented.' });
@@ -130,7 +158,7 @@ export default function DashboardSearch({ role }: { role: UserRole }) {
                         <TableBody>{searchResults.map((r, i) => <TableRow key={i}><TableCell>{r.name}</TableCell><TableCell>{r.materials}</TableCell><TableCell>{r.site}</TableCell></TableRow>)}</TableBody>
                     </Table>
                 );
-            case 'boq-usage-engineer':
+            case 'boq-usage':
                  return (
                     <Table>
                         <TableHeader><TableRow><TableHead>BOQ Item</TableHead><TableHead>Consumed</TableHead><TableHead>Budget</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
@@ -144,11 +172,41 @@ export default function DashboardSearch({ role }: { role: UserRole }) {
                         <TableBody>{searchResults.map((r, i) => <TableRow key={i}><TableCell>{r.building}</TableCell><TableCell>{r.material}</TableCell><TableCell>{r.quantity}</TableCell><TableCell>{r.engineer}</TableCell></TableRow>)}</TableBody>
                     </Table>
                 );
-            case 'month-usage-site':
+            case 'month-usage':
                 return (
                     <Table>
                         <TableHeader><TableRow><TableHead>Month</TableHead><TableHead>Material</TableHead><TableHead>Quantity</TableHead><TableHead>Site</TableHead></TableRow></TableHeader>
                         <TableBody>{searchResults.map((r, i) => <TableRow key={i}><TableCell>{r.month}</TableCell><TableCell>{r.material}</TableCell><TableCell>{r.quantity}</TableCell><TableCell>{r.site}</TableCell></TableRow>)}</TableBody>
+                    </Table>
+                );
+            case 'site-activity':
+                return (
+                    <Table>
+                        <TableHeader><TableRow><TableHead>Type</TableHead><TableHead>Details</TableHead><TableHead>Status</TableHead><TableHead>Date</TableHead></TableRow></TableHeader>
+                        <TableBody>{searchResults.map((r, i) => <TableRow key={i}><TableCell>{r.type}</TableCell><TableCell>{r.details}</TableCell><TableCell>{r.status}</TableCell><TableCell>{r.date}</TableCell></TableRow>)}</TableBody>
+                    </Table>
+                );
+            case 'org-stock':
+                return (
+                    <Table>
+                        <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Site</TableHead><TableHead className="text-right">Quantity</TableHead></TableRow></TableHeader>
+                        <TableBody>{searchResults.map((r, i) => <TableRow key={i}><TableCell>{r.material}</TableCell><TableCell>{r.site}</TableCell><TableCell className="text-right">{r.quantity} {r.unit}</TableCell></TableRow>)}</TableBody>
+                    </Table>
+                );
+            case 'indent-by-material':
+            case 'indent-by-site':
+            case 'indent-by-status':
+                return (
+                    <Table>
+                        <TableHeader><TableRow><TableHead>Indent ID</TableHead><TableHead>Material</TableHead><TableHead>Site</TableHead><TableHead>Status</TableHead><TableHead>Return Date</TableHead></TableRow></TableHeader>
+                        <TableBody>{searchResults.map((r, i) => <TableRow key={i}><TableCell>{r.id}</TableCell><TableCell>{r.material}</TableCell><TableCell>{r.site}</TableCell><TableCell>{r.status}</TableCell><TableCell>{r.returnDate}</TableCell></TableRow>)}</TableBody>
+                    </Table>
+                );
+            case 'godown-stock':
+                return (
+                    <Table>
+                        <TableHeader><TableRow><TableHead>Material</TableHead><TableHead className="text-right">Quantity</TableHead></TableRow></TableHeader>
+                        <TableBody>{searchResults.map((r, i) => <TableRow key={i}><TableCell>{r.material}</TableCell><TableCell className="text-right">{r.quantity} {r.unit}</TableCell></TableRow>)}</TableBody>
                     </Table>
                 );
             default:
@@ -199,3 +257,5 @@ export default function DashboardSearch({ role }: { role: UserRole }) {
         </>
     );
 }
+
+    
