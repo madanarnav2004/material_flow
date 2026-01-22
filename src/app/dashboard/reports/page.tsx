@@ -18,6 +18,11 @@ const reports = [
     variants: ["Site-wise", "Organization-wise"],
   },
   {
+    title: "Returnable Material Report",
+    description: "Details on materials that are returnable to the godown or another site.",
+    variants: ["Site-wise", "Organization-wise", "Godown-wise"],
+  },
+  {
     title: "Material Stock Report",
     description: "Current inventory levels across different locations.",
     variants: ["Site-wise", "Store-wise", "Organization-wise"],
@@ -51,7 +56,7 @@ const reports = [
   },
 ];
 
-const sitesList = ["North Site", "South Site", "West Site", "East Site"];
+const sitesList = ["North Site", "South Site", "West Site", "East Site", "MAPI Godown"];
 
 export default function ReportsPage() {
   return (
