@@ -2,185 +2,119 @@
 'use client';
 
 import * as React from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { DollarSign, PlusCircle, Save, Trash } from 'lucide-react';
+import { DollarSign, Upload } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Label } from '@/components/ui/label';
-import { mockBoqData } from '@/lib/mock-data';
 
-// Schemas
-const materialRateSchema = z.object({
-  type: z.string(),
-  rate: z.coerce.number().min(0, 'Rate must be positive.'),
-  unit: z.string(),
+const fileSchema = (typeof window !== 'undefined' ? z.instanceof(File) : z.any()).optional();
+
+const rateUploadSchema = z.object({
+  materialFile: fileSchema,
+  equipmentFile: fileSchema,
+  workforceFile: fileSchema,
 });
 
-const equipmentRateSchema = z.object({
-  source: z.string(),
-  name: z.string(),
-  rate: z.coerce.number().min(0, 'Rate must be positive.'),
-  unit: z.string(),
-});
+type RateUploadFormValues = z.infer<typeof rateUploadSchema>;
 
-const workforceRateSchema = z.object({
-  skill: z.string(),
-  designation: z.string(),
-  rate: z.coerce.number().min(0, 'Rate must be positive.'),
-});
-
-// Main component
 export default function RateFixingPage() {
+  const { toast } = useToast();
+
+  const form = useForm<RateUploadFormValues>({
+    resolver: zodResolver(rateUploadSchema),
+  });
+
+  function onSubmit(values: RateUploadFormValues) {
+    console.log('Uploading rate files:', values);
+    let uploadedFiles = 0;
+    if (values.materialFile) uploadedFiles++;
+    if (values.equipmentFile) uploadedFiles++;
+    if (values.workforceFile) uploadedFiles++;
+
+    if (uploadedFiles > 0) {
+      toast({
+        title: 'Rate Files Uploaded!',
+        description: `Your rate configurations have been submitted for processing.`,
+      });
+      form.reset({
+        materialFile: undefined,
+        equipmentFile: undefined,
+        workforceFile: undefined,
+      });
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'No Files Selected',
+        description: 'Please select at least one file to upload.',
+      });
+    }
+  }
+
+  const renderUploadCard = (name: keyof RateUploadFormValues, title: string, description: string) => (
+    <Card className="shadow-none">
+      <CardHeader>
+        <CardTitle className="text-lg">{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <FormField
+          control={form.control}
+          name={name}
+          render={({ field: { onChange, value, ...rest } }) => (
+            <FormItem>
+              <FormControl>
+                <Input
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  onChange={(e) =>
+                    onChange(e.target.files ? e.target.files[0] : null)
+                  }
+                />
+              </FormControl>
+              {value && <p className="text-sm text-muted-foreground mt-2">Selected: {value.name}</p>}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold font-headline">Rate Fixing Module</h1>
-      <MaterialRateForm />
-      <EquipmentRateForm />
-      <WorkforceRateForm />
+      <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
+        <DollarSign /> Rate Fixing Module
+      </h1>
+      
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <Card>
+            <CardHeader>
+              <CardTitle>Upload Rate Configuration Files</CardTitle>
+              <CardDescription>
+                Upload the master Excel files for material, equipment, and workforce rates. These rates will be used across the system for cost analysis and BOQ calculations.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {renderUploadCard('materialFile', 'Material Rates', 'Upload Excel for material types, units, and rates.')}
+                {renderUploadCard('equipmentFile', 'Equipment Rates', 'Upload Excel for equipment names, units, and rates.')}
+                {renderUploadCard('workforceFile', 'Workforce Rates', 'Upload Excel for worker skills, designations, and rates.')}
+              </div>
+              <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
+                <Upload className="mr-2 h-4 w-4" />
+                {form.formState.isSubmitting ? 'Uploading...' : 'Upload and Process Rate Files'}
+              </Button>
+            </CardContent>
+          </Card>
+        </form>
+      </Form>
     </div>
-  );
-}
-
-// Sub-components for each rate type
-function MaterialRateForm() {
-  const { toast } = useToast();
-  const form = useForm<{ rates: z.infer<typeof materialRateSchema>[] }>({
-    resolver: zodResolver(z.object({ rates: z.array(materialRateSchema) })),
-    defaultValues: { rates: mockBoqData.materials },
-  });
-
-  const { fields, append, remove } = useFieldArray({ control: form.control, name: 'rates' });
-
-  function onSubmit(values: { rates: z.infer<typeof materialRateSchema>[] }) {
-    console.log('Saving Material Rates:', values);
-    toast({ title: 'Material Rates Saved Successfully' });
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Material Rate Configuration</CardTitle>
-        <CardDescription>Manage per-unit rates for all material types.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <Table>
-              <TableHeader><TableRow><TableHead>Material Type</TableHead><TableHead>Unit</TableHead><TableHead>Rate</TableHead><TableHead className="w-12" /></TableRow></TableHeader>
-              <TableBody>
-                {fields.map((field, index) => (
-                  <TableRow key={field.id}>
-                    <TableCell><FormField control={form.control} name={`rates.${index}.type`} render={({ field }) => <FormItem><FormControl><Input {...field} readOnly/></FormControl></FormItem>}/></TableCell>
-                    <TableCell><FormField control={form.control} name={`rates.${index}.unit`} render={({ field }) => <FormItem><FormControl><Input {...field} readOnly/></FormControl></FormItem>}/></TableCell>
-                    <TableCell><FormField control={form.control} name={`rates.${index}.rate`} render={({ field }) => <FormItem><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>}/></TableCell>
-                    <TableCell><Button variant="ghost" size="icon" onClick={() => remove(index)}><Trash className="h-4 w-4" /></Button></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <Button type="button" variant="outline" size="sm" onClick={() => append({ type: '', unit: '', rate: 0 })}><PlusCircle className="mr-2 h-4 w-4" /> Add Material</Button>
-            <Button type="submit"><Save className="mr-2 h-4 w-4" /> Save Material Rates</Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
-  );
-}
-
-function EquipmentRateForm() {
-  const { toast } = useToast();
-  const form = useForm<{ rates: z.infer<typeof equipmentRateSchema>[] }>({
-    resolver: zodResolver(z.object({ rates: z.array(equipmentRateSchema) })),
-    defaultValues: { rates: mockBoqData.equipment },
-  });
-
-  const { fields, append, remove } = useFieldArray({ control: form.control, name: 'rates' });
-
-  function onSubmit(values: { rates: z.infer<typeof equipmentRateSchema>[] }) {
-    console.log('Saving Equipment Rates:', values);
-    toast({ title: 'Equipment Rates Saved Successfully' });
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Equipment Rate Configuration</CardTitle>
-        <CardDescription>Manage per-hour rates for owned and hired equipment.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <Table>
-              <TableHeader><TableRow><TableHead>Source</TableHead><TableHead>Equipment Name</TableHead><TableHead>Unit</TableHead><TableHead>Rate</TableHead><TableHead className="w-12" /></TableRow></TableHeader>
-              <TableBody>
-                {fields.map((field, index) => (
-                  <TableRow key={field.id}>
-                    <TableCell><FormField control={form.control} name={`rates.${index}.source`} render={({ field }) => <FormItem><FormControl><Input {...field} readOnly/></FormControl></FormItem>}/></TableCell>
-                    <TableCell><FormField control={form.control} name={`rates.${index}.name`} render={({ field }) => <FormItem><FormControl><Input {...field} readOnly/></FormControl></FormItem>}/></TableCell>
-                    <TableCell><FormField control={form.control} name={`rates.${index}.unit`} render={({ field }) => <FormItem><FormControl><Input {...field} readOnly/></FormControl></FormItem>}/></TableCell>
-                    <TableCell><FormField control={form.control} name={`rates.${index}.rate`} render={({ field }) => <FormItem><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>}/></TableCell>
-                    <TableCell><Button variant="ghost" size="icon" onClick={() => remove(index)}><Trash className="h-4 w-4" /></Button></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <Button type="button" variant="outline" size="sm" onClick={() => append({ source: '', name: '', unit: '', rate: 0 })}><PlusCircle className="mr-2 h-4 w-4" /> Add Equipment</Button>
-            <Button type="submit"><Save className="mr-2 h-4 w-4" /> Save Equipment Rates</Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
-  );
-}
-
-function WorkforceRateForm() {
-  const { toast } = useToast();
-  const form = useForm<{ rates: z.infer<typeof workforceRateSchema>[] }>({
-    resolver: zodResolver(z.object({ rates: z.array(workforceRateSchema) })),
-    defaultValues: { rates: mockBoqData.workforce },
-  });
-
-  const { fields, append, remove } = useFieldArray({ control: form.control, name: 'rates' });
-
-  function onSubmit(values: { rates: z.infer<typeof workforceRateSchema>[] }) {
-    console.log('Saving Workforce Rates:', values);
-    toast({ title: 'Workforce Rates Saved Successfully' });
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Workforce Rate Configuration</CardTitle>
-        <CardDescription>Manage per-hour rates for different skill types and designations.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <Table>
-              <TableHeader><TableRow><TableHead>Skill</TableHead><TableHead>Designation</TableHead><TableHead>Rate/hr</TableHead><TableHead className="w-12" /></TableRow></TableHeader>
-              <TableBody>
-                {fields.map((field, index) => (
-                  <TableRow key={field.id}>
-                    <TableCell><FormField control={form.control} name={`rates.${index}.skill`} render={({ field }) => <FormItem><FormControl><Input {...field} readOnly/></FormControl></FormItem>}/></TableCell>
-                    <TableCell><FormField control={form.control} name={`rates.${index}.designation`} render={({ field }) => <FormItem><FormControl><Input {...field} readOnly/></FormControl></FormItem>}/></TableCell>
-                    <TableCell><FormField control={form.control} name={`rates.${index}.rate`} render={({ field }) => <FormItem><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>}/></TableCell>
-                    <TableCell><Button variant="ghost" size="icon" onClick={() => remove(index)}><Trash className="h-4 w-4" /></Button></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <Button type="button" variant="outline" size="sm" onClick={() => append({ skill: '', designation: '', rate: 0 })}><PlusCircle className="mr-2 h-4 w-4" /> Add Workforce</Button>
-            <Button type="submit"><Save className="mr-2 h-4 w-4" /> Save Workforce Rates</Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
   );
 }
