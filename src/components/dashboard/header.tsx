@@ -65,8 +65,7 @@ export default function DashboardHeader({ user }: { user: { name: string; email:
               {lastLogin && <p className="text-xs text-muted-foreground mt-1">Last login: {lastLogin}</p>}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>Profile</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>Settings</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>Update Profile</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive-foreground focus:bg-destructive">
               <LogOut className="mr-2 h-4 w-4" />
