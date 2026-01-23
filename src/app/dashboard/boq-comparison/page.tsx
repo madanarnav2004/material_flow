@@ -313,7 +313,16 @@ export default function BoqComparisonPage() {
                           <TableCell className={cn("text-right", materialQtyVariance > 0 ? "text-destructive" : "text-green-600")}>
                             {materialQtyVariance > 0 ? `+${materialQtyVariance}` : materialQtyVariance}
                           </TableCell>
-                          <TableCell className="text-left border-l">{item.actualManpowerBreakdown}</TableCell>
+                          <TableCell className="text-left border-l">
+                            <div>
+                              {item.actualManpower.map((worker) => (
+                                <div key={worker.designation} className="flex justify-between gap-2">
+                                  <span>{worker.designation}</span>
+                                  <span className="font-semibold">{worker.count}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </TableCell>
                           <TableCell className="text-right">{item.actualManpowerHours} hrs</TableCell>
                           <TableCell className="text-right">{item.actualManpowerOtHours} hrs</TableCell>
                           <TableCell className="text-right">${item.actualManpowerCost.toFixed(2)}</TableCell>
@@ -336,7 +345,16 @@ export default function BoqComparisonPage() {
                           <TableCell className={cn("text-right", materialQtyVariance > 0 ? "text-destructive" : "text-green-600")}>
                             {materialQtyVariance > 0 ? `+${materialQtyVariance}` : materialQtyVariance}
                           </TableCell>
-                          <TableCell className="text-left border-l">{item.actualManpowerBreakdown}</TableCell>
+                          <TableCell className="text-left border-l">
+                            <div>
+                              {item.actualManpower.map((worker) => (
+                                <div key={worker.designation} className="flex justify-between gap-2">
+                                  <span>{worker.designation}</span>
+                                  <span className="font-semibold">{worker.count}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </TableCell>
                           <TableCell className="text-right">{item.actualManpowerHours} hrs</TableCell>
                           <TableCell className="text-right">{item.actualManpowerOtHours} hrs</TableCell>
                           <TableCell className="text-right border-l">{item.actualEquipmentName}</TableCell>

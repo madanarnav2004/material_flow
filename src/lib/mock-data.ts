@@ -1,4 +1,5 @@
 
+
 export const monthlyConsumption = [
   { month: 'Jan', consumption: 186 },
   { month: 'Feb', consumption: 305 },
@@ -208,7 +209,10 @@ export const detailedBoqAnalysis = [
     boqRate: 150,
     actualMaterialQty: 950,
     actualMaterialRate: 155,
-    actualManpowerBreakdown: "12 Masons, 8 Helpers",
+    actualManpower: [
+      { designation: 'Masons', count: 12 },
+      { designation: 'Helpers', count: 8 }
+    ],
     actualManpowerHours: 160,
     actualManpowerOtHours: 20,
     actualManpowerCost: 5200,
@@ -224,7 +228,10 @@ export const detailedBoqAnalysis = [
     boqRate: 50,
     actualMaterialQty: 120,
     actualMaterialRate: 52,
-    actualManpowerBreakdown: "2 Operators, 3 Laborers",
+    actualManpower: [
+      { designation: 'Operators', count: 2 },
+      { designation: 'Laborers', count: 3 }
+    ],
     actualManpowerHours: 40,
     actualManpowerOtHours: 10,
     actualManpowerCost: 1500,
@@ -240,7 +247,10 @@ export const detailedBoqAnalysis = [
     boqRate: 20,
     actualMaterialQty: 1800,
     actualMaterialRate: 18,
-    actualManpowerBreakdown: "8 Masons, 7 Helpers",
+    actualManpower: [
+      { designation: 'Masons', count: 8 },
+      { designation: 'Helpers', count: 7 }
+    ],
     actualManpowerHours: 120,
     actualManpowerOtHours: 0,
     actualManpowerCost: 3600,
@@ -256,7 +266,10 @@ export const detailedBoqAnalysis = [
     boqRate: 100,
     actualMaterialQty: 500,
     actualMaterialRate: 95,
-    actualManpowerBreakdown: "4 Painters, 6 Assistants",
+    actualManpower: [
+      { designation: 'Painters', count: 4 },
+      { designation: 'Assistants', count: 6 }
+    ],
     actualManpowerHours: 80,
     actualManpowerOtHours: 15,
     actualManpowerCost: 4000,
@@ -272,7 +285,10 @@ export const detailedBoqAnalysis = [
     boqRate: 140,
     actualMaterialQty: 1300,
     actualMaterialRate: 145,
-    actualManpowerBreakdown: "15 Masons, 10 Helpers",
+    actualManpower: [
+      { designation: 'Masons', count: 15 },
+      { designation: 'Helpers', count: 10 }
+    ],
     actualManpowerHours: 200,
     actualManpowerOtHours: 40,
     actualManpowerCost: 8000,
@@ -288,7 +304,10 @@ export const detailedBoqAnalysis = [
     boqRate: 22,
     actualMaterialQty: 2400,
     actualMaterialRate: 22,
-    actualManpowerBreakdown: "12 Masons, 8 Helpers",
+    actualManpower: [
+      { designation: 'Masons', count: 12 },
+      { designation: 'Helpers', count: 8 }
+    ],
     actualManpowerHours: 160,
     actualManpowerOtHours: 10,
     actualManpowerCost: 4800,
