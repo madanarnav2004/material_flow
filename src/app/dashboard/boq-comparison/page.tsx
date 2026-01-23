@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { Label } from '@/components/ui/label';
 
 const reportSchema = z.object({
   siteName: z.string().min(1, 'Please select a site.'),
@@ -28,6 +29,7 @@ type ReportFormValues = z.infer<typeof reportSchema>;
 
 export default function BoqComparisonPage() {
   const [comparisonSite, setComparisonSite] = React.useState<string>('North Site');
+  const [analysisType, setAnalysisType] = React.useState<string>('overall');
   const { toast } = useToast();
 
   const reportForm = useForm<ReportFormValues>({
@@ -178,55 +180,124 @@ export default function BoqComparisonPage() {
           </Dialog>
         </CardHeader>
         <CardContent>
-          <div className="mb-6">
-            <Select value={comparisonSite} onValueChange={setComparisonSite}>
-              <SelectTrigger className="w-full max-w-sm">
-                <SelectValue placeholder="Select a site to compare" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...new Set(detailedBoqAnalysis.map(d => d.site))].map(site => (
-                  <SelectItem key={site} value={site}>{site}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="site-select">Select Site</Label>
+              <Select id="site-select" value={comparisonSite} onValueChange={setComparisonSite}>
+                <SelectTrigger className="w-full max-w-sm">
+                  <SelectValue placeholder="Select a site to compare" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...new Set(detailedBoqAnalysis.map(d => d.site))].map(site => (
+                    <SelectItem key={site} value={site}>{site}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="analysis-type-select">Select Analysis Type</Label>
+              <Select id="analysis-type-select" value={analysisType} onValueChange={setAnalysisType}>
+                <SelectTrigger className="w-full max-w-sm">
+                  <SelectValue placeholder="Select analysis type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="overall">Overall Analysis</SelectItem>
+                  <SelectItem value="quantity">Quantity Analysis</SelectItem>
+                  <SelectItem value="cost">Cost Analysis</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="rounded-md border">
             <Table>
-               <TableHeader>
-                <TableRow>
-                  <TableHead rowSpan={2} className="align-bottom">BOQ Item</TableHead>
-                  <TableHead colSpan={3} className="text-center border-l">Material Quantity Analysis</TableHead>
-                  <TableHead colSpan={4} className="text-center border-l">Manpower Analysis</TableHead>
-                  <TableHead colSpan={4} className="text-center border-l">Equipment Analysis</TableHead>
-                  <TableHead colSpan={3} className="text-center border-l">Cost Analysis</TableHead>
-                </TableRow>
-                <TableRow>
-                  {/* Material */}
-                  <TableHead className="text-right border-l">BOQ Qty</TableHead>
-                  <TableHead className="text-right">Actual Qty</TableHead>
-                  <TableHead className="text-right">Variance</TableHead>
-                  {/* Manpower */}
-                  <TableHead className="text-right border-l">Workers</TableHead>
-                  <TableHead className="text-right">Hours</TableHead>
-                  <TableHead className="text-right">OT Hours</TableHead>
-                  <TableHead className="text-right">Cost</TableHead>
-                  {/* Equipment */}
-                  <TableHead className="text-right border-l">Name</TableHead>
-                  <TableHead className="text-right">Hours</TableHead>
-                  <TableHead className="text-right">OT Hours</TableHead>
-                  <TableHead className="text-right">Cost</TableHead>
-                  {/* Cost */}
-                  <TableHead className="text-right border-l">BOQ Cost</TableHead>
-                  <TableHead className="text-right">Actual Cost</TableHead>
-                  <TableHead className="text-right">Variance</TableHead>
-                </TableRow>
-              </TableHeader>
+               {analysisType === 'overall' && (
+                <TableHeader>
+                  <TableRow>
+                    <TableHead rowSpan={2} className="align-bottom">BOQ Item</TableHead>
+                    <TableHead colSpan={3} className="text-center border-l">Material Quantity Analysis</TableHead>
+                    <TableHead colSpan={4} className="text-center border-l">Manpower Analysis</TableHead>
+                    <TableHead colSpan={4} className="text-center border-l">Equipment Analysis</TableHead>
+                    <TableHead colSpan={3} className="text-center border-l">Cost Analysis</TableHead>
+                  </TableRow>
+                  <TableRow>
+                    {/* Material */}
+                    <TableHead className="text-right border-l">BOQ Qty</TableHead>
+                    <TableHead className="text-right">Actual Qty</TableHead>
+                    <TableHead className="text-right">Variance</TableHead>
+                    {/* Manpower */}
+                    <TableHead className="text-right border-l">Workers</TableHead>
+                    <TableHead className="text-right">Hours</TableHead>
+                    <TableHead className="text-right">OT Hours</TableHead>
+                    <TableHead className="text-right">Cost</TableHead>
+                    {/* Equipment */}
+                    <TableHead className="text-right border-l">Name</TableHead>
+                    <TableHead className="text-right">Hours</TableHead>
+                    <TableHead className="text-right">OT Hours</TableHead>
+                    <TableHead className="text-right">Cost</TableHead>
+                    {/* Cost */}
+                    <TableHead className="text-right border-l">BOQ Cost</TableHead>
+                    <TableHead className="text-right">Actual Cost</TableHead>
+                    <TableHead className="text-right">Variance</TableHead>
+                  </TableRow>
+                </TableHeader>
+              )}
+              {analysisType === 'quantity' && (
+                <TableHeader>
+                  <TableRow>
+                    <TableHead rowSpan={2} className="align-bottom">BOQ Item</TableHead>
+                    <TableHead colSpan={3} className="text-center border-l">Material Quantity Analysis</TableHead>
+                    <TableHead colSpan={3} className="text-center border-l">Manpower Analysis</TableHead>
+                    <TableHead colSpan={3} className="text-center border-l">Equipment Analysis</TableHead>
+                  </TableRow>
+                  <TableRow>
+                    {/* Material */}
+                    <TableHead className="text-right border-l">BOQ Qty</TableHead>
+                    <TableHead className="text-right">Actual Qty</TableHead>
+                    <TableHead className="text-right">Variance</TableHead>
+                    {/* Manpower */}
+                    <TableHead className="text-right border-l">Workers</TableHead>
+                    <TableHead className="text-right">Hours</TableHead>
+                    <TableHead className="text-right">OT Hours</TableHead>
+                    {/* Equipment */}
+                    <TableHead className="text-right border-l">Name</TableHead>
+                    <TableHead className="text-right">Hours</TableHead>
+                    <TableHead className="text-right">OT Hours</TableHead>
+                  </TableRow>
+                </TableHeader>
+              )}
+              {analysisType === 'cost' && (
+                <TableHeader>
+                  <TableRow>
+                    <TableHead rowSpan={2} className="align-bottom">BOQ Item</TableHead>
+                    <TableHead colSpan={3} className="text-center border-l">Material Cost</TableHead>
+                    <TableHead colSpan={1} className="text-center border-l">Manpower Cost</TableHead>
+                    <TableHead colSpan={1} className="text-center border-l">Equipment Cost</TableHead>
+                    <TableHead colSpan={3} className="text-center border-l">Total Cost</TableHead>
+                  </TableRow>
+                  <TableRow>
+                    {/* Material Cost */}
+                    <TableHead className="text-right border-l">BOQ Cost</TableHead>
+                    <TableHead className="text-right">Actual Cost</TableHead>
+                    <TableHead className="text-right">Variance</TableHead>
+                    {/* Manpower Cost */}
+                    <TableHead className="text-right border-l">Actual Cost</TableHead>
+                    {/* Equipment Cost */}
+                    <TableHead className="text-right border-l">Actual Cost</TableHead>
+                    {/* Total Cost */}
+                    <TableHead className="text-right border-l">Total BOQ Cost</TableHead>
+                    <TableHead className="text-right">Actual Cost</TableHead>
+                    <TableHead className="text-right">Variance</TableHead>
+                  </TableRow>
+                </TableHeader>
+              )}
               <TableBody>
                 {filteredComparisonData.map(item => {
                   const materialQtyVariance = item.actualMaterialQty - item.boqQty;
-                  const boqTotalCost = item.boqQty * item.boqRate;
+                  const boqMaterialCost = item.boqQty * item.boqRate;
                   const actualMaterialCost = item.actualMaterialQty * item.actualMaterialRate;
+                  const materialCostVariance = actualMaterialCost - boqMaterialCost;
+                  const boqTotalCost = item.boqQty * item.boqRate;
                   const actualTotalCost = actualMaterialCost + item.actualManpowerCost + item.actualEquipmentCost;
                   const totalCostVariance = actualTotalCost - boqTotalCost;
 
@@ -235,31 +306,61 @@ export default function BoqComparisonPage() {
                     <TableRow key={item.item}>
                       <TableCell className="font-medium">{item.item}</TableCell>
                       
-                      {/* Material */}
-                      <TableCell className="text-right border-l">{item.boqQty}</TableCell>
-                      <TableCell className="text-right">{item.actualMaterialQty}</TableCell>
-                      <TableCell className={cn("text-right", materialQtyVariance > 0 ? "text-destructive" : "text-green-600")}>
-                        {materialQtyVariance > 0 ? `+${materialQtyVariance}` : materialQtyVariance}
-                      </TableCell>
+                      {analysisType === 'overall' && (
+                        <>
+                          <TableCell className="text-right border-l">{item.boqQty}</TableCell>
+                          <TableCell className="text-right">{item.actualMaterialQty}</TableCell>
+                          <TableCell className={cn("text-right", materialQtyVariance > 0 ? "text-destructive" : "text-green-600")}>
+                            {materialQtyVariance > 0 ? `+${materialQtyVariance}` : materialQtyVariance}
+                          </TableCell>
+                          <TableCell className="text-right border-l">{item.actualManpowerCount}</TableCell>
+                          <TableCell className="text-right">{item.actualManpowerHours} hrs</TableCell>
+                          <TableCell className="text-right">{item.actualManpowerOtHours} hrs</TableCell>
+                          <TableCell className="text-right">${item.actualManpowerCost.toFixed(2)}</TableCell>
+                          <TableCell className="text-right border-l">{item.actualEquipmentName}</TableCell>
+                          <TableCell className="text-right">{item.actualEquipmentHours} hrs</TableCell>
+                          <TableCell className="text-right">{item.actualEquipmentOtHours} hrs</TableCell>
+                          <TableCell className="text-right">${item.actualEquipmentCost.toFixed(2)}</TableCell>
+                          <TableCell className="text-right border-l">${boqTotalCost.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">${actualTotalCost.toFixed(2)}</TableCell>
+                          <TableCell className={cn("text-right font-semibold", totalCostVariance > 0 ? "text-destructive" : "text-green-600")}>
+                            ${totalCostVariance.toFixed(2)}
+                          </TableCell>
+                        </>
+                      )}
 
-                      {/* Manpower */}
-                      <TableCell className="text-right border-l">{item.actualManpowerCount}</TableCell>
-                      <TableCell className="text-right">{item.actualManpowerHours} hrs</TableCell>
-                      <TableCell className="text-right">{item.actualManpowerOtHours} hrs</TableCell>
-                      <TableCell className="text-right">${item.actualManpowerCost.toFixed(2)}</TableCell>
-
-                      {/* Equipment */}
-                      <TableCell className="text-right border-l">{item.actualEquipmentName}</TableCell>
-                      <TableCell className="text-right">{item.actualEquipmentHours} hrs</TableCell>
-                      <TableCell className="text-right">{item.actualEquipmentOtHours} hrs</TableCell>
-                      <TableCell className="text-right">${item.actualEquipmentCost.toFixed(2)}</TableCell>
-
-                      {/* Cost */}
-                      <TableCell className="text-right border-l">${boqTotalCost.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">${actualTotalCost.toFixed(2)}</TableCell>
-                      <TableCell className={cn("text-right font-semibold", totalCostVariance > 0 ? "text-destructive" : "text-green-600")}>
-                        ${totalCostVariance.toFixed(2)}
-                      </TableCell>
+                      {analysisType === 'quantity' && (
+                        <>
+                          <TableCell className="text-right border-l">{item.boqQty}</TableCell>
+                          <TableCell className="text-right">{item.actualMaterialQty}</TableCell>
+                          <TableCell className={cn("text-right", materialQtyVariance > 0 ? "text-destructive" : "text-green-600")}>
+                            {materialQtyVariance > 0 ? `+${materialQtyVariance}` : materialQtyVariance}
+                          </TableCell>
+                          <TableCell className="text-right border-l">{item.actualManpowerCount}</TableCell>
+                          <TableCell className="text-right">{item.actualManpowerHours} hrs</TableCell>
+                          <TableCell className="text-right">{item.actualManpowerOtHours} hrs</TableCell>
+                          <TableCell className="text-right border-l">{item.actualEquipmentName}</TableCell>
+                          <TableCell className="text-right">{item.actualEquipmentHours} hrs</TableCell>
+                          <TableCell className="text-right">{item.actualEquipmentOtHours} hrs</TableCell>
+                        </>
+                      )}
+                      
+                      {analysisType === 'cost' && (
+                        <>
+                          <TableCell className="text-right border-l">${boqMaterialCost.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">${actualMaterialCost.toFixed(2)}</TableCell>
+                          <TableCell className={cn("text-right", materialCostVariance > 0 ? "text-destructive" : "text-green-600")}>
+                            ${materialCostVariance.toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right border-l">${item.actualManpowerCost.toFixed(2)}</TableCell>
+                          <TableCell className="text-right border-l">${item.actualEquipmentCost.toFixed(2)}</TableCell>
+                          <TableCell className="text-right border-l">${boqTotalCost.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">${actualTotalCost.toFixed(2)}</TableCell>
+                          <TableCell className={cn("text-right font-semibold", totalCostVariance > 0 ? "text-destructive" : "text-green-600")}>
+                            ${totalCostVariance.toFixed(2)}
+                          </TableCell>
+                        </>
+                      )}
                     </TableRow>
                   )
                 })}
