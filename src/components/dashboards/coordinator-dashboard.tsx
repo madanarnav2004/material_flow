@@ -1,6 +1,6 @@
 'use client';
 
-import { Building, FileText, Eye, Download, FileSpreadsheet, AlertTriangle, ChevronDown, Package } from 'lucide-react';
+import { Building, FileText, Eye, Download, FileSpreadsheet, AlertTriangle, ChevronDown, Package, PackageSearch } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,9 +13,10 @@ import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useMaterialContext, type InventoryItem, type IndentStatus } from '@/context/material-context';
 import { boqUsage, engineerUsage } from '@/lib/mock-data';
+import { Select, SelectValue, SelectTrigger, SelectContent, SelectItem } from '../ui/select';
 
 
 type RequestFormValues = {
@@ -41,6 +42,8 @@ export default function CoordinatorDashboard() {
   const router = useRouter();
   const { requests, setRequests, inventory } = useMaterialContext();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
+  const [lowStockSite, setLowStockSite] = React.useState('All');
+  const [stockOverviewSite, setStockOverviewSite] = React.useState('Overall');
 
   const indentsForApproval = requests.filter(r => r.status === 'Pending Director Approval');
 
@@ -60,6 +63,43 @@ export default function CoordinatorDashboard() {
   const sites = React.useMemo(() => {
     return ['All', ...Array.from(new Set(inventory.map(item => item.site)))];
   }, [inventory]);
+
+  const stockLocations = ['Overall', ...new Set(inventory.map(item => item.site))];
+
+  const filteredLowStockMaterials = React.useMemo(() => {
+    if (lowStockSite === 'All') return lowStockMaterials;
+    return lowStockMaterials.filter(item => item.site === lowStockSite);
+  }, [lowStockMaterials, lowStockSite]);
+
+  const { orgStock, siteStock } = React.useMemo(() => {
+    const org: { [key: string]: { quantity: number; unit: string } } = {};
+    const site: { [key: string]: {name: string, quantity: number, unit: string}[] } = {};
+    
+    inventory.forEach(item => {
+      if (org[item.material]) {
+        org[item.material].quantity += item.quantity;
+      } else {
+        org[item.material] = { quantity: item.quantity, unit: item.unit };
+      }
+      
+      if (!site[item.site]) {
+        site[item.site] = [];
+      }
+      site[item.site].push({ name: item.material, quantity: item.quantity, unit: item.unit });
+    });
+
+    const orgStock = Object.entries(org).map(([name, data]) => ({ name, ...data }));
+    const siteStock = site;
+
+    return { orgStock, siteStock };
+  }, [inventory]);
+
+  const stockToDisplay = React.useMemo(() => {
+    if (stockOverviewSite === 'Overall') {
+      return orgStock.map(item => ({...item, name: item.name}));
+    }
+    return siteStock[stockOverviewSite] || [];
+  }, [stockOverviewSite, orgStock, siteStock]);
 
 
   const handleViewBill = (reqId: string) => {
@@ -91,10 +131,10 @@ export default function CoordinatorDashboard() {
     }
   };
 
-  const handleDownloadExcel = (reportName: string) => {
+  const handleDownloadExcel = (reportName: string, site: string) => {
     toast({
       title: "Download Started",
-      description: `Your ${reportName} Excel file is being generated.`,
+      description: `Your ${reportName} for ${site} is being generated.`,
     });
   };
 
@@ -135,6 +175,12 @@ export default function CoordinatorDashboard() {
                   ))}
                 </TableBody>
               </Table>
+              <DialogFooter>
+                 <Button onClick={() => handleDownloadExcel('Site List', 'All Sites')}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download List
+                  </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
 
@@ -221,12 +267,22 @@ export default function CoordinatorDashboard() {
              <DialogContent className="max-w-3xl">
               <DialogHeader>
                 <DialogTitle>Low Stock Material Alerts</DialogTitle>
-                <DialogDescription>
-                  Materials that have fallen below the minimum required quantity.
-                </DialogDescription>
+                <div className="flex justify-between items-center pt-2">
+                  <DialogDescription>
+                    Materials that have fallen below the minimum required quantity.
+                  </DialogDescription>
+                  <Select value={lowStockSite} onValueChange={setLowStockSite}>
+                      <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Filter by site..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
+                </div>
               </DialogHeader>
                <div className="max-h-[60vh] overflow-y-auto">
-                {lowStockMaterials.length > 0 ? (
+                {filteredLowStockMaterials.length > 0 ? (
                     <Table>
                       <TableHeader>
                           <TableRow>
@@ -237,7 +293,7 @@ export default function CoordinatorDashboard() {
                           </TableRow>
                       </TableHeader>
                       <TableBody>
-                          {lowStockMaterials.map((item: InventoryItem) => (
+                          {filteredLowStockMaterials.map((item: InventoryItem) => (
                           <TableRow key={item.id} className="text-destructive">
                               <TableCell className="font-medium">{item.material}</TableCell>
                               <TableCell>{item.site}</TableCell>
@@ -248,11 +304,74 @@ export default function CoordinatorDashboard() {
                       </TableBody>
                     </Table>
                 ) : (
-                    <p className="text-center text-muted-foreground p-8">No low stock alerts.</p>
+                    <p className="text-center text-muted-foreground p-8">No low stock alerts for this site.</p>
                 )}
               </div>
+              <DialogFooter>
+                <Button onClick={() => handleDownloadExcel('Low Stock Report', lowStockSite)}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Report
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
+
+           <Dialog>
+              <DialogTrigger asChild>
+                <div className="cursor-pointer">
+                  <StatCard
+                    title="Material Stock"
+                    value={`${inventory.length} types`}
+                    icon={PackageSearch}
+                    description="View across all sites"
+                  />
+                </div>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl">
+                <DialogHeader>
+                  <DialogTitle>Material Stock Overview</DialogTitle>
+                  <div className="flex justify-between items-center pt-2">
+                    <DialogDescription>
+                      Live inventory counts across the organization.
+                    </DialogDescription>
+                     <Select value={stockOverviewSite} onValueChange={setStockOverviewSite}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Select Location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {stockLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                  </div>
+                </DialogHeader>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Material</TableHead>
+                            <TableHead className="text-right">Total Quantity</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {stockToDisplay.length > 0 ? stockToDisplay.map(item => (
+                            <TableRow key={item.name}>
+                                <TableCell>{item.name}</TableCell>
+                                <TableCell className="text-right">{item.quantity.toLocaleString()} {item.unit}</TableCell>
+                            </TableRow>
+                        )) : (
+                            <TableRow>
+                                <TableCell colSpan={2} className="text-center text-muted-foreground">No stock data for this location.</TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+                 <DialogFooter>
+                    <Button onClick={() => handleDownloadExcel('Stock Overview', stockOverviewSite)}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Download Report
+                    </Button>
+                  </DialogFooter>
+              </DialogContent>
+            </Dialog>
         </div>
         
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -503,7 +622,7 @@ export default function CoordinatorDashboard() {
               )}
             </div>
             <div className="flex justify-end mt-4">
-              <Button onClick={() => handleDownloadExcel('Return Reminders Report')}>
+              <Button onClick={() => handleDownloadExcel('Return Reminders Report', 'All Sites')}>
                 <Download className="mr-2 h-4 w-4" />
                 Download Excel
               </Button>
@@ -573,7 +692,7 @@ export default function CoordinatorDashboard() {
               )}
             </div>
             <div className="flex justify-end mt-4">
-              <Button onClick={() => handleDownloadExcel('Engineer Usage Report')}>
+              <Button onClick={() => handleDownloadExcel('Engineer Usage Report', 'All Sites')}>
                 <Download className="mr-2 h-4 w-4" />
                 Download Excel
               </Button>

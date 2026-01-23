@@ -46,6 +46,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { useMaterialContext, type IndentStatus, type InventoryItem } from '@/context/material-context';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -95,12 +96,21 @@ export default function DirectorDashboard() {
   const [isConsumptionDialogOpen, setIsConsumptionDialogOpen] = React.useState(false);
   const [consumptionSite, setConsumptionSite] = React.useState('All');
   const [stockSite, setStockSite] = React.useState('Overall');
+  const [lowStockSite, setLowStockSite] = React.useState('All');
 
   const indentsForApproval = requests.filter(r => r.status === 'Pending Director Approval');
   
   const lowStockMaterials = React.useMemo(() => {
     return inventory.filter(item => item.quantity <= item.minQty);
   }, [inventory]);
+
+  const filteredLowStockMaterials = React.useMemo(() => {
+    if (lowStockSite === 'All') return lowStockMaterials;
+    return lowStockMaterials.filter(item => item.site === lowStockSite);
+  }, [lowStockMaterials, lowStockSite]);
+
+  const sites = ['All', ...new Set(inventory.map(item => item.site))];
+
   const lowStockCount = lowStockMaterials.length;
 
   const stockLocations = ['Overall', 'MAPI Godown', ...new Set(inventory.map(s => s.site).filter(s => s !== 'MAPI Godown'))];
@@ -164,10 +174,10 @@ export default function DirectorDashboard() {
     }
   };
 
-  const handleDownloadExcel = () => {
+  const handleDownloadExcel = (reportName: string, site: string) => {
     toast({
       title: 'Download Started',
-      description: 'Your Excel file is being generated and will download shortly.',
+      description: `Your ${reportName} for ${site} is being generated.`,
     });
   };
   
@@ -259,12 +269,12 @@ export default function DirectorDashboard() {
                       </Table>
                   </div>
               </div>
-              <div className="flex justify-end gap-4 mt-4">
-                  <Button onClick={handleDownloadExcel}>
+              <DialogFooter>
+                  <Button onClick={() => handleDownloadExcel('Full Ledger', 'All Sites')}>
                       <Download className="mr-2 h-4 w-4" />
                       Download Full Ledger
                   </Button>
-              </div>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
 
@@ -351,10 +361,20 @@ export default function DirectorDashboard() {
             <DialogContent className="max-w-3xl">
               <DialogHeader>
                 <DialogTitle>Low Stock Material Alerts</DialogTitle>
-                <DialogDescription>Materials that have fallen below their minimum required quantity.</DialogDescription>
+                <div className="flex justify-between items-center pt-2">
+                  <DialogDescription>Materials that have fallen below their minimum required quantity.</DialogDescription>
+                   <Select value={lowStockSite} onValueChange={setLowStockSite}>
+                      <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Filter by site..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
+                </div>
               </DialogHeader>
                <div className="max-h-[60vh] overflow-y-auto">
-                {lowStockMaterials.length > 0 ? (
+                {filteredLowStockMaterials.length > 0 ? (
                     <Table>
                       <TableHeader>
                           <TableRow>
@@ -365,7 +385,7 @@ export default function DirectorDashboard() {
                           </TableRow>
                       </TableHeader>
                       <TableBody>
-                          {lowStockMaterials.map((item: InventoryItem) => (
+                          {filteredLowStockMaterials.map((item: InventoryItem) => (
                           <TableRow key={item.id} className="text-destructive">
                               <TableCell className="font-medium">{item.material}</TableCell>
                               <TableCell>{item.site}</TableCell>
@@ -376,9 +396,15 @@ export default function DirectorDashboard() {
                       </TableBody>
                     </Table>
                 ) : (
-                    <p className="text-center text-muted-foreground">No low stock alerts.</p>
+                    <p className="text-center text-muted-foreground p-8">No low stock alerts.</p>
                 )}
               </div>
+              <DialogFooter>
+                <Button onClick={() => handleDownloadExcel('Low Stock Report', lowStockSite)}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Report
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
@@ -473,12 +499,12 @@ export default function DirectorDashboard() {
                 ) : (
                   <p>Select a month from the chart to see details.</p>
                 )}
-                <div className="flex justify-end mt-4">
-                  <Button onClick={handleDownloadExcel}>
+                <DialogFooter>
+                  <Button onClick={() => handleDownloadExcel(`Consumption for ${selectedMonth}`, consumptionSite)}>
                     <Download className="mr-2 h-4 w-4" />
                     Download Excel
                   </Button>
-                </div>
+                </DialogFooter>
               </DialogContent>
             </Dialog>
             <Card>
@@ -488,14 +514,19 @@ export default function DirectorDashboard() {
                         <CardTitle>Material Stock Distribution</CardTitle>
                         <CardDescription>Stock distribution by material type.</CardDescription>
                     </div>
-                    <Select value={stockSite} onValueChange={setStockSite}>
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Select Location" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {stockLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Select value={stockSite} onValueChange={setStockSite}>
+                          <SelectTrigger className="w-[180px]">
+                              <SelectValue placeholder="Select Location" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              {stockLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
+                          </SelectContent>
+                      </Select>
+                      <Button variant="outline" size="icon" onClick={() => handleDownloadExcel('Stock Distribution', stockSite)}>
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
                 </div>
               </CardHeader>
               <CardContent className="flex items-center justify-center">
@@ -715,12 +746,12 @@ export default function DirectorDashboard() {
                 </TableBody>
               </Table>
             </div>
-            <div className="flex justify-end mt-4">
-              <Button onClick={handleDownloadExcel}>
+            <DialogFooter>
+              <Button onClick={() => handleDownloadExcel('Return Reminders', 'All Sites')}>
                 <Download className="mr-2 h-4 w-4" />
                 Download Excel
               </Button>
-            </div>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
         <Card>

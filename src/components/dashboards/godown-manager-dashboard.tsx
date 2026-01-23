@@ -33,7 +33,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useMaterialContext, type InventoryItem } from '@/context/material-context';
 import { storeInventory, recentStoreActivity } from '@/lib/mock-data';
 
@@ -98,10 +98,10 @@ export default function GodownManagerDashboard() {
     }
   };
 
-  const handleDownloadExcel = () => {
+  const handleDownloadExcel = (reportName: string) => {
     toast({
       title: "Download Started",
-      description: "Your Excel file is being generated and will download shortly.",
+      description: `Your ${reportName} is being generated and will download shortly.`,
     });
   };
 
@@ -150,12 +150,12 @@ export default function GodownManagerDashboard() {
                         <p className="text-center text-muted-foreground p-8">No inventory data available.</p>
                     )}
                 </div>
-                <div className="flex justify-end gap-4 mt-4">
-                    <Button onClick={handleDownloadExcel}>
+                <DialogFooter>
+                    <Button onClick={() => handleDownloadExcel('Godown Inventory Report')}>
                         <Download className="mr-2 h-4 w-4" />
                         Download Excel
                     </Button>
-                </div>
+                </DialogFooter>
               </DialogContent>
           </Dialog>
           <Dialog>
@@ -280,6 +280,12 @@ export default function GodownManagerDashboard() {
                     <p className="text-center text-muted-foreground p-8">No low stock alerts.</p>
                 )}
               </div>
+               <DialogFooter>
+                <Button onClick={() => handleDownloadExcel('Godown Low Stock Report')}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Report
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
@@ -492,12 +498,12 @@ export default function GodownManagerDashboard() {
                 <p className="text-center text-muted-foreground">No return reminders.</p>
               )}
             </div>
-            <div className="flex justify-end mt-4">
-              <Button onClick={handleDownloadExcel}>
+            <DialogFooter>
+              <Button onClick={() => handleDownloadExcel('Return Reminders Report')}>
                 <Download className="mr-2 h-4 w-4" />
                 Download Excel
               </Button>
-            </div>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useMaterialContext, MaterialIndent, InventoryItem } from '@/context/material-context';
 import { Badge } from '../ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '@/components/ui/label';
@@ -220,6 +220,13 @@ export default function PurchaseDepartmentDashboard() {
     });
   }
 
+  const handleLowStockDownload = () => {
+    toast({
+      title: 'Download Started',
+      description: `Your low stock report for ${lowStockSite} is being generated.`
+    });
+  };
+
 
   return (
     <>
@@ -412,6 +419,11 @@ export default function PurchaseDepartmentDashboard() {
                   <p className="text-center text-muted-foreground p-8">No low stock alerts for the selected site.</p>
               )}
             </div>
+            <DialogFooter>
+              <Button onClick={handleLowStockDownload}>
+                <Download className="mr-2 h-4 w-4" /> Download Report
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

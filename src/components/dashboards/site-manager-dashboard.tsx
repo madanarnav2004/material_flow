@@ -39,7 +39,7 @@ import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useMaterialContext } from '@/context/material-context';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/hooks/use-user';
@@ -137,10 +137,10 @@ export default function SiteManagerDashboard() {
     }
   };
 
-  const handleDownloadExcel = () => {
+  const handleDownloadExcel = (reportName: string) => {
     toast({
       title: "Download Started",
-      description: "Your Excel file is being generated and will download shortly.",
+      description: `Your ${reportName} for ${siteName} is being generated.`,
     });
   };
 
@@ -202,6 +202,11 @@ export default function SiteManagerDashboard() {
                   <p className="text-center text-muted-foreground p-8">No stock data available for this site.</p>
                 )}
               </div>
+              <DialogFooter>
+                <Button onClick={() => handleDownloadExcel('Available Materials Report')}>
+                  <Download className="mr-2 h-4 w-4" /> Download Report
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
 
@@ -336,6 +341,11 @@ export default function SiteManagerDashboard() {
               ) : (
                   <p className="text-center text-muted-foreground p-8">No low stock materials on this site.</p>
               )}
+               <DialogFooter>
+                <Button onClick={() => handleDownloadExcel('Low Stock Report')}>
+                  <Download className="mr-2 h-4 w-4" /> Download Report
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
@@ -545,12 +555,12 @@ export default function SiteManagerDashboard() {
                 <p className="text-center text-muted-foreground p-8">No return reminders for this site.</p>
               )}
             </div>
-            <div className="flex justify-end mt-4">
-              <Button onClick={handleDownloadExcel}>
+            <DialogFooter>
+              <Button onClick={() => handleDownloadExcel('Return Reminders Report')}>
                 <Download className="mr-2 h-4 w-4" />
                 Download Excel
               </Button>
-            </div>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
         
