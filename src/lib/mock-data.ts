@@ -1,6 +1,4 @@
 
-
-
 export const monthlyConsumption = [
   { month: 'Jan', consumption: 186 },
   { month: 'Feb', consumption: 305 },
@@ -216,6 +214,7 @@ export const detailedBoqAnalysis = [
     actualManpowerCost: 5200,
     actualEquipmentName: 'Concrete Mixer',
     actualEquipmentHours: 16,
+    actualEquipmentOtHours: 2,
     actualEquipmentCost: 800,
   },
   {
@@ -231,6 +230,7 @@ export const detailedBoqAnalysis = [
     actualManpowerCost: 1500,
     actualEquipmentName: 'JCB',
     actualEquipmentHours: 40,
+    actualEquipmentOtHours: 5,
     actualEquipmentCost: 2000,
   },
   {
@@ -246,6 +246,7 @@ export const detailedBoqAnalysis = [
     actualManpowerCost: 3600,
     actualEquipmentName: 'Scaffolding',
     actualEquipmentHours: 120,
+    actualEquipmentOtHours: 0,
     actualEquipmentCost: 600,
   },
   {
@@ -261,6 +262,7 @@ export const detailedBoqAnalysis = [
     actualManpowerCost: 4000,
     actualEquipmentName: 'Paint Sprayer',
     actualEquipmentHours: 30,
+    actualEquipmentOtHours: 4,
     actualEquipmentCost: 300,
   },
    {
@@ -276,6 +278,7 @@ export const detailedBoqAnalysis = [
     actualManpowerCost: 8000,
     actualEquipmentName: 'Concrete Mixer',
     actualEquipmentHours: 20,
+    actualEquipmentOtHours: 5,
     actualEquipmentCost: 1000,
   },
   {
@@ -291,6 +294,7 @@ export const detailedBoqAnalysis = [
     actualManpowerCost: 4800,
     actualEquipmentName: 'Scaffolding',
     actualEquipmentHours: 160,
+    actualEquipmentOtHours: 0,
     actualEquipmentCost: 800,
   },
 ];

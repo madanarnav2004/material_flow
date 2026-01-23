@@ -197,8 +197,8 @@ export default function BoqAnalysisPage() {
                 <TableRow>
                   <TableHead rowSpan={2} className="align-bottom">BOQ Item</TableHead>
                   <TableHead colSpan={3} className="text-center border-l">Material Quantity Analysis</TableHead>
-                  <TableHead colSpan={3} className="text-center border-l">Manpower Analysis</TableHead>
-                  <TableHead colSpan={3} className="text-center border-l">Equipment Analysis</TableHead>
+                  <TableHead colSpan={4} className="text-center border-l">Manpower Analysis</TableHead>
+                  <TableHead colSpan={4} className="text-center border-l">Equipment Analysis</TableHead>
                   <TableHead colSpan={3} className="text-center border-l">Cost Analysis</TableHead>
                 </TableRow>
                 <TableRow>
@@ -208,11 +208,13 @@ export default function BoqAnalysisPage() {
                   <TableHead className="text-right">Variance</TableHead>
                   {/* Manpower */}
                   <TableHead className="text-right border-l">Workers</TableHead>
-                  <TableHead className="text-right">Total Hours</TableHead>
+                  <TableHead className="text-right">Hours</TableHead>
+                  <TableHead className="text-right">OT Hours</TableHead>
                   <TableHead className="text-right">Cost</TableHead>
                   {/* Equipment */}
                   <TableHead className="text-right border-l">Name</TableHead>
                   <TableHead className="text-right">Hours</TableHead>
+                  <TableHead className="text-right">OT Hours</TableHead>
                   <TableHead className="text-right">Cost</TableHead>
                   {/* Cost */}
                   <TableHead className="text-right border-l">BOQ Cost</TableHead>
@@ -223,12 +225,10 @@ export default function BoqAnalysisPage() {
               <TableBody>
                 {filteredComparisonData.map(item => {
                   const materialQtyVariance = item.actualMaterialQty - item.boqQty;
-                  const manpowerTotalHours = item.actualManpowerHours + item.actualManpowerOtHours;
                   const boqTotalCost = item.boqQty * item.boqRate;
                   const actualMaterialCost = item.actualMaterialQty * item.actualMaterialRate;
                   const actualTotalCost = actualMaterialCost + item.actualManpowerCost + item.actualEquipmentCost;
                   const totalCostVariance = actualTotalCost - boqTotalCost;
-
 
                   return (
                     <TableRow key={item.item}>
@@ -243,12 +243,14 @@ export default function BoqAnalysisPage() {
 
                       {/* Manpower */}
                       <TableCell className="text-right border-l">{item.actualManpowerCount}</TableCell>
-                      <TableCell className="text-right">{manpowerTotalHours} hrs</TableCell>
+                      <TableCell className="text-right">{item.actualManpowerHours} hrs</TableCell>
+                      <TableCell className="text-right">{item.actualManpowerOtHours} hrs</TableCell>
                       <TableCell className="text-right">${item.actualManpowerCost.toFixed(2)}</TableCell>
 
                       {/* Equipment */}
                       <TableCell className="text-right border-l">{item.actualEquipmentName}</TableCell>
                       <TableCell className="text-right">{item.actualEquipmentHours} hrs</TableCell>
+                      <TableCell className="text-right">{item.actualEquipmentOtHours} hrs</TableCell>
                       <TableCell className="text-right">${item.actualEquipmentCost.toFixed(2)}</TableCell>
 
                       {/* Cost */}
