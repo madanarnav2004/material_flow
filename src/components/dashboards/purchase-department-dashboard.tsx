@@ -15,7 +15,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import StatCard from '../dashboard/stat-card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { Input } from '../ui/input';
@@ -41,6 +40,9 @@ export default function PurchaseDepartmentDashboard() {
   const [selectedIndent, setSelectedIndent] = React.useState<MaterialIndent | null>(null);
   const [issuingSite, setIssuingSite] = React.useState<string>('');
   
+  const [lowStockSite, setLowStockSite] = React.useState('All');
+  const [stockOverviewSite, setStockOverviewSite] = React.useState('Overall');
+  
   const indentsForProcessing = requests.filter(req => req.status === 'Director Approved');
 
   const generatedPOs: PurchaseOrder[] = requests
@@ -55,6 +57,14 @@ export default function PurchaseDepartmentDashboard() {
     return inventory.filter(item => item.quantity <= item.minQty);
   }, [inventory]);
   const lowStockCount = lowStockMaterials.length;
+
+  const filteredLowStockMaterials = React.useMemo(() => {
+    if (lowStockSite === 'All') return lowStockMaterials;
+    return lowStockMaterials.filter(item => item.site === lowStockSite);
+  }, [lowStockMaterials, lowStockSite]);
+
+  const sites = ['All', ...new Set(inventory.map(item => item.site))];
+  const stockLocations = ['Overall', ...new Set(inventory.map(item => item.site))];
 
   const materialAvailability = selectedIndent
     ? inventory.filter(s => s.material.toLowerCase() === selectedIndent.material.toLowerCase())
@@ -173,8 +183,7 @@ export default function PurchaseDepartmentDashboard() {
     });
   };
 
-  // Memoize stock calculations
-  const { orgStock, siteStock, storeStock } = React.useMemo(() => {
+  const { orgStock, siteStock } = React.useMemo(() => {
     const org: { [key: string]: { quantity: number; unit: string } } = {};
     const site: { [key: string]: {name: string, quantity: number, unit: string}[] } = {};
     
@@ -193,10 +202,23 @@ export default function PurchaseDepartmentDashboard() {
 
     const orgStock = Object.entries(org).map(([name, data]) => ({ name, ...data }));
     const siteStock = site;
-    const storeStock = inventory.filter(s => s.site === 'MAPI Godown');
 
-    return { orgStock, siteStock, storeStock };
+    return { orgStock, siteStock };
   }, [inventory]);
+
+  const stockToDisplay = React.useMemo(() => {
+    if (stockOverviewSite === 'Overall') {
+      return orgStock.map(item => ({...item, name: item.name}));
+    }
+    return siteStock[stockOverviewSite] || [];
+  }, [stockOverviewSite, orgStock, siteStock]);
+
+  const handleStockDownload = () => {
+    toast({
+      title: 'Download Started',
+      description: `Your stock report for ${stockOverviewSite} is being generated.`
+    });
+  }
 
 
   return (
@@ -351,11 +373,21 @@ export default function PurchaseDepartmentDashboard() {
           </DialogTrigger>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
-              <DialogTitle>Low Stock Material Alerts</DialogTitle>
-              <DialogDescription>Materials that have fallen below their minimum required quantity.</DialogDescription>
+                <DialogTitle>Low Stock Material Alerts</DialogTitle>
+                <div className="flex justify-between items-center pt-2">
+                <DialogDescription>Materials that have fallen below their minimum required quantity.</DialogDescription>
+                    <Select value={lowStockSite} onValueChange={setLowStockSite}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Filter by site..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
             </DialogHeader>
               <div className="max-h-[60vh] overflow-y-auto">
-              {lowStockMaterials.length > 0 ? (
+              {filteredLowStockMaterials.length > 0 ? (
                   <Table>
                     <TableHeader>
                         <TableRow>
@@ -366,7 +398,7 @@ export default function PurchaseDepartmentDashboard() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {lowStockMaterials.map((item: InventoryItem) => (
+                        {filteredLowStockMaterials.map((item: InventoryItem) => (
                         <TableRow key={item.id} className="text-destructive">
                             <TableCell className="font-medium">{item.material}</TableCell>
                             <TableCell>{item.site}</TableCell>
@@ -377,7 +409,7 @@ export default function PurchaseDepartmentDashboard() {
                     </TableBody>
                   </Table>
               ) : (
-                  <p className="text-center text-muted-foreground p-8">No low stock alerts.</p>
+                  <p className="text-center text-muted-foreground p-8">No low stock alerts for the selected site.</p>
               )}
             </div>
           </DialogContent>
@@ -385,52 +417,51 @@ export default function PurchaseDepartmentDashboard() {
       </div>
 
       <div className="space-y-6">
-        <Card>
-          <CardHeader>
-              <CardTitle>Material Stock Overview</CardTitle>
-              <CardDescription>
-                  Live inventory counts across the organization.
-              </CardDescription>
-          </CardHeader>
-          <CardContent>
-              <Tabs defaultValue="organization" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="organization">Organization-wise</TabsTrigger>
-                      <TabsTrigger value="site">Site-wise</TabsTrigger>
-                      <TabsTrigger value="store">Store-wise</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="organization">
-                      <Table>
-                          <TableHeader><TableRow><TableHead>Material</TableHead><TableHead className="text-right">Total Quantity</TableHead></TableRow></TableHeader>
-                          <TableBody>
-                              {orgStock.map(item => (<TableRow key={item.name}><TableCell>{item.name}</TableCell><TableCell className="text-right">{item.quantity.toLocaleString()} {item.unit}</TableCell></TableRow>))}
-                          </TableBody>
-                      </Table>
-                  </TabsContent>
-                  <TabsContent value="site">
-                      {Object.entries(siteStock).map(([siteName, materials]) => (
-                          <div key={siteName} className="mb-4">
-                              <h3 className="font-semibold mb-2">{siteName}</h3>
-                              <Table>
-                                  <TableHeader><TableRow><TableHead>Material</TableHead><TableHead className="text-right">Quantity</TableHead></TableRow></TableHeader>
-                                  <TableBody>
-                                      {materials.map(item => (<TableRow key={item.name}><TableCell>{item.name}</TableCell><TableCell className="text-right">{item.quantity.toLocaleString()} {item.unit}</TableCell></TableRow>))}
-                                  </TableBody>
-                              </Table>
-                          </div>
-                      ))}
-                  </TabsContent>
-                  <TabsContent value="store">
-                      <Table>
-                          <TableHeader><TableRow><TableHead>Material</TableHead><TableHead className="text-right">Quantity</TableHead></TableRow></TableHeader>
-                          <TableBody>
-                              {storeStock.map(item => (<TableRow key={item.id}><TableCell>{item.material}</TableCell><TableCell className="text-right">{item.quantity.toLocaleString()}</TableCell></TableRow>))}
-                          </TableBody>
-                      </Table>
-                  </TabsContent>
-              </Tabs>
-          </CardContent>
-      </Card>
+         <Card>
+            <CardHeader>
+                <div className="flex justify-between items-start">
+                    <div>
+                        <CardTitle>Material Stock Overview</CardTitle>
+                        <CardDescription>
+                            Live inventory counts across the organization.
+                        </CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                        <Select value={stockOverviewSite} onValueChange={setStockOverviewSite}>
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Select Location" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {stockLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <Button variant="outline" onClick={handleStockDownload}><Download className="mr-2 h-4 w-4" /> Download</Button>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Material</TableHead>
+                            <TableHead className="text-right">Total Quantity</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {stockToDisplay.length > 0 ? stockToDisplay.map(item => (
+                            <TableRow key={item.name}>
+                                <TableCell>{item.name}</TableCell>
+                                <TableCell className="text-right">{item.quantity.toLocaleString()} {item.unit}</TableCell>
+                            </TableRow>
+                        )) : (
+                            <TableRow>
+                                <TableCell colSpan={2} className="text-center text-muted-foreground">No stock data for this location.</TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
       </div>
 
       <Dialog open={!!selectedIndent} onOpenChange={(isOpen) => !isOpen && setSelectedIndent(null)}>
