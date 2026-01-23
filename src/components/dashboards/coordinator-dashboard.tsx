@@ -415,35 +415,50 @@ export default function CoordinatorDashboard() {
                   </CardHeader>
                   <CardContent>
                     {indentsForApproval.length > 0 ? (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Material</TableHead>
-                                    <TableHead>Qty</TableHead>
-                                    <TableHead>Site</TableHead>
-                                    <TableHead>Status</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {indentsForApproval.map((item) => (
-                                    <TableRow key={item.id} className="text-sm">
-                                        <TableCell className="font-medium">{item.material}</TableCell>
-                                        <TableCell>{item.quantity}</TableCell>
-                                        <TableCell>{item.site}</TableCell>
-                                        <TableCell>
-                                        <Badge 
-                                            variant={'secondary'}
-                                            className={cn('bg-yellow-500/80 text-white')}
-                                        >
-                                            {item.status}
-                                        </Badge>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                      <Table>
+                          <TableHeader>
+                              <TableRow>
+                                  <TableHead>Indent ID</TableHead>
+                                  <TableHead>Material</TableHead>
+                                  <TableHead>Qty</TableHead>
+                                  <TableHead>Site</TableHead>
+                                  <TableHead className="text-right">Actions</TableHead>
+                              </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                          {indentsForApproval.map(item => (
+                              <TableRow key={item.id}>
+                                  <TableCell className="font-medium">{item.id}</TableCell>
+                                  <TableCell>{item.material}</TableCell>
+                                  <TableCell>{item.quantity}</TableCell>
+                                  <TableCell>{item.site}</TableCell>
+                                  <TableCell className="text-right">
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" size="sm">
+                                          Actions <ChevronDown className="ml-2 h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => handleViewBill(item.id)}>
+                                          <Eye className="mr-2 h-4 w-4" /> View Details
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => handleStatusChange(item.id, 'Director Approved')}>
+                                          Approve
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleStatusChange(item.id, 'Director Rejected')} className="text-destructive">
+                                          Reject
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </TableCell>
+                              </TableRow>
+                          ))}
+                          </TableBody>
+                      </Table>
                     ) : (
-                        <p className="text-center text-muted-foreground p-4">No indents are awaiting approval.</p>
+                      <p className="text-center text-muted-foreground p-4">No indents are awaiting approval.</p>
                     )}
                   </CardContent>
                 </Card>
