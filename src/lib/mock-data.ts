@@ -1,5 +1,6 @@
 
 
+
 export const monthlyConsumption = [
   { month: 'Jan', consumption: 186 },
   { month: 'Feb', consumption: 305 },
@@ -137,13 +138,13 @@ export const siteStock = [
 ];
 
 export const recentSiteActivity = [
-    { id: 'sa-1', type: 'GRN', details: '500 Bags of Cement', from: 'MAPI Godown', status: 'Completed', date: '2024-07-20' },
-    { id: 'sa-2', type: 'Indent', details: '100 cu.m. Sand', to: 'MAPI Godown', status: 'Pending', date: '2024-07-21' },
-    { id: 'sa-3', type: 'Internal Issue', details: '20 bags Cement', to: 'Block A', status: 'Completed', date: '2024-07-21' },
+    { id: 'sa-1', type: 'GRN', details: '500 Bags of Cement', from: 'MAPI Godown', site: 'North Site', status: 'Completed', date: '2024-07-20' },
+    { id: 'sa-2', type: 'Indent', details: '100 cu.m. Sand', to: 'MAPI Godown', site: 'North Site', status: 'Pending', date: '2024-07-21' },
+    { id: 'sa-3', type: 'Internal Issue', details: '20 bags Cement', to: 'Block A', site: 'North Site', status: 'Completed', date: '2024-07-21' },
 ];
 
 export const pendingSiteRequests = [
-    { id: 'psr-1', material: 'Sand', quantity: '100 cu.m.', requestedFrom: 'MAPI Godown'},
+    { id: 'psr-1', material: 'Sand', quantity: '100 cu.m.', requestedFrom: 'MAPI Godown', site: 'North Site'},
 ];
 
 export const lowStockSite = [
@@ -201,12 +202,99 @@ export const mockBoqData = {
   ]
 };
 
-export const boqVsActual = [
-  { site: 'North Site', item: 'Concrete Works', boqQty: 1000, boqRate: 150, actualQty: 800, actualRate: 120, actualManpowerCost: 15000, actualEquipmentCost: 4000 },
-  { site: 'North Site', item: 'Excavation', boqQty: 100, boqRate: 50, actualQty: 120, actualRate: 40, actualManpowerCost: 5000, actualEquipmentCost: 2000 },
-  { site: 'South Site', item: 'Brickwork', boqQty: 2000, boqRate: 20, actualQty: 1800, actualRate: 18, actualManpowerCost: 9000, actualEquipmentCost: 800 },
-  { site: 'South Site', item: 'Finishing', boqQty: 500, boqRate: 100, actualQty: 500, actualRate: 90, actualManpowerCost: 30000, actualEquipmentCost: 1500 },
+export const detailedBoqAnalysis = [
+  {
+    site: 'North Site',
+    item: 'Concrete Works',
+    boqQty: 1000,
+    boqRate: 150,
+    actualMaterialQty: 950,
+    actualMaterialRate: 155,
+    actualManpowerCount: 20,
+    actualManpowerHours: 160,
+    actualManpowerOtHours: 20,
+    actualManpowerCost: 5200,
+    actualEquipmentName: 'Concrete Mixer',
+    actualEquipmentHours: 16,
+    actualEquipmentCost: 800,
+  },
+  {
+    site: 'North Site',
+    item: 'Excavation',
+    boqQty: 100,
+    boqRate: 50,
+    actualMaterialQty: 120,
+    actualMaterialRate: 52,
+    actualManpowerCount: 5,
+    actualManpowerHours: 40,
+    actualManpowerOtHours: 10,
+    actualManpowerCost: 1500,
+    actualEquipmentName: 'JCB',
+    actualEquipmentHours: 40,
+    actualEquipmentCost: 2000,
+  },
+  {
+    site: 'South Site',
+    item: 'Brickwork',
+    boqQty: 2000,
+    boqRate: 20,
+    actualMaterialQty: 1800,
+    actualMaterialRate: 18,
+    actualManpowerCount: 15,
+    actualManpowerHours: 120,
+    actualManpowerOtHours: 0,
+    actualManpowerCost: 3600,
+    actualEquipmentName: 'Scaffolding',
+    actualEquipmentHours: 120,
+    actualEquipmentCost: 600,
+  },
+  {
+    site: 'South Site',
+    item: 'Finishing',
+    boqQty: 500,
+    boqRate: 100,
+    actualMaterialQty: 500,
+    actualMaterialRate: 95,
+    actualManpowerCount: 10,
+    actualManpowerHours: 80,
+    actualManpowerOtHours: 15,
+    actualManpowerCost: 4000,
+    actualEquipmentName: 'Paint Sprayer',
+    actualEquipmentHours: 30,
+    actualEquipmentCost: 300,
+  },
+   {
+    site: 'West Site',
+    item: 'Concrete Works',
+    boqQty: 1200,
+    boqRate: 140,
+    actualMaterialQty: 1300,
+    actualMaterialRate: 145,
+    actualManpowerCount: 25,
+    actualManpowerHours: 200,
+    actualManpowerOtHours: 40,
+    actualManpowerCost: 8000,
+    actualEquipmentName: 'Concrete Mixer',
+    actualEquipmentHours: 20,
+    actualEquipmentCost: 1000,
+  },
+  {
+    site: 'East Site',
+    item: 'Brickwork',
+    boqQty: 2500,
+    boqRate: 22,
+    actualMaterialQty: 2400,
+    actualMaterialRate: 22,
+    actualManpowerCount: 20,
+    actualManpowerHours: 160,
+    actualManpowerOtHours: 10,
+    actualManpowerCost: 4800,
+    actualEquipmentName: 'Scaffolding',
+    actualEquipmentHours: 160,
+    actualEquipmentCost: 800,
+  },
 ];
+
 
 export const liveInventory = [
   { id: 'inv-1', site: 'North Site', material: 'Cement', classification: 'Consumable' as const, quantity: 480, unit: 'bags', minQty: 100, maxQty: 1000 },
