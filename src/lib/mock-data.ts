@@ -26,12 +26,12 @@ export const recentActivities = [
 ];
 
 export const allMaterials = [
-    { id: 'mat-1', name: 'Cement', unit: 'bag', description: 'Portland cement, 50kg bag' },
-    { id: 'mat-2', name: 'Steel Rebar', unit: 'ton', description: '12mm diameter steel reinforcement bars' },
-    { id: 'mat-3', name: 'Sand', unit: 'cubic meter', description: 'Fine aggregate for concrete' },
-    { id: 'mat-4', name: 'Bricks', unit: 'pcs', description: 'Standard clay bricks' },
-    { id: 'mat-5', name: 'Gravel', unit: 'cubic meter', description: 'Coarse aggregate for concrete' },
-    { id: 'mat-6', name: 'Paint', unit: 'liter', description: 'White emulsion paint' },
+    { id: 'mat-1', name: 'Cement', unit: 'bag', description: 'Portland cement, 50kg bag', rate: 10 },
+    { id: 'mat-2', name: 'Steel Rebar', unit: 'ton', description: '12mm diameter steel reinforcement bars', rate: 800 },
+    { id: 'mat-3', name: 'Sand', unit: 'cubic meter', description: 'Fine aggregate for concrete', rate: 25 },
+    { id: 'mat-4', name: 'Bricks', unit: 'pcs', description: 'Standard clay bricks', rate: 0.5 },
+    { id: 'mat-5', name: 'Gravel', unit: 'cubic meter', description: 'Coarse aggregate for concrete', rate: 30 },
+    { id: 'mat-6', name: 'Paint', unit: 'liter', description: 'White emulsion paint', rate: 5 },
 ];
 
 export const lowStockMaterials = [
@@ -54,8 +54,8 @@ export const materialReturnReminders = [
 ];
 
 export const issuedMaterialsForReceipt = [
-    { requestId: 'REQ-NORTH-20240720-001', issuedId: 'ISS-NORTH-20240720-001', materialName: 'Cement', issuedQuantity: 500, issuingSite: 'MAPI Godown', receivingSite: 'North Site' },
-    { requestId: 'REQ-EAST-20240718-002', issuedId: 'ISS-EAST-20240718-002', materialName: 'Steel Rebar', issuedQuantity: 10, issuingSite: 'MAPI Godown', receivingSite: 'East Site' },
+    { requestId: 'REQ-NORTH-20240720-001', issuedId: 'ISS-NORTH-20240720-001', materialName: 'Cement', issuedQuantity: 500, issuingSite: 'MAPI Godown', receivingSite: 'North Site', unit: 'bags', rate: 10 },
+    { requestId: 'REQ-EAST-20240718-002', issuedId: 'ISS-EAST-20240718-002', materialName: 'Steel Rebar', issuedQuantity: 10, issuingSite: 'MAPI Godown', receivingSite: 'East Site', unit: 'tons', rate: 800 },
 ];
 
 const generateSiteConsumption = (materials: {name: string, unit: string}[], sites: string[]) => {
@@ -190,6 +190,8 @@ export const mockBoqData = {
   materials: [
       { type: 'Cement', unit: 'bags', rate: 10 },
       { type: 'Sand', unit: 'cu.m.', rate: 25 },
+      { type: 'Steel Rebar', unit: 'tons', rate: 800 },
+      { type: 'Bricks', unit: 'pcs', rate: 0.5 },
   ],
   equipment: [
       { source: 'Owned', name: 'JCB', unit: 'hours', rate: 50 },

@@ -19,6 +19,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Label } from '@/components/ui/label';
 import { useMaterialContext } from '@/context/material-context';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { mockBoqData } from '@/lib/mock-data';
 
 // Schemas
 const materialIssueItemSchema = z.object({
@@ -29,6 +31,7 @@ const materialIssueItemSchema = z.object({
   engineerName: z.string().min(1, 'Engineer name is required.'),
   buildingName: z.string().min(1, 'Building name is required.'),
   remarks: z.string().optional(),
+  rate: z.coerce.number().optional(),
 });
 
 const issueBillSchema = z.object({
@@ -41,6 +44,7 @@ type IssueBillFormValues = z.infer<typeof issueBillSchema>;
 
 type GeneratedBill = IssueBillFormValues & {
   issueBillId: string;
+  totalValue: number;
 };
 
 export default function MaterialsIssuedPage() {
@@ -70,10 +74,14 @@ export default function MaterialsIssuedPage() {
         form.setValue('requestId', requestId);
         // Clear previous materials and add the new one
         form.setValue('materials', []);
+        
+        const materialInfo = mockBoqData.materials.find(m => m.type.toLowerCase() === selectedRequest.material.toLowerCase());
+
         append({
             materialName: selectedRequest.material,
             issuedQuantity: selectedRequest.quantity,
-            materialUnit: 'unit', // Mock unit, replace with actual if available
+            materialUnit: materialInfo?.unit || 'unit', // Auto-filled unit
+            rate: materialInfo?.rate || 0, // Auto-filled rate
             boqItem: 'Default BOQ', // Mock data
             engineerName: 'Site Engineer', // Mock data
             buildingName: 'Main Building', // Mock data
@@ -99,10 +107,13 @@ export default function MaterialsIssuedPage() {
     const countPart = (Date.now() % 1000).toString().padStart(3, '0');
     const siteCode = selectedRequest.site.replace(/\s+/g, '').substring(0, 4).toUpperCase();
     const newBillId = `ISS-${siteCode}-${datePart}-${countPart}`;
+    
+    const totalValue = values.materials.reduce((acc, m) => acc + (m.issuedQuantity * (m.rate || 0)), 0);
 
     const bill: GeneratedBill = {
       ...values,
       issueBillId: newBillId,
+      totalValue: totalValue,
     };
     
     setLastGeneratedBill(bill);
@@ -116,6 +127,8 @@ export default function MaterialsIssuedPage() {
             issuedQuantity: material.issuedQuantity,
             issuingSite: selectedRequest.issuingSite || 'MAPI Store',
             receivingSite: selectedRequest.site,
+            unit: material.materialUnit,
+            rate: material.rate || 0,
         };
         setIssuedMaterials(prev => [...prev, issuedMaterial]);
 
@@ -233,12 +246,10 @@ export default function MaterialsIssuedPage() {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Material</TableHead>
-                            <TableHead>Unit</TableHead>
                             <TableHead>Qty</TableHead>
-                            <TableHead>Engineer</TableHead>
-                            <TableHead>Building</TableHead>
-                            <TableHead>BOQ Item</TableHead>
-                            <TableHead>Remarks</TableHead>
+                            <TableHead>Unit</TableHead>
+                            <TableHead>Rate</TableHead>
+                            <TableHead>Amount</TableHead>
                             <TableHead className="w-12"></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -257,56 +268,32 @@ export default function MaterialsIssuedPage() {
                               <TableCell>
                                 <FormField
                                   control={form.control}
-                                  name={`materials.${index}.materialUnit`}
-                                  render={({ field }) => (
-                                    <FormItem><FormControl><Input placeholder="e.g., bag" {...field} /></FormControl><FormMessage /></FormItem>
-                                  )}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <FormField
-                                  control={form.control}
                                   name={`materials.${index}.issuedQuantity`}
                                   render={({ field }) => (
                                     <FormItem><FormControl><Input type="number" placeholder="Qty" {...field} /></FormControl><FormMessage /></FormItem>
                                   )}
                                 />
                               </TableCell>
-                              <TableCell>
+                               <TableCell>
                                 <FormField
                                   control={form.control}
-                                  name={`materials.${index}.engineerName`}
+                                  name={`materials.${index}.materialUnit`}
                                   render={({ field }) => (
-                                    <FormItem><FormControl><Input placeholder="Engineer" {...field} readOnly/></FormControl><FormMessage /></FormItem>
+                                    <FormItem><FormControl><Input placeholder="e.g., bag" {...field} readOnly/></FormControl><FormMessage /></FormItem>
                                   )}
                                 />
                               </TableCell>
-                              <TableCell>
+                               <TableCell>
                                 <FormField
                                   control={form.control}
-                                  name={`materials.${index}.buildingName`}
+                                  name={`materials.${index}.rate`}
                                   render={({ field }) => (
-                                    <FormItem><FormControl><Input placeholder="Building" {...field} readOnly/></FormControl><FormMessage /></FormItem>
+                                    <FormItem><FormControl><Input type="number" {...field} readOnly /></FormControl><FormMessage /></FormItem>
                                   )}
                                 />
                               </TableCell>
-                              <TableCell>
-                                <FormField
-                                  control={form.control}
-                                  name={`materials.${index}.boqItem`}
-                                  render={({ field }) => (
-                                    <FormItem><FormControl><Input placeholder="BOQ Item" {...field} readOnly/></FormControl><FormMessage /></FormItem>
-                                  )}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <FormField
-                                  control={form.control}
-                                  name={`materials.${index}.remarks`}
-                                  render={({ field }) => (
-                                    <FormItem><FormControl><Input placeholder="Remarks" {...field} /></FormControl><FormMessage /></FormItem>
-                                  )}
-                                />
+                              <TableCell className="font-medium">
+                                 ${(form.getValues(`materials.${index}.issuedQuantity`) * (form.getValues(`materials.${index}.rate`) || 0)).toFixed(2)}
                               </TableCell>
                               <TableCell>
                                 <Button variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length < 1}>
@@ -364,10 +351,8 @@ export default function MaterialsIssuedPage() {
                       <TableRow>
                         <TableHead>Material</TableHead>
                         <TableHead>Qty</TableHead>
-                        <TableHead>Engineer</TableHead>
-                        <TableHead>Building</TableHead>
-                        <TableHead>BOQ Item</TableHead>
-                        <TableHead>Remarks</TableHead>
+                        <TableHead>Rate</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -375,14 +360,16 @@ export default function MaterialsIssuedPage() {
                         <TableRow key={index}>
                           <TableCell>{item.materialName} ({item.materialUnit})</TableCell>
                           <TableCell>{item.issuedQuantity}</TableCell>
-                          <TableCell>{item.engineerName}</TableCell>
-                          <TableCell>{item.buildingName}</TableCell>
-                          <TableCell>{item.boqItem}</TableCell>
-                          <TableCell>{item.remarks}</TableCell>
+                          <TableCell>${(item.rate || 0).toFixed(2)}</TableCell>
+                          <TableCell className="text-right">${(item.issuedQuantity * (item.rate || 0)).toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                  <Separator className="my-2"/>
+                  <div className="text-right font-bold text-lg">
+                    Total Value: ${lastGeneratedBill.totalValue.toFixed(2)}
+                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -49,6 +49,8 @@ interface IssuedMaterial {
     issuedQuantity: number;
     issuingSite: string;
     receivingSite: string;
+    unit: string;
+    rate: number;
 }
 
 interface LowStockMaterial {
@@ -89,6 +91,7 @@ export interface MaterialReceivedBill {
   damageDescription?: string;
   remarks?: string;
   receivedDate: Date;
+  rate?: number;
   // added properties
   receivedBillId: string;
   receiver: { name: string; } | null;

@@ -23,12 +23,14 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useMaterialContext, type IndentStatus } from '@/context/material-context';
 import { useUser } from '@/hooks/use-user';
+import { mockBoqData } from '@/lib/mock-data';
 
 const materialItemSchema = z.object({
   materialName: z.string().min(1, 'Material name is required.'),
   unit: z.string().min(1, 'Unit is required.'),
   quantity: z.coerce.number().min(0.1, 'Quantity must be > 0.'),
   remarks: z.string().optional(),
+  rate: z.coerce.number().optional(),
 });
 
 const requestSchema = z.object({
@@ -76,10 +78,26 @@ export default function RequestsPage() {
       requestId: '',
       requesterName: user?.name || '',
       requestingSite: isSiteManager && site ? site : '',
-      materials: [{ materialName: '', unit: '', quantity: 1, remarks: '' }],
+      materials: [{ materialName: '', unit: '', quantity: 1, remarks: '', rate: 0 }],
       remarks: '',
     },
   });
+  
+  const materials = form.watch('materials');
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'materials',
+  });
+
+  const handleMaterialChange = (materialName: string, index: number) => {
+    const material = mockBoqData.materials.find(m => m.type === materialName);
+    if (material) {
+        form.setValue(`materials.${index}.materialName`, material.type);
+        form.setValue(`materials.${index}.unit`, material.unit);
+        form.setValue(`materials.${index}.rate`, material.rate);
+    }
+  };
 
   const requestingSite = form.watch('requestingSite');
 
@@ -100,14 +118,8 @@ export default function RequestsPage() {
     }
   }, [isSiteManager, site, user, form]);
 
-
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: 'materials',
-  });
-
   function onSubmit(values: RequestFormValues) {
-    const totalValue = 0; 
+    const totalValue = values.materials.reduce((acc, m) => acc + (m.quantity * (m.rate || 0)), 0);
     const idParts = values.requestId.split('-');
     const datePart = idParts.length > 2 ? idParts[2] : format(new Date(), 'yyyyMMdd');
     const countPart = idParts.length > 3 ? idParts[3] : (requests.length + 1).toString().padStart(3, '0');
@@ -145,7 +157,7 @@ export default function RequestsPage() {
       requestId: '',
       requesterName: user?.name || '',
       requestingSite: isSiteManager && site ? site : '',
-      materials: [{ materialName: '', unit: '', quantity: 1, remarks: '' }],
+      materials: [{ materialName: '', unit: '', quantity: 1, remarks: '', rate: 0 }],
       remarks: '',
     });
   }
@@ -162,19 +174,20 @@ export default function RequestsPage() {
       const countPart = idParts.length > 3 ? idParts[3] : request.id.slice(-3);
       const siteCode = idParts.length > 1 ? idParts[1] : 'SITE';
 
+      const materialInfo = mockBoqData.materials.find(m => m.type.toLowerCase() === request.material.toLowerCase()) || {rate: 0};
 
       const bill: MaterialIndentBill = {
         requestId: `REQ-${siteCode}-${datePart}-${countPart}`,
         requestDate: requestDate,
         requesterName: 'Sample Requester',
         requestingSite: request.site,
-        materials: [{ materialName: request.material, unit: 'unit', quantity: request.quantity, remarks: '' }], // Mock unit
+        materials: [{ materialName: request.material, unit: 'unit', quantity: request.quantity, remarks: '', rate: materialInfo.rate }], // Mock unit
         requiredPeriod: { from: fromDate, to: returnDate },
         remarks: `This is a sample bill for request ${request.id}`,
         issuedId: `ISS-${siteCode}-${datePart}-${countPart}`,
         shiftingDate: new Date(returnDate.getTime() - 9 * 24 * 60 * 60 * 1000),
         requester: { name: 'Sample Requester' },
-        totalValue: 0, // No rate, so no value
+        totalValue: request.quantity * materialInfo.rate,
         issuingSite: request.issuingSite || 'Pending Assignment',
       };
       setLastGeneratedBill(bill);
@@ -274,6 +287,8 @@ export default function RequestsPage() {
                             <TableHead className="w-2/5">Material Name</TableHead>
                             <TableHead>Unit</TableHead>
                             <TableHead>Quantity</TableHead>
+                            <TableHead>Rate</TableHead>
+                            <TableHead>Amount</TableHead>
                             <TableHead>Remarks</TableHead>
                             <TableHead className="w-12"></TableHead>
                           </TableRow>
@@ -287,9 +302,14 @@ export default function RequestsPage() {
                                   name={`materials.${index}.materialName`}
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormControl>
-                                        <Input placeholder="e.g., Cement" {...field} />
-                                      </FormControl>
+                                      <Select onValueChange={(value) => handleMaterialChange(value, index)} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Select material" /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                          {mockBoqData.materials.map(mat => (
+                                            <SelectItem key={mat.type} value={mat.type}>{mat.type}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
                                       <FormMessage />
                                     </FormItem>
                                   )}
@@ -302,7 +322,7 @@ export default function RequestsPage() {
                                   render={({ field }) => (
                                     <FormItem>
                                       <FormControl>
-                                        <Input placeholder="e.g., bag" {...field} />
+                                        <Input {...field} readOnly disabled />
                                       </FormControl>
                                       <FormMessage />
                                     </FormItem>
@@ -322,6 +342,14 @@ export default function RequestsPage() {
                                     </FormItem>
                                   )}
                                 />
+                              </TableCell>
+                              <TableCell>
+                                  <FormField control={form.control} name={`materials.${index}.rate`} render={({ field }) => (
+                                    <FormItem><FormControl><Input type="number" {...field} readOnly disabled /></FormControl></FormItem>
+                                  )} />
+                              </TableCell>
+                              <TableCell>
+                                <p className="font-medium">${(materials?.[index]?.quantity * materials?.[index]?.rate || 0).toFixed(2)}</p>
                               </TableCell>
                               <TableCell>
                                 <FormField
@@ -474,35 +502,32 @@ export default function RequestsPage() {
                     <p><strong>Shifting Date:</strong> {format(lastGeneratedBill.shiftingDate, 'PPP')}</p>
                   </div>
                 </div>
-                <div className="space-y-2 rounded-lg border p-4">
-                  <h3 className="font-semibold">Usage Period</h3>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <p><strong>Start Date:</strong> {format(lastGeneratedBill.requiredPeriod.from, 'PPP')}</p>
-                    <p><strong>End Date:</strong> {format(lastGeneratedBill.requiredPeriod.to, 'PPP')}</p>
-                  </div>
-                </div>
                 <div className="space-y-2">
                   <h3 className="font-semibold">Material Details</h3>
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Material</TableHead>
-                        <TableHead>Unit</TableHead>
                         <TableHead>Qty</TableHead>
-                        <TableHead>Remarks</TableHead>
+                        <TableHead>Rate</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {lastGeneratedBill.materials.map((m, i) => (
                         <TableRow key={i}>
-                          <TableCell>{m.materialName}</TableCell>
-                          <TableCell>{m.unit}</TableCell>
+                          <TableCell>{m.materialName} ({m.unit})</TableCell>
                           <TableCell>{m.quantity}</TableCell>
-                          <TableCell>{m.remarks}</TableCell>
+                           <TableCell>${(m.rate || 0).toFixed(2)}</TableCell>
+                           <TableCell className="text-right">${(m.quantity * (m.rate || 0)).toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                  <Separator className="my-2"/>
+                  <div className="text-right font-bold text-lg">
+                    Total Value: ${lastGeneratedBill.totalValue.toFixed(2)}
+                  </div>
                 </div>
                  {lastGeneratedBill.remarks && (
                     <div className="space-y-2">
