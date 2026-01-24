@@ -105,14 +105,18 @@ export default function ReceiptsPage() {
   const { toast } = useToast();
   const { issuedMaterials, requests, inventory, setInventory, receipts: pastReceipts, setReceipts: setPastReceipts } = useMaterialContext();
   const searchParams = useSearchParams();
-  const [activeBillDetails, setActiveBillDetails] = React.useState<FullBillDetails | null>(null);
   const billContentRef = React.useRef<HTMLDivElement>(null);
+  
+  const [activeBillDetails, setActiveBillDetails] = React.useState<FullBillDetails | null>(null);
+  const [activeShopPurchaseBill, setActiveShopPurchaseBill] = React.useState<ShopPurchase | null>(null);
 
   const [shopPurchases, setShopPurchases] = React.useState<ShopPurchase[]>([]);
   
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = React.useState(false);
   const [selectedReceiptForUpdate, setSelectedReceiptForUpdate] = React.useState<{ receipt: MaterialReceivedBill, newStatus: ReceiptStatus } | null>(null);
   const [updateRemarks, setUpdateRemarks] = React.useState('');
+
+  const [isShopPreviewDialogOpen, setIsShopPreviewDialogOpen] = React.useState(false);
 
 
   // Form for site-to-site transfers
@@ -223,11 +227,10 @@ export default function ReceiptsPage() {
       return newInventory;
     });
 
-
     const requestDetails = requests.find(r => r.id === bill.requestId) || null;
     const issueDetails = issuedMaterials.find(i => i.issuedId === bill.issuedId) || null;
     setActiveBillDetails({ request: requestDetails, issue: issueDetails, receipt: bill });
-
+    setActiveShopPurchaseBill(null);
 
     let toastDescription = `GRN for ${values.receivedQuantity} units of ${values.materialName} logged.`;
     if (status === 'Mismatch') {
@@ -246,6 +249,7 @@ export default function ReceiptsPage() {
       const requestDetails = requests.find(r => r.id === receipt.requestId) || null;
       const issueDetails = issuedMaterials.find(i => i.issuedId === receipt.issuedId) || null;
       setActiveBillDetails({ request: requestDetails, issue: issueDetails, receipt: receipt });
+      setActiveShopPurchaseBill(null);
     }
   };
 
@@ -334,7 +338,25 @@ export default function ReceiptsPage() {
   const purchaseType = fromShopForm.watch('purchaseType');
   const shopMaterials = fromShopForm.watch('materials');
 
-  function onFromShopSubmit(values: FromShopFormValues) {
+  // New form for the preview dialog
+  const previewForm = useForm<FromShopFormValues>({
+    resolver: zodResolver(fromShopSchema),
+    defaultValues: {
+      materials: [{ materialName: '', classification: 'Consumable', unit: '', quantity: 0, rate: 0 }],
+    },
+  });
+
+  const { fields: previewFields, append: appendPreviewMaterial, remove: removePreviewMaterial } = useFieldArray({
+      control: previewForm.control,
+      name: 'materials',
+  });
+
+  function onPreviewShopPurchaseSubmit(values: FromShopFormValues) {
+      previewForm.reset(values);
+      setIsShopPreviewDialogOpen(true);
+  }
+
+  function onGenerateFinalBill(values: FromShopFormValues) {
     const totalAmount = values.materials.reduce((acc, item) => acc + (item.quantity * item.rate), 0);
     const newBillId = `SHOP-REC-${format(new Date(), 'yyyyMMdd-HHmmss')}`;
 
@@ -345,10 +367,6 @@ export default function ReceiptsPage() {
     };
 
     setShopPurchases(prev => [purchase, ...prev]);
-    toast({
-      title: 'Shop Purchase Logged!',
-      description: `Invoice ${values.invoiceNumber} has been successfully logged.`,
-    });
 
     values.materials.forEach(purchasedMaterial => {
       setInventory(prevInventory => {
@@ -378,8 +396,15 @@ export default function ReceiptsPage() {
       });
     });
     
+    setIsShopPreviewDialogOpen(false);
     fromShopForm.reset();
     setActiveBillDetails(null);
+    setActiveShopPurchaseBill(purchase);
+    
+    toast({
+      title: 'Shop Purchase Logged!',
+      description: `Invoice ${values.invoiceNumber} has been successfully logged.`,
+    });
   }
 
 
@@ -390,7 +415,7 @@ export default function ReceiptsPage() {
         <div className="lg:col-span-3">
           <Tabs defaultValue="from-site" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="from-site">GRN (other site / godown)</TabsTrigger>
+              <TabsTrigger value="from-site">GRN (from site/godown)</TabsTrigger>
               <TabsTrigger value="from-shop">New Purchase Material</TabsTrigger>
             </TabsList>
             
@@ -481,7 +506,7 @@ export default function ReceiptsPage() {
                 </CardHeader>
                 <CardContent>
                   <Form {...fromShopForm}>
-                    <form onSubmit={fromShopForm.handleSubmit(onFromShopSubmit)} className="space-y-6">
+                    <form onSubmit={fromShopForm.handleSubmit(onPreviewShopPurchaseSubmit)} className="space-y-6">
                        <FormField
                         control={fromShopForm.control}
                         name="purchaseType"
@@ -567,7 +592,10 @@ export default function ReceiptsPage() {
                           </FormItem>
                         )}
                       />
-                      <Button type="submit" size="lg" disabled={fromShopForm.formState.isSubmitting}><Upload className="mr-2 h-4 w-4" />{fromShopForm.formState.isSubmitting ? 'Logging...' : 'Log Shop Purchase'}</Button>
+                      <Button type="submit" size="lg" disabled={fromShopForm.formState.isSubmitting}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        {fromShopForm.formState.isSubmitting ? 'Processing...' : 'Preview Purchase Bill'}
+                      </Button>
                     </form>
                   </Form>
                 </CardContent>
@@ -575,8 +603,10 @@ export default function ReceiptsPage() {
             </TabsContent>
           </Tabs>
         </div>
-        {activeBillDetails && (
-            <div className="lg:col-span-2">
+
+        {(activeBillDetails || activeShopPurchaseBill) && (
+            <div className="lg:col-span-2" ref={billContentRef}>
+              {activeBillDetails && (
                 <Card>
                     <CardHeader className="flex flex-row items-start justify-between">
                         <div>
@@ -585,7 +615,7 @@ export default function ReceiptsPage() {
                         </div>
                          <Button variant="outline" size="sm" onClick={() => handleDownload(activeBillDetails.receipt?.receivedBillId ?? 'bill')}><Download className="mr-2 h-4 w-4" />Download</Button>
                     </CardHeader>
-                    <CardContent ref={billContentRef} className="space-y-6 text-sm">
+                    <CardContent className="space-y-6 text-sm">
                         <div className="rounded-lg border p-4 space-y-2">
                             <h3 className="font-semibold text-base">Verification Status</h3>
                             {activeBillDetails.receipt?.status === 'Mismatch' ? ( <div className="flex items-center gap-2 text-destructive"><AlertTriangle className="h-5 w-5" /><p className="font-semibold">Query: Mismatch in quantities.</p></div>) 
@@ -606,6 +636,56 @@ export default function ReceiptsPage() {
                         </div>
                     </CardContent>
                 </Card>
+              )}
+              {activeShopPurchaseBill && (
+                 <Card>
+                    <CardHeader className="flex flex-row items-start justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2"><FileText /> Generated Purchase Bill</CardTitle>
+                          <CardDescription>Bill for newly purchased materials.</CardDescription>
+                        </div>
+                         <Button variant="outline" size="sm" onClick={() => handleDownload(activeShopPurchaseBill.receivedBillId)}><Download className="mr-2 h-4 w-4" />Download</Button>
+                    </CardHeader>
+                    <CardContent className="space-y-4 text-sm">
+                       <div className="rounded-lg border p-4 space-y-2">
+                          <h3 className="font-semibold">Invoice Details</h3>
+                          <div className="grid grid-cols-2 gap-2">
+                            <p><strong>Invoice #:</strong> {activeShopPurchaseBill.invoiceNumber}</p>
+                            <p><strong>Vendor:</strong> {activeShopPurchaseBill.vendorName}</p>
+                            <p><strong>Invoice Date:</strong> {format(activeShopPurchaseBill.invoiceDate, 'PPP')}</p>
+                            {activeShopPurchaseBill.poNumber && <p><strong>PO #:</strong> {activeShopPurchaseBill.poNumber}</p>}
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="font-semibold">Purchased Materials</h3>
+                           <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Material</TableHead>
+                                <TableHead>Qty</TableHead>
+                                <TableHead>Rate</TableHead>
+                                <TableHead className="text-right">Amount</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {activeShopPurchaseBill.materials.map((item, index) => (
+                                <TableRow key={index}>
+                                  <TableCell>{item.materialName}</TableCell>
+                                  <TableCell>{item.quantity} {item.unit}</TableCell>
+                                  <TableCell>${item.rate.toFixed(2)}</TableCell>
+                                  <TableCell className="text-right">${(item.quantity * item.rate).toFixed(2)}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                          <Separator className="my-2"/>
+                          <div className="text-right font-bold text-lg">
+                            Total Amount: ${activeShopPurchaseBill.totalAmount.toFixed(2)}
+                          </div>
+                        </div>
+                    </CardContent>
+                 </Card>
+              )}
             </div>
         )}
       </div>
@@ -697,7 +777,57 @@ export default function ReceiptsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
+      
+      <Dialog open={isShopPreviewDialogOpen} onOpenChange={setIsShopPreviewDialogOpen}>
+          <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                  <DialogTitle>Preview & Confirm Purchase Bill</DialogTitle>
+                  <DialogDescription>Review and edit the details before generating the final bill. Changes made here will not affect your main form until the bill is generated.</DialogDescription>
+              </DialogHeader>
+              <Form {...previewForm}>
+                  <form onSubmit={previewForm.handleSubmit(onGenerateFinalBill)} className="space-y-6">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                          <p><strong>Invoice #:</strong> {previewForm.getValues('invoiceNumber')}</p>
+                          <p><strong>Vendor:</strong> {previewForm.getValues('vendorName')}</p>
+                          <p><strong>Invoice Date:</strong> {format(previewForm.getValues('invoiceDate'), 'PPP')}</p>
+                      </div>
+                      <div className="max-h-[40vh] overflow-y-auto rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Material</TableHead>
+                                    <TableHead>Unit</TableHead>
+                                    <TableHead>Qty</TableHead>
+                                    <TableHead>Rate</TableHead>
+                                    <TableHead>Amount</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {previewFields.map((item, index) => {
+                                  const quantity = previewForm.watch(`materials.${index}.quantity`);
+                                  const rate = previewForm.watch(`materials.${index}.rate`);
+                                  const amount = quantity * rate;
+                                  return (
+                                    <TableRow key={item.id}>
+                                      <TableCell><Input readOnly disabled value={item.materialName} /></TableCell>
+                                      <TableCell><FormField control={previewForm.control} name={`materials.${index}.unit`} render={({ field }) => (<FormItem><FormControl><Input placeholder="Unit" {...field}/></FormControl><FormMessage/></FormItem>)} /></TableCell>
+                                      <TableCell><FormField control={previewForm.control} name={`materials.${index}.quantity`} render={({ field }) => (<FormItem><FormControl><Input type="number" placeholder="Qty" {...field}/></FormControl><FormMessage/></FormItem>)} /></TableCell>
+                                      <TableCell><FormField control={previewForm.control} name={`materials.${index}.rate`} render={({ field }) => (<FormItem><FormControl><Input type="number" placeholder="Rate" {...field}/></FormControl><FormMessage/></FormItem>)} /></TableCell>
+                                      <TableCell className="font-medium">${amount.toFixed(2)}</TableCell>
+                                    </TableRow>
+                                  )
+                                })}
+                            </TableBody>
+                        </Table>
+                      </div>
+                      <DialogFooter>
+                          <Button type="button" variant="outline" onClick={() => setIsShopPreviewDialogOpen(false)}>Cancel</Button>
+                          <Button type="submit">Generate Final Bill</Button>
+                      </DialogFooter>
+                  </form>
+              </Form>
+          </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 }
