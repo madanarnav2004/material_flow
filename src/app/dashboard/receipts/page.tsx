@@ -557,7 +557,16 @@ export default function ReceiptsPage() {
                             <TableBody>
                               {shopFields.map((field, index) => (
                                 <TableRow key={field.id}>
-                                  <TableCell className="min-w-[150px]"><FormField control={fromShopForm.control} name={`materials.${index}.materialName`} render={({ field }) => (<FormItem><FormControl><Input placeholder="Cement" {...field}/></FormControl><FormMessage/></FormItem>)}/></TableCell>
+                                  <TableCell className="min-w-[150px]">
+                                    <FormField control={fromShopForm.control} name={`materials.${index}.materialName`} render={({ field }) => (
+                                      <FormItem>
+                                        <FormControl>
+                                          <Input placeholder="Material Name" {...field} />
+                                        </FormControl>
+                                        <FormMessage/>
+                                      </FormItem>
+                                    )}/>
+                                  </TableCell>
                                   <TableCell className="min-w-[150px]"><FormField control={fromShopForm.control} name={`materials.${index}.classification`} render={({ field }) => (<FormItem><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Type"/></SelectTrigger></FormControl><SelectContent><SelectItem value="Consumable">Consumable</SelectItem><SelectItem value="Asset">Asset</SelectItem></SelectContent></Select><FormMessage/></FormItem>)}/></TableCell>
                                   <TableCell className="min-w-[150px]">{shopMaterials[index]?.classification === 'Asset' && <FormField control={fromShopForm.control} name={`materials.${index}.ownership`} render={({ field }) => (<FormItem><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ownership"/></SelectTrigger></FormControl><SelectContent><SelectItem value="Own">Own</SelectItem><SelectItem value="Rent">Rent</SelectItem></SelectContent></Select><FormMessage/></FormItem>)} />}</TableCell>
                                   <TableCell className="min-w-[150px]">{shopMaterials[index]?.ownership === 'Rent' && <FormField control={fromShopForm.control} name={`materials.${index}.vendorName`} render={({ field }) => (<FormItem><FormControl><Input placeholder="Vendor Name" {...field} /></FormControl><FormMessage/></FormItem>)} />}</TableCell>
