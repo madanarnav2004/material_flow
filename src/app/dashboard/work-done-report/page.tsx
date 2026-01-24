@@ -22,9 +22,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 
 const materialSchema = z.object({
-  type: z.string().min(1, 'Material type is required.'),
+  materialName: z.string().min(1, 'Material name is required.'),
   quantity: z.coerce.number().min(0.1, 'Quantity is required.'),
-  unit: z.string(),
+  unit: z.string().min(1, 'Unit is required.'),
   rate: z.coerce.number().optional(),
 });
 
@@ -92,7 +92,7 @@ export default function WorkDoneReportPage() {
       itemOfWork: '',
       itemNumber: '',
       quantityOfWork: 0,
-      materials: [{ type: '', quantity: 0, unit: '', rate: 0 }],
+      materials: [{ materialName: '', quantity: 0, unit: '', rate: 0 }],
       equipment: [{ source: '', name: '', usage: 0, unit: '', rate: 0 }],
       workforce: [{ skill: '', designation: '', count: 0, hours: 0, otHours: 0, rate: 0, otRate: 0 }],
     },
@@ -141,13 +141,6 @@ export default function WorkDoneReportPage() {
     if (!source) return [];
     return mockBoqData.equipment.filter(e => e.source.toLowerCase() === source.toLowerCase());
   }
-  
-  const handleMaterialTypeChange = (value: string, index: number) => {
-    form.setValue(`materials.${index}.type`, value);
-    const selectedMaterial = mockBoqData.materials.find(m => m.type === value);
-    form.setValue(`materials.${index}.unit`, selectedMaterial?.unit || '');
-    form.setValue(`materials.${index}.rate`, selectedMaterial?.rate || 0);
-  };
   
   const handleEquipmentSourceChange = (value: string, index: number) => {
     form.setValue(`equipment.${index}.source`, value);
@@ -432,7 +425,7 @@ export default function WorkDoneReportPage() {
                         <Table>
                             <TableHeader>
                             <TableRow>
-                                <TableHead className="w-2/5">Material Type</TableHead>
+                                <TableHead className="w-2/5">Material Name</TableHead>
                                 <TableHead>Quantity</TableHead>
                                 <TableHead>Unit</TableHead>
                                 <TableHead>Rate</TableHead>
@@ -445,18 +438,13 @@ export default function WorkDoneReportPage() {
                                 <TableCell>
                                     <FormField
                                     control={form.control}
-                                    name={`materials.${index}.type`}
+                                    name={`materials.${index}.materialName`}
                                     render={({ field }) => (
                                         <FormItem>
-                                        <Select onValueChange={(value) => handleMaterialTypeChange(value, index)} defaultValue={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue placeholder="Select material" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                            {mockBoqData.materials.map(mat => (
-                                                <SelectItem key={mat.type} value={mat.type}>{mat.type}</SelectItem>
-                                            ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
+                                          <FormControl>
+                                            <Input placeholder="Material Name" {...field} />
+                                          </FormControl>
+                                          <FormMessage />
                                         </FormItem>
                                     )}
                                     />
@@ -475,7 +463,7 @@ export default function WorkDoneReportPage() {
                                     control={form.control}
                                     name={`materials.${index}.unit`}
                                     render={({ field }) => (
-                                        <FormItem><FormControl><Input readOnly disabled {...field} /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormControl><Input placeholder="Unit" {...field} /></FormControl><FormMessage /></FormItem>
                                     )}
                                     />
                                 </TableCell>
@@ -484,7 +472,7 @@ export default function WorkDoneReportPage() {
                                     control={form.control}
                                     name={`materials.${index}.rate`}
                                     render={({ field }) => (
-                                        <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} /></FormControl><FormMessage /></FormItem>
                                     )}
                                   />
                                 </TableCell>
@@ -498,7 +486,7 @@ export default function WorkDoneReportPage() {
                             </TableBody>
                         </Table>
                         </div>
-                        <Button type="button" variant="outline" size="sm" onClick={() => appendMaterial({ type: '', quantity: 0, unit: '', rate: 0 })} className="mt-4">
+                        <Button type="button" variant="outline" size="sm" onClick={() => appendMaterial({ materialName: '', quantity: 0, unit: '', rate: 0 })} className="mt-4">
                             <PlusCircle className="mr-2 h-4 w-4" /> Add Material
                         </Button>
                     </CardContent>

@@ -90,15 +90,6 @@ export default function RequestsPage() {
     name: 'materials',
   });
 
-  const handleMaterialChange = (materialName: string, index: number) => {
-    const material = mockBoqData.materials.find(m => m.type === materialName);
-    if (material) {
-        form.setValue(`materials.${index}.materialName`, material.type);
-        form.setValue(`materials.${index}.unit`, material.unit);
-        form.setValue(`materials.${index}.rate`, material.rate);
-    }
-  };
-
   const requestingSite = form.watch('requestingSite');
 
   React.useEffect(() => {
@@ -302,14 +293,9 @@ export default function RequestsPage() {
                                   name={`materials.${index}.materialName`}
                                   render={({ field }) => (
                                     <FormItem>
-                                      <Select onValueChange={(value) => handleMaterialChange(value, index)} defaultValue={field.value}>
-                                        <FormControl><SelectTrigger><SelectValue placeholder="Select material" /></SelectTrigger></FormControl>
-                                        <SelectContent>
-                                          {mockBoqData.materials.map(mat => (
-                                            <SelectItem key={mat.type} value={mat.type}>{mat.type}</SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
+                                      <FormControl>
+                                        <Input placeholder="Material Name" {...field} />
+                                      </FormControl>
                                       <FormMessage />
                                     </FormItem>
                                   )}
@@ -322,7 +308,7 @@ export default function RequestsPage() {
                                   render={({ field }) => (
                                     <FormItem>
                                       <FormControl>
-                                        <Input {...field} readOnly disabled />
+                                        <Input placeholder="Unit" {...field} />
                                       </FormControl>
                                       <FormMessage />
                                     </FormItem>
@@ -345,7 +331,7 @@ export default function RequestsPage() {
                               </TableCell>
                               <TableCell>
                                   <FormField control={form.control} name={`materials.${index}.rate`} render={({ field }) => (
-                                    <FormItem><FormControl><Input type="number" {...field} readOnly disabled /></FormControl></FormItem>
+                                    <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} /></FormControl><FormMessage /></FormItem>
                                   )} />
                               </TableCell>
                               <TableCell>
