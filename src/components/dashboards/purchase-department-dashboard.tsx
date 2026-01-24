@@ -74,6 +74,11 @@ export default function PurchaseDepartmentDashboard() {
 
   const poForm = useForm<PoDetailsFormValues>({
     resolver: zodResolver(poDetailsSchema),
+    defaultValues: {
+      vendorName: '',
+      vendorContact: '',
+      billNumber: '',
+    },
   });
 
   const handleProcessClick = (indent: MaterialIndent) => {
