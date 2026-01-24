@@ -71,6 +71,7 @@ export default function RequestsPage() {
   const billContentRef = React.useRef<HTMLDivElement>(null);
 
   const isSiteManager = role === 'site-manager';
+  const canViewCost = role === 'director' || role === 'coordinator' || role === 'purchase-department';
 
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(requestSchema),
@@ -278,8 +279,8 @@ export default function RequestsPage() {
                             <TableHead className="w-2/5">Material Name</TableHead>
                             <TableHead>Unit</TableHead>
                             <TableHead>Quantity</TableHead>
-                            <TableHead>Rate</TableHead>
-                            <TableHead>Amount</TableHead>
+                            {canViewCost && <TableHead>Rate</TableHead>}
+                            {canViewCost && <TableHead>Amount</TableHead>}
                             <TableHead>Remarks</TableHead>
                             <TableHead className="w-12"></TableHead>
                           </TableRow>
@@ -329,14 +330,18 @@ export default function RequestsPage() {
                                   )}
                                 />
                               </TableCell>
-                              <TableCell>
-                                  <FormField control={form.control} name={`materials.${index}.rate`} render={({ field }) => (
-                                    <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} /></FormControl><FormMessage /></FormItem>
-                                  )} />
-                              </TableCell>
-                              <TableCell>
-                                <p className="font-medium">${(materials?.[index]?.quantity * materials?.[index]?.rate || 0).toFixed(2)}</p>
-                              </TableCell>
+                              {canViewCost && (
+                                <TableCell>
+                                    <FormField control={form.control} name={`materials.${index}.rate`} render={({ field }) => (
+                                      <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                </TableCell>
+                              )}
+                              {canViewCost && (
+                                <TableCell>
+                                  <p className="font-medium">${(materials?.[index]?.quantity * materials?.[index]?.rate || 0).toFixed(2)}</p>
+                                </TableCell>
+                              )}
                               <TableCell>
                                 <FormField
                                   control={form.control}
@@ -495,8 +500,8 @@ export default function RequestsPage() {
                       <TableRow>
                         <TableHead>Material</TableHead>
                         <TableHead>Qty</TableHead>
-                        <TableHead>Rate</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
+                        {canViewCost && <TableHead>Rate</TableHead>}
+                        {canViewCost && <TableHead className="text-right">Amount</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -504,16 +509,20 @@ export default function RequestsPage() {
                         <TableRow key={i}>
                           <TableCell>{m.materialName} ({m.unit})</TableCell>
                           <TableCell>{m.quantity}</TableCell>
-                           <TableCell>${(m.rate || 0).toFixed(2)}</TableCell>
-                           <TableCell className="text-right">${(m.quantity * (m.rate || 0)).toFixed(2)}</TableCell>
+                           {canViewCost && <TableCell>${(m.rate || 0).toFixed(2)}</TableCell>}
+                           {canViewCost && <TableCell className="text-right">${(m.quantity * (m.rate || 0)).toFixed(2)}</TableCell>}
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
-                  <Separator className="my-2"/>
-                  <div className="text-right font-bold text-lg">
-                    Total Value: ${lastGeneratedBill.totalValue.toFixed(2)}
-                  </div>
+                  {canViewCost && (
+                    <>
+                      <Separator className="my-2"/>
+                      <div className="text-right font-bold text-lg">
+                        Total Value: ${lastGeneratedBill.totalValue.toFixed(2)}
+                      </div>
+                    </>
+                  )}
                 </div>
                  {lastGeneratedBill.remarks && (
                     <div className="space-y-2">
