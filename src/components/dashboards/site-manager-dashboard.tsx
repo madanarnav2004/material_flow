@@ -43,6 +43,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { useMaterialContext } from '@/context/material-context';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/hooks/use-user';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 type RequestFormValues = {
@@ -69,6 +70,7 @@ export default function SiteManagerDashboard() {
   const { requests, inventory, issuedMaterials, receipts: pastReceipts } = useMaterialContext();
   const { site } = useUser();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
+  const [activityFilter, setActivityFilter] = React.useState('All');
 
   const siteName = site || "Current Site"; 
 
@@ -80,9 +82,15 @@ export default function SiteManagerDashboard() {
     return pendingSiteRequests.filter(req => req.site === siteName);
   }, [pendingSiteRequests, siteName]);
 
-  const siteRecentActivity = React.useMemo(() => {
-    return recentSiteActivity.filter(act => act.site === siteName);
-  }, [recentSiteActivity, siteName]);
+  const filteredSiteActivity = React.useMemo(() => {
+    const siteActivities = recentSiteActivity.filter(act => act.site === siteName);
+    if (activityFilter === 'All') {
+        return siteActivities;
+    }
+    // Mapping 'Material Received' to 'Internal Issue' for filtering
+    const filterType = activityFilter === 'Material Received' ? 'Internal Issue' : activityFilter;
+    return siteActivities.filter(act => act.type === filterType);
+  }, [recentSiteActivity, siteName, activityFilter]);
 
   const lowStockSite = React.useMemo(() => {
     return inventory.filter(item => item.site === siteName && item.quantity <= item.minQty);
@@ -142,6 +150,15 @@ export default function SiteManagerDashboard() {
       title: "Download Started",
       description: `Your ${reportName} for ${siteName} is being generated.`,
     });
+  };
+
+  const handleDownloadReport = () => {
+    toast({
+        title: "Download Started",
+        description: `Your ${activityFilter} report for ${siteName} is being generated.`,
+    });
+    // In a real app, you would generate a file based on `filteredSiteActivity`
+    console.log(`Downloading ${activityFilter} report for ${siteName}`, filteredSiteActivity);
   };
 
 
@@ -247,7 +264,7 @@ export default function SiteManagerDashboard() {
                         </TableBody>
                     </Table>
                   ): (
-                    <p className="text-center text-muted-foreground p-8">No pending indents for this site.</p>
+                    <p className="text-center text-muted-foreground p-8">No pending indents from this site.</p>
                   )}
               </div>
             </DialogContent>
@@ -565,12 +582,32 @@ export default function SiteManagerDashboard() {
         </Dialog>
         
           <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><History /> Recent Site Activity</CardTitle>
-            <CardDescription>A log of recent material movements involving your site.</CardDescription>
-          </CardHeader>
+            <CardHeader>
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                    <div>
+                        <CardTitle className="flex items-center gap-2"><History /> Recent Site Activity</CardTitle>
+                        <CardDescription>A log of recent material movements involving your site.</CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Select value={activityFilter} onValueChange={setActivityFilter}>
+                            <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectValue placeholder="Filter by type..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="All">All Activities</SelectItem>
+                                <SelectItem value="GRN">GRN</SelectItem>
+                                <SelectItem value="Indent">Indent</SelectItem>
+                                <SelectItem value="Material Received">Material Received</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Button variant="outline" onClick={handleDownloadReport}>
+                            <Download className="mr-2 h-4 w-4" /> Download
+                        </Button>
+                    </div>
+                </div>
+            </CardHeader>
           <CardContent>
-            {siteRecentActivity.length > 0 ? (
+            {filteredSiteActivity.length > 0 ? (
                 <Table>
                 <TableHeader>
                     <TableRow>
@@ -582,7 +619,7 @@ export default function SiteManagerDashboard() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {siteRecentActivity.map(activity => (
+                    {filteredSiteActivity.map(activity => (
                     <TableRow key={activity.id}>
                         <TableCell className="font-medium">{activity.type}</TableCell>
                         <TableCell>{activity.details}</TableCell>
@@ -598,7 +635,7 @@ export default function SiteManagerDashboard() {
                 </TableBody>
                 </Table>
             ) : (
-                <p className="text-center text-muted-foreground p-8">No recent activity on this site.</p>
+                <p className="text-center text-muted-foreground p-8">No activity for the selected filter.</p>
             )}
           </CardContent>
         </Card>
