@@ -1,14 +1,12 @@
 'use client';
 
-import { Bar, BarChart, CartesianGrid, XAxis, Pie, PieChart, Cell } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts';
 import { useRouter } from 'next/navigation';
 import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
 } from '@/components/ui/chart';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -58,17 +56,6 @@ const chartConfig: ChartConfig = {
     color: 'hsl(var(--primary))',
   },
 };
-
-const pieChartConfig = {
-  Cement: { label: 'Cement', color: 'hsl(var(--chart-1))' },
-  Steel: { label: 'Steel', color: 'hsl(var(--chart-2))' },
-  Sand: { label: 'Sand', color: 'hsl(var(--chart-3))' },
-  Bricks: { label: 'Bricks', color: 'hsl(var(--chart-4))' },
-  Gravel: { label: 'Gravel', color: 'hsl(var(--chart-5))' },
-  Paint: { label: 'Paint', color: 'hsl(var(--chart-1))' },
-} satisfies ChartConfig;
-
-const COLORS = Object.values(pieChartConfig).map(c => c.color);
 
 type RequestFormValues = {
   requesterName: string;
@@ -120,22 +107,12 @@ export default function DirectorDashboard() {
     return inventory.reduce((acc, item) => acc + item.quantity, 0);
   }, [inventory]);
 
-  const filteredStockData = React.useMemo(() => {
-    const stockSource = stockSite === 'Overall'
-        ? inventory
-        : inventory.filter(s => s.site === stockSite);
-    
-    const aggregated = stockSource.reduce((acc, item) => {
-        if (acc[item.material]) {
-            acc[item.material] += item.quantity;
-        } else {
-            acc[item.material] = item.quantity;
-        }
-        return acc;
-    }, {} as Record<string, number>);
-
-    return Object.entries(aggregated).map(([name, value]) => ({ name, value }));
-  }, [stockSite, inventory]);
+  const stockTableData = React.useMemo(() => {
+    if (stockSite === 'Overall') {
+      return inventory;
+    }
+    return inventory.filter((item) => item.site === stockSite);
+  }, [inventory, stockSite]);
 
   const handleStatusChange = (reqId: string, newStatus: IndentStatus) => {
     setRequests(requests.map(req => (req.id === reqId ? { ...req, status: newStatus } : req)));
@@ -512,7 +489,7 @@ export default function DirectorDashboard() {
                 <div className="flex justify-between items-start">
                     <div>
                         <CardTitle>Material Stock Distribution</CardTitle>
-                        <CardDescription>Stock distribution by material type.</CardDescription>
+                        <CardDescription>Stock levels by material and site.</CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
                       <Select value={stockSite} onValueChange={setStockSite}>
@@ -529,18 +506,33 @@ export default function DirectorDashboard() {
                     </div>
                 </div>
               </CardHeader>
-              <CardContent className="flex items-center justify-center">
-                <ChartContainer config={pieChartConfig} className="h-[250px] w-full">
-                  <PieChart>
-                    <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
-                    <Pie data={filteredStockData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                      {filteredStockData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <ChartLegend content={<ChartLegendContent nameKey="name" />} />
-                  </PieChart>
-                </ChartContainer>
+              <CardContent>
+                <div className="max-h-[250px] overflow-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Site</TableHead>
+                                <TableHead>Material Name</TableHead>
+                                <TableHead className="text-right">Stock</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {stockTableData.length > 0 ? (
+                                stockTableData.map((item) => (
+                                    <TableRow key={item.id}>
+                                        <TableCell>{item.site}</TableCell>
+                                        <TableCell>{item.material}</TableCell>
+                                        <TableCell className="text-right">{item.quantity} {item.unit}</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-center">No stock data available for this selection.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
               </CardContent>
             </Card>
           </div>
