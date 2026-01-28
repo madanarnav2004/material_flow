@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -57,8 +58,10 @@ type MaterialIndentBill = RequestFormValues & {
 
 export default function GodownManagerDashboard() {
   const { toast } = useToast();
-  const { requests, pendingRequests, inventory } = useMaterialContext();
+  const { requests, inventory } = useMaterialContext();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
+
+  const pendingRequests = React.useMemo(() => requests.filter(r => r.status === 'Director Approved'), [requests]);
 
   const materialsIssuedToday = React.useMemo(() => {
     return recentStoreActivity.filter(a => a.type === 'Issue' && a.date === format(new Date(), 'yyyy-MM-dd'));
@@ -506,6 +509,80 @@ export default function GodownManagerDashboard() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Card>
+            <CardHeader>
+                <div className="flex items-center gap-2">
+                    <Building className="h-6 w-6" />
+                    <CardTitle>Overall Store Inventory</CardTitle>
+                </div>
+                <CardDescription>
+                    Live summary of materials available at the central MAPI store.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+            {storeInventory.length > 0 ? (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Material</TableHead>
+                            <TableHead>Available Quantity</TableHead>
+                            <TableHead>Sites Supplied</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                    {storeInventory.map((material) => (
+                        <TableRow key={material.id}>
+                            <TableCell className="font-medium">{material.name}</TableCell>
+                            <TableCell>{material.quantity}</TableCell>
+                            <TableCell>{material.siteDistribution}</TableCell>
+                        </TableRow>
+                    ))}
+                    </TableBody>
+                </Table>
+            ) : (
+                <p className="text-center text-muted-foreground">No inventory data available.</p>
+            )}
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">Recent Store Activity</CardTitle>
+                <CardDescription>An overview of recent material movements and indents from the store.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {recentStoreActivity.length > 0 ? (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Type</TableHead>
+                                <TableHead>Details</TableHead>
+                                <TableHead>Site</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Date</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {recentStoreActivity.map(activity => (
+                                <TableRow key={activity.id}>
+                                    <TableCell className="font-medium">{activity.type}</TableCell>
+                                    <TableCell>{activity.details}</TableCell>
+                                    <TableCell>{activity.site}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={activity.status === 'Completed' || activity.status === 'Accepted' || activity.status === 'Processed' ? 'default' : 'secondary'} className={cn((activity.status === 'Completed' || activity.status === 'Accepted') && 'bg-green-600/80')}>
+                                            {activity.status}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>{activity.date}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                ) : (
+                    <p className="text-center text-muted-foreground">No recent store activity.</p>
+                )}
+            </CardContent>
+        </Card>
       </div>
     </>
   );

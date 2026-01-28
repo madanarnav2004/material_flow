@@ -1,13 +1,12 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { 
     materialReturnReminders as initialRequests, 
-    pendingRequests as initialPendingRequests,
     issuedMaterialsForReceipt as initialIssuedMaterials,
-    lowStockMaterials as initialLowStockMaterials,
     liveInventory as initialInventory,
+    pendingRequests as initialPendingRequests
 } from '@/lib/mock-data';
 
 export type IndentStatus = 
@@ -33,15 +32,6 @@ export interface MaterialIndent {
   poDate?: string;
 }
 
-interface PendingIndent {
-  id: string;
-  material: string;
-  quantity: string | number;
-  site: string;
-  status?: IndentStatus;
-}
-
-
 interface IssuedMaterial {
     requestId: string;
     issuedId: string;
@@ -51,15 +41,6 @@ interface IssuedMaterial {
     receivingSite: string;
     unit: string;
     rate: number;
-}
-
-interface LowStockMaterial {
-    id: string;
-    material: string;
-    site: string;
-    quantity: number;
-    unit: string;
-    threshold: number;
 }
 
 export interface InventoryItem {
@@ -99,15 +80,38 @@ export interface MaterialReceivedBill {
 }
 
 
+// Helper function to get item from localStorage
+function getFromLocalStorage<T>(key: string, defaultValue: T): T {
+    if (typeof window === 'undefined') {
+        return defaultValue;
+    }
+    try {
+        const item = window.localStorage.getItem(key);
+        return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+        console.error(`Error reading from localStorage for key "${key}":`, error);
+        return defaultValue;
+    }
+}
+
+// Helper function to set item in localStorage
+function setInLocalStorage<T>(key: string, value: T) {
+    if (typeof window === 'undefined') {
+        return;
+    }
+    try {
+        window.localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+        console.error(`Error writing to localStorage for key "${key}":`, error);
+    }
+}
+
+
 interface MaterialContextType {
   requests: MaterialIndent[];
   setRequests: React.Dispatch<React.SetStateAction<MaterialIndent[]>>;
-  pendingRequests: PendingIndent[];
-  setPendingRequests: React.Dispatch<React.SetStateAction<PendingIndent[]>>;
   issuedMaterials: IssuedMaterial[];
   setIssuedMaterials: React.Dispatch<React.SetStateAction<IssuedMaterial[]>>;
-  lowStockMaterials: LowStockMaterial[];
-  setLowStockMaterials: React.Dispatch<React.SetStateAction<LowStockMaterial[]>>;
   inventory: InventoryItem[];
   setInventory: React.Dispatch<React.SetStateAction<InventoryItem[]>>;
   receipts: MaterialReceivedBill[];
@@ -117,18 +121,43 @@ interface MaterialContextType {
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
 
 export const MaterialProvider = ({ children }: { children: ReactNode }) => {
-  const [requests, setRequests] = useState<MaterialIndent[]>(initialRequests);
-  const [pendingRequests, setPendingRequests] = useState<PendingIndent[]>(
-    initialPendingRequests.map(pr => ({...pr, status: 'Pending Director Approval'}))
-  );
-  const [issuedMaterials, setIssuedMaterials] = useState<IssuedMaterial[]>(initialIssuedMaterials);
-  const [lowStockMaterials, setLowStockMaterials] = useState<LowStockMaterial[]>(initialLowStockMaterials);
-  const [inventory, setInventory] = useState<InventoryItem[]>(initialInventory);
-  const [receipts, setReceipts] = useState<MaterialReceivedBill[]>([]);
+  const [requests, setRequests] = useState<MaterialIndent[]>(() => getFromLocalStorage('materialflow-requests', initialRequests));
+  const [issuedMaterials, setIssuedMaterials] = useState<IssuedMaterial[]>(() => getFromLocalStorage('materialflow-issued', initialIssuedMaterials));
+  const [inventory, setInventory] = useState<InventoryItem[]>(() => getFromLocalStorage('materialflow-inventory', initialInventory));
+  const [receipts, setReceipts] = useState<MaterialReceivedBill[]>(() => getFromLocalStorage('materialflow-receipts', []));
 
+  useEffect(() => { setInLocalStorage('materialflow-requests', requests) }, [requests]);
+  useEffect(() => { setInLocalStorage('materialflow-issued', issuedMaterials) }, [issuedMaterials]);
+  useEffect(() => { setInLocalStorage('materialflow-inventory', inventory) }, [inventory]);
+  useEffect(() => { setInLocalStorage('materialflow-receipts', receipts) }, [receipts]);
+
+  // This is a one-time setup to merge initial pending requests into the main requests list if it hasn't been done.
+  useEffect(() => {
+    const isSetupDone = getFromLocalStorage('materialflow-setup-done', false);
+    if (!isSetupDone) {
+      
+      setRequests(currentRequests => {
+        const existingIds = new Set(currentRequests.map(r => r.id));
+        const newRequests = (initialPendingRequests as any[])
+          .filter(pr => !existingIds.has(pr.id))
+          .map(pr => ({
+            ...pr,
+            status: 'Pending Director Approval' as const,
+            returnDate: '2024-09-30', // Mock return date
+            quantity: Number(pr.quantity) || 0,
+          }));
+        const combined = [...currentRequests, ...newRequests];
+        setInLocalStorage('materialflow-requests', combined); // Make sure it's saved
+        return combined;
+      });
+
+      setInLocalStorage('materialflow-setup-done', true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <MaterialContext.Provider value={{ requests, setRequests, pendingRequests, setPendingRequests, issuedMaterials, setIssuedMaterials, lowStockMaterials, setLowStockMaterials, inventory, setInventory, receipts, setReceipts }}>
+    <MaterialContext.Provider value={{ requests, setRequests, issuedMaterials, setIssuedMaterials, inventory, setInventory, receipts, setReceipts }}>
       {children}
     </MaterialContext.Provider>
   );

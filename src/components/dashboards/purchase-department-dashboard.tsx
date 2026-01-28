@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -166,6 +167,13 @@ export default function PurchaseDepartmentDashboard() {
     if (!selectedIndent) return;
 
     const poDate = new Date();
+    
+    setRequests(prevRequests =>
+        prevRequests.map(req =>
+            req.id === selectedIndent!.id ? { ...req, status: 'PO Generated', poDate: poDate.toISOString() } : req
+        )
+    );
+
     const po: PurchaseOrder = {
         ...selectedIndent,
         ...values,
@@ -173,12 +181,6 @@ export default function PurchaseDepartmentDashboard() {
         poDate: poDate,
         status: 'PO Generated',
     };
-    
-    setRequests(prevRequests =>
-        prevRequests.map(req =>
-            req.id === selectedIndent.id ? { ...req, status: 'PO Generated', poDate: poDate.toISOString() } : req
-        )
-    );
 
     setSelectedIndent(null);
     handleDownloadPO(po);
@@ -580,7 +582,7 @@ export default function PurchaseDepartmentDashboard() {
                                                 render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel>Vendor Contact (Optional)</FormLabel>
-                                                        <FormControl><Input placeholder="Phone or Email" {...field} /></FormControl>
+                                                        <FormControl><Input placeholder="Phone or Email" {...field} value={field.value ?? ''} /></FormControl>
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
@@ -591,7 +593,7 @@ export default function PurchaseDepartmentDashboard() {
                                                 render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel>Reference/Bill Number (Optional)</FormLabel>
-                                                        <FormControl><Input placeholder="e.g., Q-12345" {...field} /></FormControl>
+                                                        <FormControl><Input placeholder="e.g., Q-12345" {...field} value={field.value ?? ''} /></FormControl>
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
@@ -637,7 +639,7 @@ export default function PurchaseDepartmentDashboard() {
                               render={({ field }) => (
                                   <FormItem>
                                       <FormLabel>Vendor Contact (Optional)</FormLabel>
-                                      <FormControl><Input placeholder="Phone or Email" {...field} /></FormControl>
+                                      <FormControl><Input placeholder="Phone or Email" {...field} value={field.value ?? ''}/></FormControl>
                                       <FormMessage />
                                   </FormItem>
                               )}
@@ -648,7 +650,7 @@ export default function PurchaseDepartmentDashboard() {
                               render={({ field }) => (
                                   <FormItem>
                                       <FormLabel>Reference/Bill Number (Optional)</FormLabel>
-                                      <FormControl><Input placeholder="e.g., Q-12345" {...field} /></FormControl>
+                                      <FormControl><Input placeholder="e.g., Q-12345" {...field} value={field.value ?? ''}/></FormControl>
                                       <FormMessage />
                                   </FormItem>
                               )}

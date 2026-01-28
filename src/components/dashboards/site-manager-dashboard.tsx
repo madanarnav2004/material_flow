@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -7,8 +8,6 @@ import {
   AlertTriangle,
   History,
   Eye,
-  ChevronDown,
-  FileText,
   Download,
 } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
@@ -28,16 +27,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { 
-  recentSiteActivity, 
-  pendingSiteRequests,
-} from '@/lib/mock-data';
+import { recentSiteActivity } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useMaterialContext } from '@/context/material-context';
@@ -80,8 +75,9 @@ export default function SiteManagerDashboard() {
   }, [requests, siteName]);
 
   const sitePendingRequests = React.useMemo(() => {
-    return pendingSiteRequests.filter(req => req.site === siteName);
-  }, [pendingSiteRequests, siteName]);
+      return requests.filter(req => req.site === siteName && (req.status === 'Pending Director Approval' || req.status === 'Director Approved' || req.status === 'PO Generated'));
+  }, [requests, siteName]);
+
 
   const allSitesForFilter = React.useMemo(() => {
     return ['All', ...Array.from(new Set(inventory.map(item => item.site)))];
@@ -259,7 +255,7 @@ export default function SiteManagerDashboard() {
                             <TableRow>
                                 <TableHead>Material</TableHead>
                                 <TableHead>Quantity</TableHead>
-                                <TableHead>Requested From</TableHead>
+                                <TableHead>Status</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -267,7 +263,22 @@ export default function SiteManagerDashboard() {
                                 <TableRow key={req.id}>
                                     <TableCell className="font-medium">{req.material}</TableCell>
                                     <TableCell>{req.quantity}</TableCell>
-                                    <TableCell>{req.requestedFrom}</TableCell>
+                                    <TableCell>
+                                        <Badge 
+                                            variant={
+                                                req.status === 'Director Rejected' || req.status === 'Purchase Rejected' ? 'destructive' :
+                                                'default'
+                                            }
+                                            className={cn(
+                                                'text-white',
+                                                req.status === 'Pending Director Approval' && 'bg-yellow-500/80',
+                                                req.status === 'Director Approved' && 'bg-blue-500/80',
+                                                req.status === 'PO Generated' && 'bg-purple-500/80'
+                                            )}
+                                        >
+                                            {req.status}
+                                        </Badge>
+                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -390,7 +401,7 @@ export default function SiteManagerDashboard() {
                                   <TableRow>
                                       <TableHead>Material</TableHead>
                                       <TableHead>Quantity</TableHead>
-                                      <TableHead>From</TableHead>
+                                      <TableHead>Status</TableHead>
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -398,7 +409,22 @@ export default function SiteManagerDashboard() {
                                       <TableRow key={req.id}>
                                           <TableCell className="font-medium">{req.material}</TableCell>
                                           <TableCell>{req.quantity}</TableCell>
-                                          <TableCell>{req.requestedFrom}</TableCell>
+                                          <TableCell>
+                                            <Badge 
+                                                variant={
+                                                    req.status === 'Director Rejected' || req.status === 'Purchase Rejected' ? 'destructive' :
+                                                    'default'
+                                                }
+                                                className={cn(
+                                                    'text-white',
+                                                    req.status === 'Pending Director Approval' && 'bg-yellow-500/80',
+                                                    req.status === 'Director Approved' && 'bg-blue-500/80',
+                                                    req.status === 'PO Generated' && 'bg-purple-500/80'
+                                                )}
+                                            >
+                                                {req.status}
+                                            </Badge>
+                                          </TableCell>
                                       </TableRow>
                                   ))}
                               </TableBody>
