@@ -17,12 +17,11 @@ export const materialStock = [
     { name: 'Gravel', value: 100, unit: 'cu.m.' },
 ];
 
-export const recentActivities = [
-    { id: '1', type: 'Indent', site: 'North Site', status: 'Approved', date: '2024-07-20', details: '500 Bags of Cement' },
-    { id: '2', type: 'Issue', site: 'MAPI Godown', status: 'In Transit', date: '2024-07-20', details: '500 Bags of Cement to North Site' },
-    { id: '3', type: 'GRN', site: 'North Site', status: 'Completed', date: '2024-07-19', details: '10 tons of Steel' },
-    { id: '4', type: 'Invoice', site: 'Purchase Dept', status: 'Uploaded', date: '2024-07-18', details: 'Invoice for 10 tons of Steel' },
-    { id: '5', type: 'Indent', site: 'West Site', status: 'Pending', date: '2024-07-17', details: '2000 Bricks' },
+export const recentTransfers = [
+    { id: '1', material: '500 Bags of Cement', issuingSite: 'MAPI Godown', receivingSite: 'North Site', status: 'In Transit', date: '2024-07-20' },
+    { id: '2', material: '10 tons of Steel', issuingSite: 'Vendor A', receivingSite: 'North Site', status: 'Completed', date: '2024-07-19' },
+    { id: '3', material: '2000 Bricks', issuingSite: 'Purchase Dept', receivingSite: 'West Site', status: 'PO Generated', date: '2024-07-17' },
+    { id: '4', material: '20 cu.m. Sand', issuingSite: 'East Site', receivingSite: 'MAPI Godown', status: 'Completed', date: '2024-07-22' },
 ];
 
 export const allMaterials = [

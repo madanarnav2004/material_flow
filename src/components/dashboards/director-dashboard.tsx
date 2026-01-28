@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import {
   monthlyConsumption,
-  recentActivities,
+  recentTransfers,
   detailedMonthlyConsumption,
   detailedStock,
   stockUpdates,
@@ -748,43 +748,44 @@ export default function DirectorDashboard() {
         </Dialog>
         <Card>
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>An overview of recent material movements and indents.</CardDescription>
+            <CardTitle>Recent Material Transfers</CardTitle>
+            <CardDescription>An overview of recent material movements between sites and vendors.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Details</TableHead>
-                  <TableHead>Site/Godown</TableHead>
+                  <TableHead>Material</TableHead>
+                  <TableHead>Issuing Site</TableHead>
+                  <TableHead>Receiving Site</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recentActivities.map(activity => (
-                  <TableRow key={activity.id}>
-                    <TableCell className="font-medium">{activity.type}</TableCell>
-                    <TableCell>{activity.details}</TableCell>
-                    <TableCell>{activity.site}</TableCell>
+                {recentTransfers.map(transfer => (
+                  <TableRow key={transfer.id}>
+                    <TableCell className="font-medium">{transfer.material}</TableCell>
+                    <TableCell>{transfer.issuingSite}</TableCell>
+                    <TableCell>{transfer.receivingSite}</TableCell>
                     <TableCell>
                       <Badge
                         variant={
-                          activity.status === 'Completed' || activity.status === 'Approved' || activity.status === 'Uploaded'
+                          transfer.status === 'Completed'
                             ? 'default'
-                            : activity.status === 'In Transit' || activity.status === 'Delayed'
+                            : transfer.status === 'In Transit'
                             ? 'destructive'
                             : 'secondary'
                         }
-                        className={
-                          activity.status === 'Pending' ? 'bg-accent text-accent-foreground hover:bg-accent/80' : ''
-                        }
+                        className={cn(
+                           transfer.status === 'Completed' && 'bg-green-600/80',
+                           transfer.status === 'PO Generated' && 'bg-purple-500/80'
+                        )}
                       >
-                        {activity.status}
+                        {transfer.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{activity.date}</TableCell>
+                    <TableCell>{transfer.date}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
