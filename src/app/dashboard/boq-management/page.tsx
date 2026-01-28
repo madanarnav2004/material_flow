@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -62,6 +63,11 @@ export default function BoqManagementPage() {
     toast({
       title: 'BOQ Configuration Submitted!',
       description: `Your BOQ files for ${values.siteName} have been uploaded for processing.`,
+    });
+    toast({
+      title: 'Note: Demo Only',
+      description: 'In a real application, this data would update dropdowns. Currently, dropdowns use mock data.',
+      duration: 6000
     });
     // Reset file inputs if needed, but keep site selection
     uploadForm.reset({

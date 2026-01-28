@@ -30,6 +30,9 @@ export interface MaterialIndent {
   returnDate: string;
   issuingSite?: string;
   poDate?: string;
+  vendorName?: string;
+  vendorContact?: string;
+  billNumber?: string;
 }
 
 interface IssuedMaterial {

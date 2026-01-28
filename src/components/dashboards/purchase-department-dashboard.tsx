@@ -170,7 +170,14 @@ export default function PurchaseDepartmentDashboard() {
     
     setRequests(prevRequests =>
         prevRequests.map(req =>
-            req.id === selectedIndent!.id ? { ...req, status: 'PO Generated', poDate: poDate.toISOString() } : req
+            req.id === selectedIndent!.id ? { 
+                ...req, 
+                status: 'PO Generated', 
+                poDate: poDate.toISOString(),
+                vendorName: values.vendorName,
+                vendorContact: values.vendorContact,
+                billNumber: values.billNumber
+            } : req
         )
     );
 
