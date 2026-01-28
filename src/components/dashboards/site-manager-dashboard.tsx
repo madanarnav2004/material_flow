@@ -83,14 +83,9 @@ export default function SiteManagerDashboard() {
     return pendingSiteRequests.filter(req => req.site === siteName);
   }, [pendingSiteRequests, siteName]);
 
-  const otherSitesInvolved = React.useMemo(() => {
-    const sites = new Set<string>();
-    recentSiteActivity.forEach(act => {
-        if (act.from && act.from !== siteName) sites.add(act.from);
-        if (act.to && act.to !== siteName) sites.add(act.to);
-    });
-    return ['All', ...Array.from(sites)];
-  }, [recentSiteActivity, siteName]);
+  const allSitesForFilter = React.useMemo(() => {
+    return ['All', ...Array.from(new Set(inventory.map(item => item.site)))];
+  }, [inventory]);
 
   const filteredSiteActivity = React.useMemo(() => {
     let activities = recentSiteActivity.filter(act => act.site === siteName);
@@ -619,7 +614,7 @@ export default function SiteManagerDashboard() {
                               <SelectValue placeholder="Filter by site..." />
                           </SelectTrigger>
                           <SelectContent>
-                              {otherSitesInvolved.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                              {allSitesForFilter.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                           </SelectContent>
                         </Select>
                         <Button variant="outline" onClick={handleDownloadReport}>
