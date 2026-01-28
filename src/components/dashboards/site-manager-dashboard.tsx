@@ -71,6 +71,7 @@ export default function SiteManagerDashboard() {
   const { site } = useUser();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
   const [activityFilter, setActivityFilter] = React.useState('All');
+  const [otherSiteFilter, setOtherSiteFilter] = React.useState('All');
 
   const siteName = site || "Current Site"; 
 
@@ -82,15 +83,28 @@ export default function SiteManagerDashboard() {
     return pendingSiteRequests.filter(req => req.site === siteName);
   }, [pendingSiteRequests, siteName]);
 
+  const otherSitesInvolved = React.useMemo(() => {
+    const sites = new Set<string>();
+    recentSiteActivity.forEach(act => {
+        if (act.from && act.from !== siteName) sites.add(act.from);
+        if (act.to && act.to !== siteName) sites.add(act.to);
+    });
+    return ['All', ...Array.from(sites)];
+  }, [recentSiteActivity, siteName]);
+
   const filteredSiteActivity = React.useMemo(() => {
-    const siteActivities = recentSiteActivity.filter(act => act.site === siteName);
-    if (activityFilter === 'All') {
-        return siteActivities;
+    let activities = recentSiteActivity.filter(act => act.site === siteName);
+
+    if (activityFilter !== 'All') {
+        activities = activities.filter(act => act.type === activityFilter);
     }
-    // Mapping 'Material Received' to 'Internal Issue' for filtering
-    const filterType = activityFilter === 'Material Received' ? 'Internal Issue' : activityFilter;
-    return siteActivities.filter(act => act.type === filterType);
-  }, [recentSiteActivity, siteName, activityFilter]);
+    
+    if (otherSiteFilter !== 'All') {
+        activities = activities.filter(act => act.from === otherSiteFilter || act.to === otherSiteFilter);
+    }
+
+    return activities;
+  }, [recentSiteActivity, siteName, activityFilter, otherSiteFilter]);
 
   const lowStockSite = React.useMemo(() => {
     return inventory.filter(item => item.site === siteName && item.quantity <= item.minQty);
@@ -155,7 +169,7 @@ export default function SiteManagerDashboard() {
   const handleDownloadReport = () => {
     toast({
         title: "Download Started",
-        description: `Your ${activityFilter} report for ${siteName} is being generated.`,
+        description: `Your ${activityFilter} report for ${siteName} (filtered by ${otherSiteFilter}) is being generated.`,
     });
     // In a real app, you would generate a file based on `filteredSiteActivity`
     console.log(`Downloading ${activityFilter} report for ${siteName}`, filteredSiteActivity);
@@ -597,8 +611,16 @@ export default function SiteManagerDashboard() {
                                 <SelectItem value="All">All Activities</SelectItem>
                                 <SelectItem value="GRN">GRN</SelectItem>
                                 <SelectItem value="Indent">Indent</SelectItem>
-                                <SelectItem value="Material Received">Material Received</SelectItem>
+                                <SelectItem value="Material Transfer">Material Transfer</SelectItem>
                             </SelectContent>
+                        </Select>
+                        <Select value={otherSiteFilter} onValueChange={setOtherSiteFilter}>
+                          <SelectTrigger className="w-full sm:w-[180px]">
+                              <SelectValue placeholder="Filter by site..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                              {otherSitesInvolved.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                          </SelectContent>
                         </Select>
                         <Button variant="outline" onClick={handleDownloadReport}>
                             <Download className="mr-2 h-4 w-4" /> Download

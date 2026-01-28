@@ -138,7 +138,7 @@ export const siteStock = [
 export const recentSiteActivity = [
     { id: 'sa-1', type: 'GRN', details: '500 Bags of Cement', from: 'MAPI Godown', site: 'North Site', status: 'Completed', date: '2024-07-20' },
     { id: 'sa-2', type: 'Indent', details: '100 cu.m. Sand', to: 'MAPI Godown', site: 'North Site', status: 'Pending', date: '2024-07-21' },
-    { id: 'sa-3', type: 'Internal Issue', details: '20 bags Cement', to: 'Block A', site: 'North Site', status: 'Completed', date: '2024-07-21' },
+    { id: 'sa-3', type: 'Material Transfer', details: '20 bags Cement', to: 'Block A', site: 'North Site', status: 'Completed', date: '2024-07-21' },
 ];
 
 export const pendingSiteRequests = [
