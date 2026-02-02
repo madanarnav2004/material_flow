@@ -11,8 +11,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Upload, Download, RefreshCw, Ruler, FileText, Layers } from 'lucide-react';
+import { Upload, Download, RefreshCw, Ruler, FileText, Layers, ChevronDown } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const fileSchema = (typeof window !== 'undefined' ? z.instanceof(File) : z.any()).optional();
 
@@ -21,25 +22,20 @@ const drawingSchema = z.object({
 });
 type DrawingFormValues = z.infer<typeof drawingSchema>;
 
-const boqSchema = z.object({
-  boqFile: fileSchema,
-});
-type BoqFormValues = z.infer<typeof boqSchema>;
-
 const measurementSchema = z.object({
     measurementType: z.string().min(1, 'Please select a measurement type.'),
 });
 type MeasurementFormValues = z.infer<typeof measurementSchema>;
-
 
 export default function TenderToolsPage() {
     const { toast } = useToast();
     const [drawingFileName, setDrawingFileName] = React.useState<string | null>(null);
     const [is3dModelVisible, setIs3dModelVisible] = React.useState(false);
     const [measurements, setMeasurements] = React.useState<any[]>([]);
+    const [boq, setBoq] = React.useState<any[]>([]);
+    const [isBoqVisible, setIsBoqVisible] = React.useState(false);
 
     const drawingForm = useForm<DrawingFormValues>({ resolver: zodResolver(drawingSchema) });
-    const boqForm = useForm<BoqFormValues>({ resolver: zodResolver(boqSchema) });
     const measurementForm = useForm<MeasurementFormValues>({ resolver: zodResolver(measurementSchema) });
 
     function onDrawingUpload(values: DrawingFormValues) {
@@ -47,6 +43,8 @@ export default function TenderToolsPage() {
             setDrawingFileName(values.drawingFile.name);
             setIs3dModelVisible(false);
             setMeasurements([]);
+            setIsBoqVisible(false);
+            setBoq([]);
             toast({
                 title: 'Drawing Uploaded',
                 description: `${values.drawingFile.name} is ready for processing.`,
@@ -81,28 +79,30 @@ export default function TenderToolsPage() {
 
         if (selectedType === 'Excavation') {
             mockData = [
-                { id: 1, type: 'Excavation', description: 'Foundation Footing F1', value: '15.0 m³' },
-                { id: 2, type: 'Excavation', description: 'Foundation Footing F2', value: '22.5 m³' },
+                { id: 1, type: 'Excavation', description: 'Foundation Footing F1', quantity: 15.0, unit: 'm³' },
+                { id: 2, type: 'Excavation', description: 'Foundation Footing F2', quantity: 22.5, unit: 'm³' },
             ];
         } else if (selectedType === 'Plastering') {
             mockData = [
-                { id: 1, type: 'Plastering', description: 'Internal Wall - Room 101', value: '85.2 m²' },
-                { id: 2, type: 'Plastering', description: 'External Wall - North Face', value: '120.0 m²' },
+                { id: 1, type: 'Plastering', description: 'Internal Wall - Room 101', quantity: 85.2, unit: 'm²' },
+                { id: 2, type: 'Plastering', description: 'External Wall - North Face', quantity: 120.0, unit: 'm²' },
             ];
         } else if (selectedType === 'Concrete') {
             mockData = [
-                 { id: 1, type: 'Concrete', description: 'Slab S1', value: '12.0 m³' },
-                 { id: 2, type: 'Concrete', description: 'Column C1', value: '2.5 m³' },
+                 { id: 1, type: 'Concrete', description: 'Slab S1', quantity: 12.0, unit: 'm³' },
+                 { id: 2, type: 'Concrete', description: 'Column C1', quantity: 2.5, unit: 'm³' },
             ];
-        } else { // Overall or other types
+        } else {
             mockData = [
-                { id: 1, type: 'Excavation', description: 'Foundation Footings', value: '150.0 m³' },
-                { id: 2, type: 'Concrete', description: 'Foundations & Slabs', value: '75.2 m³' },
-                { id: 3, type: 'Plastering', description: 'Total Internal Walls', value: '850.0 m²' },
+                { id: 1, type: 'Excavation', description: 'Foundation Footings', quantity: 150.0, unit: 'm³' },
+                { id: 2, type: 'Concrete', description: 'Foundations & Slabs', quantity: 75.2, unit: 'm³' },
+                { id: 3, type: 'Plastering', description: 'Total Internal Walls', quantity: 850.0, unit: 'm²' },
             ];
         }
 
         setMeasurements(mockData);
+        setIsBoqVisible(false);
+        setBoq([]);
         toast({ title: 'Measurements Calculated', description: `Measurements for ${selectedType} have been extracted.` });
     }
 
@@ -115,17 +115,33 @@ export default function TenderToolsPage() {
             toast({ variant: 'destructive', title: 'No Measurements', description: 'Please calculate measurements first to generate a BOQ.' });
             return;
         }
-        toast({ title: 'BOQ & Estimation Generated', description: 'A standard format BOQ has been created and is ready for download.' });
+
+        const newBoq = measurements.map(m => ({
+            id: m.id,
+            description: m.description,
+            quantity: m.quantity,
+            unit: m.unit,
+            rate: Math.floor(Math.random() * 100) + 10, // Mock rate
+        }));
+        
+        setBoq(newBoq);
+        setIsBoqVisible(true);
+        toast({ title: 'BOQ & Estimation Generated', description: 'A standard format BOQ has been created and is ready for download and editing.' });
     }
 
-    function onBoqUpload(values: BoqFormValues) {
-        if (values.boqFile) {
-            toast({
-                title: 'BOQ Uploaded',
-                description: `${values.boqFile.name} has been uploaded successfully.`,
-            });
-        }
-    }
+    const handleBoqChange = (index: number, field: 'quantity' | 'rate', value: string) => {
+        const updatedBoq = [...boq];
+        const numericValue = parseFloat(value) || 0;
+        updatedBoq[index] = { ...updatedBoq[index], [field]: numericValue };
+        setBoq(updatedBoq);
+    };
+
+    const handleDownloadBoq = (format: 'Excel' | 'PDF') => {
+        toast({
+            title: 'Download Started',
+            description: `Your BOQ is being downloaded as a ${format} file.`
+        });
+    };
 
     return (
         <div className="space-y-6">
@@ -133,11 +149,11 @@ export default function TenderToolsPage() {
                 <Layers /> Tender Department Tools
             </h1>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 {/* 2D/3D AutoCAD Tools */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>2D to 3D AutoCAD Conversion</CardTitle>
+                        <CardTitle>1. 2D to 3D AutoCAD Conversion</CardTitle>
                         <CardDescription>Upload a 2D drawing to generate a 3D model and extract measurements.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
@@ -184,8 +200,8 @@ export default function TenderToolsPage() {
                 {/* Measurement & BOQ */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Measurement & BOQ Generation</CardTitle>
-                        <CardDescription>Extract measurements and generate a Bill of Quantities from the uploaded drawing.</CardDescription>
+                        <CardTitle>2. Measurement & BOQ Generation</CardTitle>
+                        <CardDescription>Extract measurements and generate a Bill of Quantities from the drawing.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                        <Form {...measurementForm}>
@@ -224,10 +240,10 @@ export default function TenderToolsPage() {
                                 </div>
                                 <div className="max-h-40 overflow-y-auto border rounded-md">
                                     <Table>
-                                        <TableHeader><TableRow><TableHead>Type</TableHead><TableHead>Description</TableHead><TableHead>Value</TableHead></TableRow></TableHeader>
+                                        <TableHeader><TableRow><TableHead>Type</TableHead><TableHead>Description</TableHead><TableHead>Quantity</TableHead></TableRow></TableHeader>
                                         <TableBody>
                                             {measurements.map(m => (
-                                                <TableRow key={m.id}><TableCell>{m.type}</TableCell><TableCell>{m.description}</TableCell><TableCell>{m.value}</TableCell></TableRow>
+                                                <TableRow key={m.id}><TableCell>{m.type}</TableCell><TableCell>{m.description}</TableCell><TableCell>{`${m.quantity} ${m.unit}`}</TableCell></TableRow>
                                             ))}
                                         </TableBody>
                                     </Table>
@@ -237,35 +253,71 @@ export default function TenderToolsPage() {
                        )}
                     </CardContent>
                 </Card>
+            </div>
 
-                 {/* BOQ Upload */}
-                <Card className="lg:col-span-2">
+            {isBoqVisible && (
+                <Card>
                     <CardHeader>
-                        <CardTitle>BOQ Upload</CardTitle>
-                        <CardDescription>Upload an existing Bill of Quantities file for analysis or record-keeping.</CardDescription>
+                        <div className="flex justify-between items-center">
+                            <CardTitle>3. Generated BOQ & Estimation</CardTitle>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline">
+                                        <Download className="mr-2" />
+                                        Download BOQ
+                                        <ChevronDown className="ml-2" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                    <DropdownMenuItem onSelect={() => handleDownloadBoq('Excel')}>Excel (.xlsx)</DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => handleDownloadBoq('PDF')}>PDF (.pdf)</DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                        <CardDescription>Review and edit the auto-generated Bill of Quantities. Rates and quantities are editable.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                         <Form {...boqForm}>
-                            <form onSubmit={boqForm.handleSubmit(onBoqUpload)} className="flex items-end gap-4">
-                                <FormField
-                                    control={boqForm.control}
-                                    name="boqFile"
-                                    render={({ field: { onChange, value, ...rest } }) => (
-                                        <FormItem className="flex-grow">
-                                            <FormLabel>BOQ File (.xlsx, .csv)</FormLabel>
-                                            <FormControl>
-                                                <Input type="file" accept=".xlsx, .xls, .csv" onChange={(e) => onChange(e.target.files?.[0])} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <Button type="submit"><Upload className="mr-2"/>Upload BOQ</Button>
-                            </form>
-                        </Form>
+                         <div className="max-h-96 overflow-y-auto border rounded-md">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Description</TableHead>
+                                        <TableHead className="w-32">Quantity</TableHead>
+                                        <TableHead className="w-24">Unit</TableHead>
+                                        <TableHead className="w-32">Rate</TableHead>
+                                        <TableHead className="w-40 text-right">Amount</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {boq.map((item, index) => (
+                                        <TableRow key={item.id}>
+                                            <TableCell className="font-medium">{item.description}</TableCell>
+                                            <TableCell>
+                                                <Input 
+                                                    type="number" 
+                                                    value={item.quantity}
+                                                    onChange={(e) => handleBoqChange(index, 'quantity', e.target.value)}
+                                                    className="h-8"
+                                                />
+                                            </TableCell>
+                                            <TableCell>{item.unit}</TableCell>
+                                            <TableCell>
+                                                <Input 
+                                                    type="number"
+                                                    value={item.rate}
+                                                    onChange={(e) => handleBoqChange(index, 'rate', e.target.value)}
+                                                    className="h-8"
+                                                />
+                                            </TableCell>
+                                            <TableCell className="text-right font-semibold">${(item.quantity * item.rate).toFixed(2)}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                         </div>
                     </CardContent>
                 </Card>
-            </div>
+            )}
         </div>
     );
 }
