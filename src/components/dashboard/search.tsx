@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -70,10 +69,14 @@ export default function DashboardSearch({ role }: { role: UserRole }) {
     }, [role]);
 
     React.useEffect(() => {
-        if (availableCategories.length > 0) {
+        const currentCategoryIsValid = availableCategories.some(c => c.value === searchCategory);
+    
+        // If there is no category selected, or the current one is no longer valid for the user's role,
+        // default to the first available category.
+        if (availableCategories.length > 0 && !currentCategoryIsValid) {
             setSearchCategory(availableCategories[0].value);
         }
-    }, [availableCategories]);
+    }, [availableCategories, searchCategory]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -257,5 +260,3 @@ export default function DashboardSearch({ role }: { role: UserRole }) {
         </>
     );
 }
-
-    
