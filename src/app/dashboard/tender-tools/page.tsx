@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Upload, Download, RefreshCw, Ruler, FileText, Layers, ChevronDown } from 'lucide-react';
+import { Upload, Download, RefreshCw, Ruler, FileText, Layers, ChevronDown, Edit } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -39,6 +39,7 @@ export default function TenderToolsPage() {
     const [measurements, setMeasurements] = React.useState<any[]>([]);
     const [boq, setBoq] = React.useState<any[]>([]);
     const [isBoqVisible, setIsBoqVisible] = React.useState(false);
+    const [isBoqEditable, setIsBoqEditable] = React.useState(true);
 
     const drawingForm = useForm<DrawingFormValues>({ resolver: zodResolver(drawingSchema) });
     const measurementForm = useForm<MeasurementFormValues>({ resolver: zodResolver(measurementSchema) });
@@ -132,6 +133,7 @@ export default function TenderToolsPage() {
         
         setBoq(newBoq);
         setIsBoqVisible(true);
+        setIsBoqEditable(true);
         toast({ title: 'BOQ & Estimation Generated', description: 'A standard format BOQ has been created and is ready for download and editing.' });
     }
 
@@ -150,6 +152,7 @@ export default function TenderToolsPage() {
             ];
             setBoq(newBoq);
             setIsBoqVisible(true);
+            setIsBoqEditable(true);
         }
     }
 
@@ -161,7 +164,7 @@ export default function TenderToolsPage() {
         setBoq(updatedBoq);
     };
 
-    const handleDownloadBoq = (format: 'Excel' | 'PDF') => {
+    const handleDownloadBoq = (format: 'Excel' | 'PDF' | 'Word') => {
         toast({
             title: 'Download Started',
             description: `Your BOQ is being downloaded as a ${format} file.`
@@ -329,19 +332,35 @@ export default function TenderToolsPage() {
                     <CardHeader>
                         <div className="flex justify-between items-center">
                             <CardTitle>4. Generated BOQ & Estimation</CardTitle>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline">
-                                        <Download className="mr-2" />
-                                        Download BOQ
-                                        <ChevronDown className="ml-2" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                    <DropdownMenuItem onSelect={() => handleDownloadBoq('Excel')}>Excel (.xlsx)</DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => handleDownloadBoq('PDF')}>PDF (.pdf)</DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                            <div className="flex gap-2">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline">
+                                            <Edit className="mr-2" />
+                                            {isBoqEditable ? 'Editable' : 'Locked'}
+                                            <ChevronDown className="ml-2" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuItem onSelect={() => setIsBoqEditable(true)}>Enable Editing</DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={() => setIsBoqEditable(false)}>Lock (Read-only)</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline">
+                                            <Download className="mr-2" />
+                                            Download BOQ
+                                            <ChevronDown className="ml-2" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuItem onSelect={() => handleDownloadBoq('Excel')}>Excel (.xlsx)</DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={() => handleDownloadBoq('PDF')}>PDF (.pdf)</DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={() => handleDownloadBoq('Word')}>Word (.docx)</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
                         </div>
                         <CardDescription>Review and edit the Bill of Quantities. Rates and quantities are editable.</CardDescription>
                     </CardHeader>
@@ -367,6 +386,7 @@ export default function TenderToolsPage() {
                                                     value={item.quantity}
                                                     onChange={(e) => handleBoqChange(index, 'quantity', e.target.value)}
                                                     className="h-8"
+                                                    disabled={!isBoqEditable}
                                                 />
                                             </TableCell>
                                             <TableCell>{item.unit}</TableCell>
@@ -376,6 +396,7 @@ export default function TenderToolsPage() {
                                                     value={item.rate}
                                                     onChange={(e) => handleBoqChange(index, 'rate', e.target.value)}
                                                     className="h-8"
+                                                    disabled={!isBoqEditable}
                                                 />
                                             </TableCell>
                                             <TableCell className="text-right font-semibold">${(item.quantity * item.rate).toFixed(2)}</TableCell>
