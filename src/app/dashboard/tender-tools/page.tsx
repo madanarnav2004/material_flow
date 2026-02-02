@@ -75,13 +75,35 @@ export default function TenderToolsPage() {
             toast({ variant: 'destructive', title: 'No Drawing', description: 'Please upload a drawing first.' });
             return;
         }
-        // Mock measurement data
-        setMeasurements([
-            { id: 1, type: values.measurementType, description: 'Main Wall', value: '10.5 m' },
-            { id: 2, type: values.measurementType, description: 'Foundation', value: '25.2 m²' },
-            { id: 3, type: values.measurementType, description: 'Slab Volume', value: '15.0 m³' },
-        ]);
-        toast({ title: 'Measurements Calculated', description: 'Overall measurements have been extracted from the drawing.' });
+        
+        let mockData: any[] = [];
+        const selectedType = values.measurementType;
+
+        if (selectedType === 'Excavation') {
+            mockData = [
+                { id: 1, type: 'Excavation', description: 'Foundation Footing F1', value: '15.0 m³' },
+                { id: 2, type: 'Excavation', description: 'Foundation Footing F2', value: '22.5 m³' },
+            ];
+        } else if (selectedType === 'Plastering') {
+            mockData = [
+                { id: 1, type: 'Plastering', description: 'Internal Wall - Room 101', value: '85.2 m²' },
+                { id: 2, type: 'Plastering', description: 'External Wall - North Face', value: '120.0 m²' },
+            ];
+        } else if (selectedType === 'Concrete') {
+            mockData = [
+                 { id: 1, type: 'Concrete', description: 'Slab S1', value: '12.0 m³' },
+                 { id: 2, type: 'Concrete', description: 'Column C1', value: '2.5 m³' },
+            ];
+        } else { // Overall or other types
+            mockData = [
+                { id: 1, type: 'Excavation', description: 'Foundation Footings', value: '150.0 m³' },
+                { id: 2, type: 'Concrete', description: 'Foundations & Slabs', value: '75.2 m³' },
+                { id: 3, type: 'Plastering', description: 'Total Internal Walls', value: '850.0 m²' },
+            ];
+        }
+
+        setMeasurements(mockData);
+        toast({ title: 'Measurements Calculated', description: `Measurements for ${selectedType} have been extracted.` });
     }
 
     function onDownloadMeasurements() {
@@ -177,10 +199,12 @@ export default function TenderToolsPage() {
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Select a measurement type" /></SelectTrigger></FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="length">Length (m)</SelectItem>
-                                                    <SelectItem value="area">Area (m²)</SelectItem>
-                                                    <SelectItem value="volume">Volume (m³)</SelectItem>
-                                                    <SelectItem value="all">Overall Measurement</SelectItem>
+                                                    <SelectItem value="Excavation">Excavation</SelectItem>
+                                                    <SelectItem value="Concrete">Concrete</SelectItem>
+                                                    <SelectItem value="Plastering">Plastering</SelectItem>
+                                                    <SelectItem value="Shuttering">Shuttering</SelectItem>
+                                                    <SelectItem value="Reinforcement">Reinforcement</SelectItem>
+                                                    <SelectItem value="Overall">Overall Measurement</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
