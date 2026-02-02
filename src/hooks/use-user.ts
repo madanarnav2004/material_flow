@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 
-export type UserRole = 'director' | 'site-manager' | 'coordinator' | 'godown-manager' | 'purchase-department' | null;
+export type UserRole = 'director' | 'site-manager' | 'coordinator' | 'godown-manager' | 'purchase-department' | 'tender-department' | null;
 
 const MOCK_USERS = {
   director: { name: 'Dr. Evelyn Reed', email: 'e.reed@materialflow.com' },
@@ -10,6 +10,7 @@ const MOCK_USERS = {
   coordinator: { name: 'Aria Chen', email: 'a.chen@materialflow.com' },
   'godown-manager': { name: 'Leo Gomez', email: 'l.gomez@materialflow.com' },
   'purchase-department': { name: 'Samira Khan', email: 's.khan@materialflow.com' },
+  'tender-department': { name: 'Tender Department', email: 'tender@materialflow.com' },
 };
 
 export function useUser() {

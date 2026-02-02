@@ -6,6 +6,7 @@ import SiteManagerDashboard from "@/components/dashboards/site-manager-dashboard
 import CoordinatorDashboard from "@/components/dashboards/coordinator-dashboard";
 import GodownManagerDashboard from "@/components/dashboards/godown-manager-dashboard";
 import PurchaseDepartmentDashboard from "@/components/dashboards/purchase-department-dashboard";
+import TenderDepartmentDashboard from "@/components/dashboards/tender-department-dashboard";
 
 export default function DashboardPage() {
   const { role } = useUser();
@@ -22,6 +23,8 @@ export default function DashboardPage() {
         return <GodownManagerDashboard />;
       case 'purchase-department':
         return <PurchaseDepartmentDashboard />;
+      case 'tender-department':
+        return <TenderDepartmentDashboard />;
       default:
         return <div>Loading dashboard...</div>;
     }

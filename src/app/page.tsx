@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building, Lock, Mail, User, UserCog, UserSquare, Warehouse, ShoppingCart } from "lucide-react";
+import { Building, Lock, Mail, User, UserCog, UserSquare, Warehouse, ShoppingCart, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ const ROLES = [
   { value: 'site-manager-south', label: 'Site Manager (South)', icon: UserSquare, site: 'South Site', role: 'site-manager' },
   { value: 'site-manager-east', label: 'Site Manager (East)', icon: UserSquare, site: 'East Site', role: 'site-manager' },
   { value: 'site-manager-west', label: 'Site Manager (West)', icon: UserSquare, site: 'West Site', role: 'site-manager' },
+  { value: 'tender-department', label: 'Tender Department', icon: Layers, site: 'Global', role: 'tender-department' },
 ];
 
 

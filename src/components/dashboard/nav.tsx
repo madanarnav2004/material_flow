@@ -46,7 +46,7 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { href: '/dashboard', icon: Home, label: 'Dashboard', roles: ['director', 'site-manager', 'coordinator', 'godown-manager', 'purchase-department'] },
+  { href: '/dashboard', icon: Home, label: 'Dashboard', roles: ['director', 'site-manager', 'coordinator', 'godown-manager', 'purchase-department', 'tender-department'] },
   { href: '/dashboard/inventory', icon: Archive, label: 'Inventory', roles: ['director', 'site-manager', 'coordinator', 'godown-manager', 'purchase-department'] },
   { href: '/dashboard/requests', icon: Package, label: 'Material Indents', roles: ['director', 'site-manager', 'coordinator', 'godown-manager', 'purchase-department'] },
   { href: '/dashboard/materials-issued', icon: Truck, label: 'Materials Issued', roles: ['director', 'site-manager', 'coordinator', 'godown-manager'] },
@@ -59,6 +59,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard/boq-analysis', icon: FileSpreadsheet, label: 'BOQ Analysis', roles: ['coordinator', 'director'] },
   { href: '/dashboard/reports', icon: AreaChart, label: 'Reports', roles: ['director', 'site-manager', 'coordinator', 'purchase-department'] },
   { href: '/dashboard/ai-review', icon: BrainCircuit, label: 'AI Bill Review', roles: ['director', 'coordinator', 'site-manager', 'godown-manager', 'purchase-department'] },
+  { href: '/dashboard/tender-tools', icon: Layers, label: 'Tender Tools', roles: ['tender-department'] },
   { href: '/dashboard/user-management', icon: Users, label: 'User Management', roles: ['director', 'coordinator'] },
 ];
 
