@@ -27,6 +27,11 @@ const measurementSchema = z.object({
 });
 type MeasurementFormValues = z.infer<typeof measurementSchema>;
 
+const boqUploadSchema = z.object({
+  boqFile: fileSchema.refine(file => file, 'A BOQ file is required.'),
+});
+type BoqUploadFormValues = z.infer<typeof boqUploadSchema>;
+
 export default function TenderToolsPage() {
     const { toast } = useToast();
     const [drawingFileName, setDrawingFileName] = React.useState<string | null>(null);
@@ -37,6 +42,7 @@ export default function TenderToolsPage() {
 
     const drawingForm = useForm<DrawingFormValues>({ resolver: zodResolver(drawingSchema) });
     const measurementForm = useForm<MeasurementFormValues>({ resolver: zodResolver(measurementSchema) });
+    const boqUploadForm = useForm<BoqUploadFormValues>({ resolver: zodResolver(boqUploadSchema) });
 
     function onDrawingUpload(values: DrawingFormValues) {
         if (values.drawingFile) {
@@ -109,7 +115,7 @@ export default function TenderToolsPage() {
     function onDownloadMeasurements() {
         toast({ title: 'Measurement Export Started', description: 'Your measurement data is being downloaded.' });
     }
-
+    
     function onGenerateBoq() {
         if (measurements.length === 0) {
             toast({ variant: 'destructive', title: 'No Measurements', description: 'Please calculate measurements first to generate a BOQ.' });
@@ -128,6 +134,25 @@ export default function TenderToolsPage() {
         setIsBoqVisible(true);
         toast({ title: 'BOQ & Estimation Generated', description: 'A standard format BOQ has been created and is ready for download and editing.' });
     }
+
+    function onBoqUpload(values: BoqUploadFormValues) {
+        if (values.boqFile) {
+            toast({
+                title: 'BOQ Uploaded',
+                description: `${values.boqFile.name} processed. Review the editable table below.`,
+            });
+    
+            // Simulate new data from uploaded file
+            const newBoq = [
+                { id: 1, description: 'Uploaded: Site Clearing', quantity: 1, unit: 'LS', rate: 5000 },
+                { id: 2, description: 'Uploaded: Bulk Earthworks', quantity: 250, unit: 'm³', rate: 45 },
+                { id: 3, description: 'Uploaded: Reinforcement Steel (High-Yield)', quantity: 15, unit: 'ton', rate: 950 },
+            ];
+            setBoq(newBoq);
+            setIsBoqVisible(true);
+        }
+    }
+
 
     const handleBoqChange = (index: number, field: 'quantity' | 'rate', value: string) => {
         const updatedBoq = [...boq];
@@ -150,11 +175,11 @@ export default function TenderToolsPage() {
             </h1>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                {/* 2D/3D AutoCAD Tools */}
+                {/* 1. 2D to 3D AutoCAD Conversion */}
                 <Card>
                     <CardHeader>
                         <CardTitle>1. 2D to 3D AutoCAD Conversion</CardTitle>
-                        <CardDescription>Upload a 2D drawing to generate a 3D model and extract measurements.</CardDescription>
+                        <CardDescription>Upload a 2D drawing to generate a 3D model.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <Form {...drawingForm}>
@@ -197,11 +222,11 @@ export default function TenderToolsPage() {
                     </CardContent>
                 </Card>
 
-                {/* Measurement & BOQ */}
+                {/* 2. Measurement Extraction */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>2. Measurement & BOQ Generation</CardTitle>
-                        <CardDescription>Extract measurements and generate a Bill of Quantities from the drawing.</CardDescription>
+                        <CardTitle>2. Measurement Extraction</CardTitle>
+                        <CardDescription>Extract measurements from the drawing for BOQ generation.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                        <Form {...measurementForm}>
@@ -248,18 +273,62 @@ export default function TenderToolsPage() {
                                         </TableBody>
                                     </Table>
                                 </div>
-                                <Button onClick={onGenerateBoq} className="w-full"><FileText className="mr-2"/>Generate Estimation and BOQ</Button>
                             </div>
                        )}
                     </CardContent>
                 </Card>
             </div>
 
+            <Card>
+                <CardHeader>
+                    <CardTitle>3. Generate or Upload BOQ</CardTitle>
+                    <CardDescription>Create a Bill of Quantities either from the extracted measurements or by uploading your own file.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                    <div className="space-y-4 p-4 border rounded-lg h-full flex flex-col">
+                        <h4 className="font-semibold">Generate Standard BOQ</h4>
+                        <p className="text-sm text-muted-foreground flex-grow">
+                            Use the measurements extracted in Step 2 to automatically generate a standard BOQ.
+                        </p>
+                        <Button onClick={onGenerateBoq} disabled={measurements.length === 0}>
+                            <FileText className="mr-2"/>Generate Standard BOQ
+                        </Button>
+                        {measurements.length === 0 && <p className="text-xs text-destructive">Calculate measurements first.</p>}
+                    </div>
+
+                    <div className="space-y-4 p-4 border rounded-lg h-full">
+                        <h4 className="font-semibold">Upload Custom BOQ</h4>
+                        <p className="text-sm text-muted-foreground">
+                            Upload your pre-existing BOQ file in Excel or CSV format.
+                        </p>
+                         <Form {...boqUploadForm}>
+                            <form onSubmit={boqUploadForm.handleSubmit(onBoqUpload)} className="space-y-4">
+                                <FormField
+                                    control={boqUploadForm.control}
+                                    name="boqFile"
+                                    render={({ field: { onChange, value, ...rest } }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <Input type="file" accept=".xlsx, .csv" onChange={(e) => onChange(e.target.files?.[0])} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <Button type="submit" className="w-full">
+                                    <Upload className="mr-2"/>Upload and Process File
+                                </Button>
+                            </form>
+                        </Form>
+                    </div>
+                </CardContent>
+            </Card>
+
             {isBoqVisible && (
                 <Card>
                     <CardHeader>
                         <div className="flex justify-between items-center">
-                            <CardTitle>3. Generated BOQ & Estimation</CardTitle>
+                            <CardTitle>4. Generated BOQ & Estimation</CardTitle>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="outline">
@@ -274,7 +343,7 @@ export default function TenderToolsPage() {
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
-                        <CardDescription>Review and edit the auto-generated Bill of Quantities. Rates and quantities are editable.</CardDescription>
+                        <CardDescription>Review and edit the Bill of Quantities. Rates and quantities are editable.</CardDescription>
                     </CardHeader>
                     <CardContent>
                          <div className="max-h-96 overflow-y-auto border rounded-md">
