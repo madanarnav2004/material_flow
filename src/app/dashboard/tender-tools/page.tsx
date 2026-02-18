@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Upload, Download, RefreshCw, Ruler, FileText, Layers, ChevronDown, Edit, FileType, FileSpreadsheet } from 'lucide-react';
+import { Upload, Download, RefreshCw, Ruler, FileText, Layers, ChevronDown, Edit, FileType, FileSpreadsheet, ImageIcon, ToyBrick } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -62,6 +62,15 @@ export default function TenderToolsPage() {
             });
         }
     };
+    
+    const handle3dDownload = (format: string) => {
+        const extensions: Record<string, string> = {
+            'PNG': 'png', 'JPG': 'jpg', 'DWG': 'dwg', 'DXF': 'dxf',
+            'STEP': 'step', 'IFC': 'ifc', 'SKP': 'skp'
+        };
+        const extension = extensions[format] || 'txt';
+        handleFileDownload(`Mock 3D Model Data (${format})`, `model-3d.${extension}`, 'text/plain');
+    };
 
     const convertToCsv = (data: any[]) => {
         if (!data || data.length === 0) return '';
@@ -103,10 +112,6 @@ export default function TenderToolsPage() {
         });
     }
 
-    function onDownload3d() {
-        handleFileDownload('Mock 3D Model Data', 'model-3d.obj', 'text/plain');
-    }
-
     function onCalculateMeasurements() {
         if (!drawingFileName) {
             toast({ variant: 'destructive', title: 'No Drawing', description: 'Please upload a drawing first.' });
@@ -115,12 +120,14 @@ export default function TenderToolsPage() {
         
         const allMeasurements = [
             { id: 1, type: 'Excavation', description: 'Foundation Footings', quantity: 150.0, unit: 'm³' },
-            { id: 2, type: 'Concrete', description: 'Foundation Slabs (M25)', quantity: 75.2, unit: 'm³' },
-            { id: 3, type: 'Reinforcement', description: 'Fe-500 Steel', quantity: 5.4, unit: 'ton' },
-            { id: 4, type: 'Shuttering', description: 'Column & Beam Shuttering', quantity: 450.0, unit: 'm²' },
-            { id: 5, type: 'Brickwork', description: '9-inch Brick Walls', quantity: 88.0, unit: 'm³' },
-            { id: 6, type: 'Plastering', description: 'Internal Wall Plaster', quantity: 950.0, unit: 'm²' },
-            { id: 7, type: 'Flooring', description: 'Vitrified Tile Flooring', quantity: 320.0, unit: 'm²' },
+            { id: 2, type: 'PCC', description: 'Plain Cement Concrete (1:4:8)', quantity: 25.0, unit: 'm³' },
+            { id: 3, type: 'Concrete', description: 'Foundation Slabs (M25)', quantity: 75.2, unit: 'm³' },
+            { id: 4, type: 'RCC', description: 'Columns & Beams (M25)', quantity: 60.5, unit: 'm³' },
+            { id: 5, type: 'Reinforcement', description: 'Fe-500 Steel', quantity: 5.4, unit: 'ton' },
+            { id: 6, type: 'Shuttering', description: 'Column & Beam Shuttering', quantity: 450.0, unit: 'm²' },
+            { id: 7, type: 'Brickwork', description: '9-inch Brick Walls', quantity: 88.0, unit: 'm³' },
+            { id: 8, type: 'Plastering', description: 'Internal Wall Plaster', quantity: 950.0, unit: 'm²' },
+            { id: 9, type: 'Flooring', description: 'Vitrified Tile Flooring', quantity: 320.0, unit: 'm²' },
         ];
         setMeasurements(allMeasurements);
         setIsBoqVisible(false);
@@ -179,7 +186,7 @@ export default function TenderToolsPage() {
     const handleDownloadBoq = (format: 'Excel' | 'PDF' | 'Word') => {
         const csvData = convertToCsv(boq.map(item => ({ ...item, Amount: (item.quantity * item.rate).toFixed(2) })));
         let fileName = 'boq-report';
-        let mimeType = '';
+        let mimeType = 'text/plain';
 
         switch (format) {
             case 'Excel':
@@ -248,7 +255,24 @@ export default function TenderToolsPage() {
                                     <p className="text-sm text-muted-foreground">Convert to a 3D model for visualization and download.</p>
                                     <div className="flex gap-2">
                                         <Button onClick={onConvertTo3d}><RefreshCw className="mr-2"/>Convert to 3D</Button>
-                                        <Button onClick={onDownload3d} variant="outline" disabled={!is3dModelVisible}><Download className="mr-2"/>Download 3D</Button>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="outline" disabled={!is3dModelVisible}>
+                                                    <Download className="mr-2"/>Download 3D Model <ChevronDown className="ml-2"/>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <DropdownMenuItem onSelect={() => handle3dDownload('PNG')}><ImageIcon className="mr-2"/>Image (.png)</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => handle3dDownload('JPG')}><ImageIcon className="mr-2"/>Image (.jpg)</DropdownMenuItem>
+                                                <Separator />
+                                                <DropdownMenuItem onSelect={() => handle3dDownload('DWG')}><ToyBrick className="mr-2"/>3D CAD (.dwg)</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => handle3dDownload('DXF')}><ToyBrick className="mr-2"/>3D CAD (.dxf)</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => handle3dDownload('STEP')}><ToyBrick className="mr-2"/>3D CAD (.step)</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => handle3dDownload('IFC')}><ToyBrick className="mr-2"/>3D CAD (.ifc)</DropdownMenuItem>
+                                                <Separator />
+                                                <DropdownMenuItem onSelect={() => handle3dDownload('SKP')}><FileType className="mr-2"/>SketchUp (.skp)</DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </div>
                                     {is3dModelVisible && (
                                         <div className="w-full h-32 bg-secondary rounded-lg flex items-center justify-center mt-4">
@@ -315,7 +339,7 @@ export default function TenderToolsPage() {
                                         render={({ field: { onChange } }) => (
                                             <FormItem>
                                                 <FormControl>
-                                                    <Input type="file" accept=".xlsx,.csv" onChange={(e) => onChange(e.target.files?.[0])} />
+                                                    <Input type="file" accept=".xlsx,.csv,.pdf" onChange={(e) => onChange(e.target.files?.[0])} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
