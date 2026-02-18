@@ -156,20 +156,22 @@ interface MaterialContextType {
 
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
 
-export const MaterialProvider = ({ children }: { children: ReactNode }) => {
-  const [requests, setRequests] = useState<MaterialIndent[]>(() => getFromLocalStorage('materialflow-requests', initialIndents));
-  const [issuedMaterials, setIssuedMaterials] = useState<IssuedMaterial[]>(() => getFromLocalStorage('materialflow-issued', initialIssuedMaterials));
-  const [inventory, setInventory] = useState<InventoryItem[]>(() => getFromLocalStorage('materialflow-inventory', initialInventory));
-  const [receipts, setReceipts] = useState<MaterialReceivedBill[]>(() => getFromLocalStorage('materialflow-receipts', []));
-  const [workDoneReports, setWorkDoneReports] = useState<WorkDoneReport[]>(() => getFromLocalStorage('materialflow-work-done-reports', []));
-  const [siteIssues, setSiteIssues] = useState<SiteIssueVoucher[]>(() => getFromLocalStorage('materialflow-site-issues', []));
+const STORAGE_KEY_VERSION = 'v2';
 
-  useEffect(() => { setInLocalStorage('materialflow-requests', requests) }, [requests]);
-  useEffect(() => { setInLocalStorage('materialflow-issued', issuedMaterials) }, [issuedMaterials]);
-  useEffect(() => { setInLocalStorage('materialflow-inventory', inventory) }, [inventory]);
-  useEffect(() => { setInLocalStorage('materialflow-receipts', receipts) }, [receipts]);
-  useEffect(() => { setInLocalStorage('materialflow-work-done-reports', workDoneReports) }, [workDoneReports]);
-  useEffect(() => { setInLocalStorage('materialflow-site-issues', siteIssues) }, [siteIssues]);
+export const MaterialProvider = ({ children }: { children: ReactNode }) => {
+  const [requests, setRequests] = useState<MaterialIndent[]>(() => getFromLocalStorage(`materialflow-requests-${STORAGE_KEY_VERSION}`, initialIndents));
+  const [issuedMaterials, setIssuedMaterials] = useState<IssuedMaterial[]>(() => getFromLocalStorage(`materialflow-issued-${STORAGE_KEY_VERSION}`, initialIssuedMaterials));
+  const [inventory, setInventory] = useState<InventoryItem[]>(() => getFromLocalStorage(`materialflow-inventory-${STORAGE_KEY_VERSION}`, initialInventory));
+  const [receipts, setReceipts] = useState<MaterialReceivedBill[]>(() => getFromLocalStorage(`materialflow-receipts-${STORAGE_KEY_VERSION}`, []));
+  const [workDoneReports, setWorkDoneReports] = useState<WorkDoneReport[]>(() => getFromLocalStorage(`materialflow-work-done-reports-${STORAGE_KEY_VERSION}`, []));
+  const [siteIssues, setSiteIssues] = useState<SiteIssueVoucher[]>(() => getFromLocalStorage(`materialflow-site-issues-${STORAGE_KEY_VERSION}`, []));
+
+  useEffect(() => { setInLocalStorage(`materialflow-requests-${STORAGE_KEY_VERSION}`, requests) }, [requests]);
+  useEffect(() => { setInLocalStorage(`materialflow-issued-${STORAGE_KEY_VERSION}`, issuedMaterials) }, [issuedMaterials]);
+  useEffect(() => { setInLocalStorage(`materialflow-inventory-${STORAGE_KEY_VERSION}`, inventory) }, [inventory]);
+  useEffect(() => { setInLocalStorage(`materialflow-receipts-${STORAGE_KEY_VERSION}`, receipts) }, [receipts]);
+  useEffect(() => { setInLocalStorage(`materialflow-work-done-reports-${STORAGE_KEY_VERSION}`, workDoneReports) }, [workDoneReports]);
+  useEffect(() => { setInLocalStorage(`materialflow-site-issues-${STORAGE_KEY_VERSION}`, siteIssues) }, [siteIssues]);
 
 
   return (
