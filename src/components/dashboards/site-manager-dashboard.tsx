@@ -35,28 +35,11 @@ import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { useMaterialContext } from '@/context/material-context';
+import { useMaterialContext, MaterialIndentBill } from '@/context/material-context';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/hooks/use-user';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-
-type RequestFormValues = {
-  requesterName: string;
-  requestingSite: string;
-  materials: { materialName: string; quantity: number; rate: number; }[];
-  requiredPeriod: { from: Date; to: Date; };
-  remarks?: string;
-};
-type MaterialIndentBill = RequestFormValues & {
-  requestId: string;
-  requestDate: Date;
-  issuedId: string;
-  issuingSite?: string;
-  shiftingDate: Date;
-  requester: { name: string; } | null;
-  totalValue: number;
-}
+import { mockBoqData } from '@/lib/mock-data';
 
 
 export default function SiteManagerDashboard() {
@@ -124,27 +107,29 @@ export default function SiteManagerDashboard() {
   const handleViewBill = (reqId: string) => {
     const request = requests.find(r => r.id === reqId);
     if (request) {
-      const returnDate = new Date(request.returnDate);
-      const fromDate = new Date(returnDate.getTime() - 10 * 24 * 60 * 60 * 1000);
-      const requestDate = new Date(returnDate.getTime() - 11 * 24 * 60 * 60 * 1000);
+      const returnDate = request.requiredPeriod ? new Date(request.requiredPeriod.to) : new Date(request.returnDate);
+      const fromDate = request.requiredPeriod ? new Date(request.requiredPeriod.from) : new Date(returnDate.getTime() - 10 * 24 * 60 * 60 * 1000);
+      const requestDate = request.requestDate ? new Date(request.requestDate) : new Date(returnDate.getTime() - 11 * 24 * 60 * 60 * 1000);
       const idParts = request.id.split('-');
       const datePart = idParts.length > 2 ? idParts[2] : format(requestDate, 'yyyyMMdd');
       const countPart = idParts.length > 3 ? idParts[3] : request.id.slice(-3);
       const siteCode = idParts.length > 1 ? idParts[1] : 'SITE';
+      const materialInfo = mockBoqData.materials.find(m => m.type.toLowerCase() === request.material.toLowerCase()) || {rate: 0};
+
 
       const bill: MaterialIndentBill = {
-        requestId: `REQ-${siteCode}-${datePart}-${countPart}`,
+        requestId: request.id,
         requestDate: requestDate,
-        requesterName: 'Sample Requester',
+        requesterName: request.requesterName || 'Sample Requester',
         requestingSite: request.site,
-        issuingSite: request.issuingSite || 'Pending Assignment',
-        materials: [{ materialName: request.material, quantity: request.quantity, rate: 10 }], // Mock rate
+        materials: request.materials || [{ materialName: request.material, quantity: request.quantity, unit: 'unit', rate: materialInfo.rate }],
         requiredPeriod: { from: fromDate, to: returnDate },
-        remarks: `This is a sample bill for request ${request.id}`,
+        remarks: request.remarks || `This is a sample bill for request ${request.id}`,
         issuedId: `ISS-${siteCode}-${datePart}-${countPart}`,
         shiftingDate: new Date(returnDate.getTime() - 9 * 24 * 60 * 60 * 1000),
-        requester: { name: 'Sample Requester' },
-        totalValue: request.quantity * 10, // Mock total value
+        requester: { name: request.requesterName || 'Sample Requester' },
+        totalValue: request.materials ? request.materials.reduce((acc, m) => acc + m.quantity * (m.rate || 0), 0) : request.quantity * materialInfo.rate,
+        issuingSite: request.issuingSite || 'Pending Assignment',
       };
       setLastGeneratedBill(bill);
     }
@@ -270,10 +255,10 @@ export default function SiteManagerDashboard() {
                                                 'default'
                                             }
                                             className={cn(
-                                                'text-white',
-                                                req.status === 'Pending Director Approval' && 'bg-yellow-500/80',
-                                                req.status === 'Director Approved' && 'bg-blue-500/80',
-                                                req.status === 'PO Generated' && 'bg-purple-500/80'
+                                                req.status === 'Pending Director Approval' && 'bg-yellow-500',
+                                                req.status === 'Director Approved' && 'bg-blue-500',
+                                                req.status === 'PO Generated' && 'bg-purple-500',
+                                                req.status !== 'Completed' && 'text-white'
                                             )}
                                         >
                                             {req.status}
@@ -416,10 +401,10 @@ export default function SiteManagerDashboard() {
                                                     'default'
                                                 }
                                                 className={cn(
-                                                    'text-white',
-                                                    req.status === 'Pending Director Approval' && 'bg-yellow-500/80',
-                                                    req.status === 'Director Approved' && 'bg-blue-500/80',
-                                                    req.status === 'PO Generated' && 'bg-purple-500/80'
+                                                    req.status === 'Pending Director Approval' && 'bg-yellow-500',
+                                                    req.status === 'Director Approved' && 'bg-blue-500',
+                                                    req.status === 'PO Generated' && 'bg-purple-500',
+                                                    req.status !== 'Completed' && 'text-white'
                                                 )}
                                             >
                                                 {req.status}
@@ -440,7 +425,7 @@ export default function SiteManagerDashboard() {
                 <Card>
                   <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <FileText /> Material Indent Bill
+                        Material Indent Bill
                       </CardTitle>
                       <CardDescription>
                         This is the generated bill for the selected indent.
@@ -479,8 +464,8 @@ export default function SiteManagerDashboard() {
                             <TableRow key={i}>
                               <TableCell>{m.materialName}</TableCell>
                               <TableCell>{m.quantity}</TableCell>
-                              <TableCell>${m.rate.toFixed(2)}</TableCell>
-                              <TableCell className="text-right">${(m.quantity * m.rate).toFixed(2)}</TableCell>
+                              <TableCell>${(m.rate || 0).toFixed(2)}</TableCell>
+                              <TableCell className="text-right">${(m.quantity * (m.rate || 0)).toFixed(2)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -528,13 +513,12 @@ export default function SiteManagerDashboard() {
                                                 'default'
                                             }
                                             className={cn(
-                                                'text-white',
-                                                req.status === 'Pending Director Approval' && 'bg-yellow-500/80',
-                                                req.status === 'Director Approved' && 'bg-blue-500/80',
-                                                req.status === 'Issued' && 'bg-green-600/80',
-                                                req.status === 'PO Generated' && 'bg-purple-500/80',
-                                                req.status === 'Partially Issued' && 'bg-orange-500/80',
-                                                (req.status === 'Director Rejected' || req.status === 'Purchase Rejected') && 'bg-destructive'
+                                                req.status === 'Pending Director Approval' && 'bg-yellow-500',
+                                                req.status === 'Director Approved' && 'bg-blue-500',
+                                                req.status === 'Issued' && 'bg-green-600',
+                                                req.status === 'PO Generated' && 'bg-purple-500',
+                                                req.status === 'Partially Issued' && 'bg-orange-500',
+                                                req.status !== 'Completed' && 'text-white'
                                             )}
                                         >
                                             {req.status}
@@ -581,13 +565,12 @@ export default function SiteManagerDashboard() {
                                             'default'
                                         }
                                         className={cn(
-                                            'text-white',
-                                            req.status === 'Pending Director Approval' && 'bg-yellow-500/80',
-                                            req.status === 'Director Approved' && 'bg-blue-500/80',
-                                            req.status === 'Issued' && 'bg-green-600/80',
-                                            req.status === 'PO Generated' && 'bg-purple-500/80',
-                                            req.status === 'Partially Issued' && 'bg-orange-500/80',
-                                            (req.status === 'Director Rejected' || req.status === 'Purchase Rejected') && 'bg-destructive'
+                                            req.status === 'Pending Director Approval' && 'bg-yellow-500',
+                                            req.status === 'Director Approved' && 'bg-blue-500',
+                                            req.status === 'Issued' && 'bg-green-600',
+                                            req.status === 'PO Generated' && 'bg-purple-500',
+                                            req.status === 'Partially Issued' && 'bg-orange-500',
+                                            req.status !== 'Completed' && 'text-white'
                                         )}
                                     >
                                         {req.status}

@@ -1,3 +1,4 @@
+import { MaterialIndent } from "@/context/material-context";
 
 export const monthlyConsumption = [
   { month: 'Jan', consumption: 186 },
@@ -28,8 +29,9 @@ export const allMaterials = [
     { id: 'mat-2', name: 'Steel Rebar', unit: 'ton', description: '12mm diameter steel reinforcement bars', rate: 800 },
     { id: 'mat-3', name: 'Sand', unit: 'cubic meter', description: 'Fine aggregate for concrete', rate: 25 },
     { id: 'mat-4', name: 'Bricks', unit: 'pcs', description: 'Standard clay bricks', rate: 0.5 },
-    { id: 'mat-5', name: 'Gravel', unit: 'cubic meter', description: 'Coarse aggregate for concrete', rate: 30 },
+    { id: 'mat-5', name: 'Gravel', unit: 'liter', description: 'Coarse aggregate for concrete', rate: 30 },
     { id: 'mat-6', name: 'Paint', unit: 'liter', description: 'White emulsion paint', rate: 5 },
+    { id: 'mat-7', name: 'Specialized Adhesive', unit: 'kg', description: 'High-strength construction adhesive', rate: 15 },
 ];
 
 export const lowStockMaterials = [
@@ -38,12 +40,12 @@ export const lowStockMaterials = [
     { id: 'ls-3', material: 'Bricks', site: 'West Site', quantity: 900, unit: 'pcs', threshold: 1000 },
 ];
 
-export const initialIndents = [
-    { id: 'REQ-NORTH-20240720-001', material: 'Cement', quantity: 500, site: 'North Site', status: 'Issued' as const, returnDate: '2024-08-15', issuingSite: 'MAPI Godown' },
-    { id: 'REQ-EAST-20240718-002', material: 'Steel Rebar', quantity: 10, site: 'East Site', status: 'Completed' as const, returnDate: '2024-08-10', issuingSite: 'MAPI Godown' },
-    { id: 'REQ-WEST-20240721-004', material: 'Bricks', quantity: 2000, site: 'West Site', status: 'Pending Director Approval' as const, returnDate: '2024-08-20' },
-    { id: 'REQ-SOUTH-20240720-003', material: 'Sand', quantity: 50, site: 'South Site', status: 'Director Approved' as const, returnDate: '2024-08-18' },
-    { id: 'REQ-NORTH-20240722-005', material: 'Specialized Adhesive', quantity: 25, site: 'North Site', status: 'Pending Director Approval' as const, returnDate: '2024-08-25' },
+export const initialIndents: MaterialIndent[] = [
+    { id: 'REQ-NORTH-20240720-001', material: 'Cement', quantity: 500, site: 'North Site', status: 'Issued', returnDate: '2024-08-15', issuingSite: 'MAPI Godown', materials: [{ materialName: 'Cement', quantity: 500, unit: 'bags', rate: 10 }] },
+    { id: 'REQ-EAST-20240718-002', material: 'Steel Rebar', quantity: 10, site: 'East Site', status: 'Completed', returnDate: '2024-08-10', issuingSite: 'MAPI Godown', materials: [{ materialName: 'Steel Rebar', quantity: 10, unit: 'tons', rate: 800 }] },
+    { id: 'REQ-WEST-20240721-004', material: 'Bricks', quantity: 2000, site: 'West Site', status: 'Pending Director Approval', returnDate: '2024-08-20', materials: [{ materialName: 'Bricks', quantity: 2000, unit: 'pcs', rate: 0.5 }] },
+    { id: 'REQ-SOUTH-20240720-003', material: 'Sand', quantity: 50, site: 'South Site', status: 'Director Approved', returnDate: '2024-08-18', materials: [{ materialName: 'Sand', quantity: 50, unit: 'cu.m.', rate: 25 }] },
+    { id: 'REQ-NORTH-20240722-005', material: 'Specialized Adhesive', quantity: 25, site: 'North Site', status: 'Pending Director Approval', returnDate: '2024-08-25', materials: [{ materialName: 'Specialized Adhesive', quantity: 25, unit: 'kg', rate: 15 }] },
 ];
 
 export const issuedMaterialsForReceipt = [
@@ -180,12 +182,7 @@ export const mockBoqData = {
     { description: 'Concrete Work', item: 'Slab', itemNumber: 'ITM-003' },
     { description: 'Brickwork', item: 'Internal Walls', itemNumber: 'ITM-004' },
   ],
-  materials: [
-      { type: 'Cement', unit: 'bags', rate: 10 },
-      { type: 'Sand', unit: 'cu.m.', rate: 25 },
-      { type: 'Steel Rebar', unit: 'tons', rate: 800 },
-      { type: 'Bricks', unit: 'pcs', rate: 0.5 },
-  ],
+  materials: allMaterials.map(m => ({type: m.name, unit: m.unit, rate: m.rate})),
   equipment: [
       { source: 'Owned', name: 'JCB', unit: 'hours', rate: 50 },
       { source: 'Hired', name: 'Crane', unit: 'hours', rate: 150 },

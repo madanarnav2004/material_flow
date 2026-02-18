@@ -14,27 +14,10 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { useMaterialContext, type InventoryItem, type IndentStatus } from '@/context/material-context';
-import { boqUsage, engineerUsage } from '@/lib/mock-data';
+import { useMaterialContext, type InventoryItem, type IndentStatus, MaterialIndent, MaterialIndentBill } from '@/context/material-context';
+import { boqUsage, engineerUsage, mockBoqData } from '@/lib/mock-data';
 import { Select, SelectValue, SelectTrigger, SelectContent, SelectItem } from '../ui/select';
-
-
-type RequestFormValues = {
-  requesterName: string;
-  requestingSite: string;
-  materials: { materialName: string; quantity: number; rate: number; }[];
-  requiredPeriod: { from: Date; to: Date; };
-  remarks?: string;
-};
-type MaterialIndentBill = RequestFormValues & {
-  requestId: string;
-  requestDate: Date;
-  issuedId: string;
-  issuingSite?: string;
-  shiftingDate: Date;
-  requester: { name: string; } | null;
-  totalValue: number;
-}
+import { Label } from '../ui/label';
 
 
 export default function CoordinatorDashboard() {
@@ -44,6 +27,8 @@ export default function CoordinatorDashboard() {
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
   const [lowStockSite, setLowStockSite] = React.useState('All');
   const [stockOverviewSite, setStockOverviewSite] = React.useState('Overall');
+  const [selectedIndent, setSelectedIndent] = React.useState<MaterialIndent | null>(null);
+  const [issuingSite, setIssuingSite] = React.useState<string>('');
 
   const indentsForApproval = requests.filter(r => r.status === 'Pending Director Approval');
 
@@ -54,6 +39,56 @@ export default function CoordinatorDashboard() {
       description: `Indent ID ${reqId} has been updated. A notification has been sent.`,
     });
   };
+
+  const handleProcessClick = (indent: MaterialIndent) => {
+    setSelectedIndent(indent);
+    setIssuingSite('');
+  };
+
+  const handleFinalApproval = (decision: 'Issued' | 'Purchase Rejected') => {
+    if (!selectedIndent) return;
+
+    if (decision === 'Issued' && !issuingSite) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please select an issuing site.' });
+        return;
+    }
+
+    setRequests(prevRequests =>
+        prevRequests.map(req =>
+            req.id === selectedIndent.id ? { ...req, status: decision, issuingSite: decision === 'Issued' ? issuingSite : undefined } : req
+        )
+    );
+
+    toast({
+        title: `Indent ${decision}`,
+        description: `Indent ${selectedIndent.id} has been processed.`,
+    });
+    setSelectedIndent(null);
+  };
+  
+  const handleGeneratePo = () => {
+    if (!selectedIndent) return;
+    setRequests(prevRequests =>
+        prevRequests.map(req =>
+            req.id === selectedIndent!.id ? { 
+                ...req, 
+                status: 'PO Generated', 
+                poDate: new Date().toISOString(),
+            } : req
+        )
+    );
+     toast({
+      title: 'Purchase Order Generated',
+      description: `A new PO for ${selectedIndent.material} has been generated.`,
+    });
+    setSelectedIndent(null);
+  };
+
+  const materialAvailability = selectedIndent
+    ? inventory.filter(s => s.material.toLowerCase() === selectedIndent.material.toLowerCase())
+    : [];
+
+  const availableSites = [...new Set(materialAvailability.map(s => s.site))];
 
   const lowStockMaterials = React.useMemo(() => {
     return inventory.filter(item => item.quantity <= item.minQty);
@@ -105,27 +140,29 @@ export default function CoordinatorDashboard() {
   const handleViewBill = (reqId: string) => {
     const request = requests.find(r => r.id === reqId);
     if (request) {
-      const returnDate = new Date(request.returnDate);
-      const fromDate = new Date(returnDate.getTime() - 10 * 24 * 60 * 60 * 1000);
-      const requestDate = new Date(returnDate.getTime() - 11 * 24 * 60 * 60 * 1000);
+      const returnDate = request.requiredPeriod ? new Date(request.requiredPeriod.to) : new Date(request.returnDate);
+      const fromDate = request.requiredPeriod ? new Date(request.requiredPeriod.from) : new Date(returnDate.getTime() - 10 * 24 * 60 * 60 * 1000);
+      const requestDate = request.requestDate ? new Date(request.requestDate) : new Date(returnDate.getTime() - 11 * 24 * 60 * 60 * 1000);
       const idParts = request.id.split('-');
       const datePart = idParts.length > 2 ? idParts[2] : format(requestDate, 'yyyyMMdd');
       const countPart = idParts.length > 3 ? idParts[3] : request.id.slice(-3);
       const siteCode = idParts.length > 1 ? idParts[1] : 'SITE';
+      const materialInfo = mockBoqData.materials.find(m => m.type.toLowerCase() === request.material.toLowerCase()) || {rate: 0};
+
 
       const bill: MaterialIndentBill = {
-        requestId: `REQ-${siteCode}-${datePart}-${countPart}`,
+        requestId: request.id,
         requestDate: requestDate,
-        requesterName: 'Sample Requester',
+        requesterName: request.requesterName || 'Sample Requester',
         requestingSite: request.site,
-        issuingSite: request.issuingSite || 'Pending Assignment',
-        materials: [{ materialName: request.material, quantity: request.quantity, rate: 10 }], // Mock rate
+        materials: request.materials || [{ materialName: request.material, quantity: request.quantity, rate: materialInfo.rate }],
         requiredPeriod: { from: fromDate, to: returnDate },
-        remarks: `This is a sample bill for request ${request.id}`,
+        remarks: request.remarks || `This is a sample bill for request ${request.id}`,
         issuedId: `ISS-${siteCode}-${datePart}-${countPart}`,
         shiftingDate: new Date(returnDate.getTime() - 9 * 24 * 60 * 60 * 1000),
-        requester: { name: 'Sample Requester' },
-        totalValue: request.quantity * 10, // Mock total value
+        requester: { name: request.requesterName || 'Sample Requester' },
+        totalValue: request.materials ? request.materials.reduce((acc, m) => acc + m.quantity * (m.rate || 0), 0) : request.quantity * materialInfo.rate,
+        issuingSite: request.issuingSite || 'Pending Assignment',
       };
       setLastGeneratedBill(bill);
     }
@@ -237,6 +274,9 @@ export default function CoordinatorDashboard() {
                                       </DropdownMenuItem>
                                       <DropdownMenuItem onClick={() => handleStatusChange(item.id, 'Director Rejected')} className="text-destructive">
                                         Reject
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleProcessClick(item)}>
+                                        Process
                                       </DropdownMenuItem>
                                     </DropdownMenuContent>
                                   </DropdownMenu>
@@ -507,8 +547,8 @@ export default function CoordinatorDashboard() {
                             <TableRow key={i}>
                               <TableCell>{m.materialName}</TableCell>
                               <TableCell>{m.quantity}</TableCell>
-                              <TableCell>${m.rate.toFixed(2)}</TableCell>
-                              <TableCell className="text-right">${(m.quantity * m.rate).toFixed(2)}</TableCell>
+                              <TableCell>${(m.rate || 0).toFixed(2)}</TableCell>
+                              <TableCell className="text-right">${(m.quantity * (m.rate || 0)).toFixed(2)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -555,13 +595,12 @@ export default function CoordinatorDashboard() {
                                                 'default'
                                             }
                                             className={cn(
-                                                'text-white',
-                                                req.status === 'Pending Director Approval' && 'bg-yellow-500/80',
-                                                req.status === 'Director Approved' && 'bg-blue-500/80',
-                                                req.status === 'Issued' && 'bg-green-600/80',
-                                                req.status === 'PO Generated' && 'bg-purple-500/80',
-                                                req.status === 'Partially Issued' && 'bg-orange-500/80',
-                                                (req.status === 'Director Rejected' || req.status === 'Purchase Rejected') && 'bg-destructive'
+                                                req.status === 'Pending Director Approval' && 'bg-yellow-500',
+                                                req.status === 'Director Approved' && 'bg-blue-500',
+                                                req.status === 'Issued' && 'bg-green-600',
+                                                req.status === 'PO Generated' && 'bg-purple-500',
+                                                req.status === 'Partially Issued' && 'bg-orange-500',
+                                                req.status !== 'Completed' && 'text-white'
                                             )}
                                         >
                                             {req.status}
@@ -610,13 +649,12 @@ export default function CoordinatorDashboard() {
                                             'default'
                                         }
                                         className={cn(
-                                            'text-white',
-                                            req.status === 'Pending Director Approval' && 'bg-yellow-500/80',
-                                            req.status === 'Director Approved' && 'bg-blue-500/80',
-                                            req.status === 'Issued' && 'bg-green-600/80',
-                                            req.status === 'PO Generated' && 'bg-purple-500/80',
-                                            req.status === 'Partially Issued' && 'bg-orange-500/80',
-                                            (req.status === 'Director Rejected' || req.status === 'Purchase Rejected') && 'bg-destructive'
+                                            req.status === 'Pending Director Approval' && 'bg-yellow-500',
+                                            req.status === 'Director Approved' && 'bg-blue-500',
+                                            req.status === 'Issued' && 'bg-green-600',
+                                            req.status === 'PO Generated' && 'bg-purple-500',
+                                            req.status === 'Partially Issued' && 'bg-orange-500',
+                                            req.status !== 'Completed' && 'text-white'
                                         )}
                                     >
                                         {req.status}
@@ -715,6 +753,103 @@ export default function CoordinatorDashboard() {
           </DialogContent>
         </Dialog>
       </div>
+      <Dialog open={!!selectedIndent} onOpenChange={(isOpen) => !isOpen && setSelectedIndent(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Process Indent: {selectedIndent?.id}</DialogTitle>
+            <DialogDescription>
+              Assign an issuing site or generate a PO for <span className="font-semibold">{selectedIndent?.quantity} units</span> of <span className="font-semibold">{selectedIndent?.material}</span> for <span className="font-semibold">{selectedIndent?.site}</span>.
+            </DialogDescription>
+          </DialogHeader>
+
+          {materialAvailability.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                <div className="space-y-4">
+                    <h3 className="font-semibold text-lg">Material Availability</h3>
+                    <Card>
+                        <CardContent className="p-0">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Location</TableHead>
+                                    <TableHead className="text-right">Available Quantity</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {materialAvailability.map(stock => (
+                                    <TableRow key={stock.id}>
+                                        <TableCell>{stock.site}</TableCell>
+                                        <TableCell className="text-right">{stock.quantity}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+                <div className="space-y-4">
+                    <h3 className="font-semibold text-lg">Assign Site & Action</h3>
+                    <div className="p-4 border rounded-lg space-y-4">
+                        <div>
+                            <Label htmlFor="issuing-site-select" className="text-sm font-normal text-muted-foreground">Option 1: Issue from existing stock</Label>
+                            <Select onValueChange={setIssuingSite} value={issuingSite}>
+                                <SelectTrigger id="issuing-site-select">
+                                    <SelectValue placeholder="Choose a site..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableSites.map(site => (
+                                        <SelectItem key={site} value={site}>{site}</SelectItem>
+                                    ))}
+                                    <SelectItem value="Other Site">Other Site</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            <Button onClick={() => handleFinalApproval('Issued')} disabled={!issuingSite} className="w-full mt-2">
+                                <Building className="mr-2 h-4 w-4" /> Issue from Selected Site
+                            </Button>
+                        </div>
+
+                        <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t" />
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-background px-2 text-muted-foreground">
+                                    Or
+                                </span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <Label className="text-sm font-normal text-muted-foreground">Option 2: Purchase new material</Label>
+                             <Button variant="secondary" className="w-full" onClick={handleGeneratePo}>
+                                Generate New Purchase Order
+                            </Button>
+                        </div>
+
+                        <Separator />
+
+                        <Button onClick={() => handleFinalApproval('Purchase Rejected')} variant="destructive" className="w-full">
+                             Reject Indent
+                        </Button>
+                    </div>
+                </div>
+            </div>
+          ) : (
+             <div className="py-4">
+                <div className="text-center p-8 border rounded-lg bg-secondary/50">
+                    <h3 className="font-semibold text-lg">No Stock Found</h3>
+                    <p className="text-muted-foreground mb-4">
+                        This material is not available at any site or the central store. Please generate a new Purchase Order.
+                    </p>
+                    <Button onClick={handleGeneratePo}>
+                        Generate New Purchase Order
+                    </Button>
+                </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
