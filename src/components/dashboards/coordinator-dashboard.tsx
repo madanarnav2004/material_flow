@@ -1,6 +1,6 @@
 'use client';
 
-import { Building, FileText, Eye, Download, FileSpreadsheet, AlertTriangle, ChevronDown, Package, PackageSearch } from 'lucide-react';
+import { Building, FileText, Eye, Download, FileSpreadsheet, AlertTriangle, ChevronDown, Package, PackageSearch, Settings, Send, FilePlus } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -18,7 +18,18 @@ import { useMaterialContext, type InventoryItem, type IndentStatus, MaterialInde
 import { boqUsage, engineerUsage, mockBoqData } from '@/lib/mock-data';
 import { Select, SelectValue, SelectTrigger, SelectContent, SelectItem } from '../ui/select';
 import { Label } from '../ui/label';
+import { Input } from '../ui/input';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 
+const poDetailsSchema = z.object({
+  vendorName: z.string().min(2, 'Vendor name is required.'),
+  vendorContact: z.string().optional(),
+  billNumber: z.string().optional(),
+});
+type PoDetailsFormValues = z.infer<typeof poDetailsSchema>;
 
 export default function CoordinatorDashboard() {
   const { toast } = useToast();
@@ -31,6 +42,13 @@ export default function CoordinatorDashboard() {
   const [issuingSite, setIssuingSite] = React.useState<string>('');
 
   const indentsForApproval = requests.filter(r => r.status === 'Pending Director Approval');
+  const indentsForProcessing = requests.filter(r => r.status === 'Director Approved');
+
+  const poForm = useForm<PoDetailsFormValues>({
+    resolver: zodResolver(poDetailsSchema),
+    defaultValues: { vendorName: '', vendorContact: '', billNumber: '' },
+  });
+
 
   const handleStatusChange = (reqId: string, newStatus: IndentStatus) => {
     setRequests(requests.map(req => (req.id === reqId ? { ...req, status: newStatus } : req)));
@@ -43,6 +61,7 @@ export default function CoordinatorDashboard() {
   const handleProcessClick = (indent: MaterialIndent) => {
     setSelectedIndent(indent);
     setIssuingSite('');
+    poForm.reset();
   };
 
   const handleFinalApproval = (decision: 'Issued' | 'Purchase Rejected') => {
@@ -66,7 +85,7 @@ export default function CoordinatorDashboard() {
     setSelectedIndent(null);
   };
   
-  const handleGeneratePo = () => {
+  const onGeneratePo = (values: PoDetailsFormValues) => {
     if (!selectedIndent) return;
     setRequests(prevRequests =>
         prevRequests.map(req =>
@@ -74,18 +93,21 @@ export default function CoordinatorDashboard() {
                 ...req, 
                 status: 'PO Generated', 
                 poDate: new Date().toISOString(),
+                vendorName: values.vendorName,
+                vendorContact: values.vendorContact,
+                billNumber: values.billNumber
             } : req
         )
     );
      toast({
       title: 'Purchase Order Generated',
-      description: `A new PO for ${selectedIndent.material} has been generated.`,
+      description: `A new PO for ${selectedIndent.materials.map(m=>m.materialName).join(', ')} has been generated.`,
     });
     setSelectedIndent(null);
   };
 
   const materialAvailability = selectedIndent
-    ? inventory.filter(s => s.material.toLowerCase() === selectedIndent.material.toLowerCase())
+    ? inventory.filter(s => selectedIndent.materials.some(m => m.materialName.toLowerCase() === s.material.toLowerCase()))
     : [];
 
   const availableSites = [...new Set(materialAvailability.map(s => s.site))];
@@ -140,29 +162,17 @@ export default function CoordinatorDashboard() {
   const handleViewBill = (reqId: string) => {
     const request = requests.find(r => r.id === reqId);
     if (request) {
-      const returnDate = request.requiredPeriod ? new Date(request.requiredPeriod.to) : new Date(request.returnDate);
-      const fromDate = request.requiredPeriod ? new Date(request.requiredPeriod.from) : new Date(returnDate.getTime() - 10 * 24 * 60 * 60 * 1000);
-      const requestDate = request.requestDate ? new Date(request.requestDate) : new Date(returnDate.getTime() - 11 * 24 * 60 * 60 * 1000);
-      const idParts = request.id.split('-');
-      const datePart = idParts.length > 2 ? idParts[2] : format(requestDate, 'yyyyMMdd');
-      const countPart = idParts.length > 3 ? idParts[3] : request.id.slice(-3);
-      const siteCode = idParts.length > 1 ? idParts[1] : 'SITE';
-      const materialInfo = mockBoqData.materials.find(m => m.type.toLowerCase() === request.material.toLowerCase()) || {rate: 0};
-
-
       const bill: MaterialIndentBill = {
-        requestId: request.id,
-        requestDate: requestDate,
-        requesterName: request.requesterName || 'Sample Requester',
-        requestingSite: request.site,
-        materials: request.materials || [{ materialName: request.material, quantity: request.quantity, rate: materialInfo.rate }],
-        requiredPeriod: { from: fromDate, to: returnDate },
-        remarks: request.remarks || `This is a sample bill for request ${request.id}`,
-        issuedId: `ISS-${siteCode}-${datePart}-${countPart}`,
-        shiftingDate: new Date(returnDate.getTime() - 9 * 24 * 60 * 60 * 1000),
-        requester: { name: request.requesterName || 'Sample Requester' },
-        totalValue: request.materials ? request.materials.reduce((acc, m) => acc + m.quantity * (m.rate || 0), 0) : request.quantity * materialInfo.rate,
-        issuingSite: request.issuingSite || 'Pending Assignment',
+        ...request,
+        requestDate: new Date(request.requestDate),
+        requiredPeriod: { 
+          from: new Date(request.requiredPeriod.from), 
+          to: new Date(request.requiredPeriod.to),
+        },
+        issuedId: request.issuedId || `ISS-${request.id.substring(4)}`,
+        shiftingDate: new Date(), // Placeholder
+        requester: { name: request.requesterName },
+        totalValue: request.materials.reduce((acc, m) => acc + m.quantity * (m.rate || 0), 0),
       };
       setLastGeneratedBill(bill);
     }
@@ -180,7 +190,7 @@ export default function CoordinatorDashboard() {
     <>
       <h1 className="text-3xl font-bold font-headline">Coordinator Dashboard</h1>
       <div className="grid gap-6">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
           <StatCard
             title="BOQ Analysis"
             value="Open Analyzer"
@@ -189,38 +199,12 @@ export default function CoordinatorDashboard() {
             className="border-primary/50"
             onClick={() => router.push('/dashboard/boq-analysis')}
           />
-          <Dialog>
-            <DialogTrigger asChild>
-              <div className="cursor-pointer">
-                <StatCard
-                  title="Sites Overview"
-                  value={`${sites.length - 1} Sites`}
-                  icon={Building}
-                  description="Total active project sites"
-                />
-              </div>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Active Project Sites</DialogTitle>
-              </DialogHeader>
-              <Table>
-                <TableHeader><TableRow><TableHead>Site Name</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {sites.filter(s => s !== 'All' && s !== 'MAPI Godown').map(site => (
-                    <TableRow key={site}><TableCell>{site}</TableCell></TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <DialogFooter>
-                 <Button onClick={() => handleDownloadExcel('Site List', 'All Sites')}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download List
-                  </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
+          <StatCard
+              title="Indents to Process"
+              value={indentsForProcessing.length.toString()}
+              icon={Settings}
+              description="Director-approved indents"
+            />
           <Dialog>
             <DialogTrigger asChild>
                <div className="cursor-pointer">
@@ -228,7 +212,7 @@ export default function CoordinatorDashboard() {
                   title="Pending Indents"
                   value={indentsForApproval.length.toString()}
                   icon={Package}
-                  description="Awaiting action"
+                  description="Awaiting director approval"
                   className="border-yellow-500/50"
                 />
               </div>
@@ -254,9 +238,9 @@ export default function CoordinatorDashboard() {
                         {indentsForApproval.map(item => (
                             <TableRow key={item.id}>
                                 <TableCell className="font-medium">{item.id}</TableCell>
-                                <TableCell>{item.material}</TableCell>
-                                <TableCell>{item.quantity}</TableCell>
-                                <TableCell>{item.site}</TableCell>
+                                <TableCell>{item.materials.map(m => m.materialName).join(', ')}</TableCell>
+                                <TableCell>{item.materials.reduce((acc, m) => acc + m.quantity, 0)}</TableCell>
+                                <TableCell>{item.requestingSite}</TableCell>
                                 <TableCell className="text-right">
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
@@ -274,9 +258,6 @@ export default function CoordinatorDashboard() {
                                       </DropdownMenuItem>
                                       <DropdownMenuItem onClick={() => handleStatusChange(item.id, 'Director Rejected')} className="text-destructive">
                                         Reject
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleProcessClick(item)}>
-                                        Process
                                       </DropdownMenuItem>
                                     </DropdownMenuContent>
                                   </DropdownMenu>
@@ -417,88 +398,39 @@ export default function CoordinatorDashboard() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div className="lg:col-span-1 space-y-6">
                 <Card>
-                    <CardHeader>
-                        <CardTitle>BOQ Item-Wise Material Usage</CardTitle>
-                        <CardDescription>Comparison of actual vs. budgeted material consumption.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {boqUsage.length > 0 ? (
-                        <Table>
-                              <TableHeader>
-                                  <TableRow>
-                                      <TableHead>BOQ Item</TableHead>
-                                      <TableHead>Consumed</TableHead>
-                                      <TableHead>Budget</TableHead>
-                                      <TableHead>Status</TableHead>
-                                  </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                  {boqUsage.slice(0, 4).map(item => (
-                                      <TableRow key={item.item}>
-                                          <TableCell className="font-medium">{item.item}</TableCell>
-                                          <TableCell>{item.consumed}</TableCell>
-                                          <TableCell>{item.budget}</TableCell>
-                                          <TableCell className={item.status === 'Over Budget' ? 'text-destructive' : ''}>{item.status}</TableCell>
-                                      </TableRow>
-                                  ))}
-                              </TableBody>
-                        </Table>
-                      ) : (
-                        <p className="text-center text-muted-foreground">No BOQ usage data available.</p>
-                      )}
-                    </CardContent>
-                </Card>
-                <Card>
                   <CardHeader>
-                    <CardTitle>Indents for Approval</CardTitle>
-                    <CardDescription>Material indents awaiting action across all sites.</CardDescription>
+                    <CardTitle>Indents for Processing</CardTitle>
+                    <CardDescription>Assign an issuing site for director-approved indents.</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {indentsForApproval.length > 0 ? (
+                    {indentsForProcessing.length > 0 ? (
                       <Table>
                           <TableHeader>
                               <TableRow>
                                   <TableHead>Indent ID</TableHead>
                                   <TableHead>Material</TableHead>
-                                  <TableHead>Qty</TableHead>
-                                  <TableHead>Site</TableHead>
+                                  <TableHead>Requesting Site</TableHead>
                                   <TableHead className="text-right">Actions</TableHead>
                               </TableRow>
                           </TableHeader>
                           <TableBody>
-                          {indentsForApproval.map(item => (
+                          {indentsForProcessing.map(item => (
                               <TableRow key={item.id}>
                                   <TableCell className="font-medium">{item.id}</TableCell>
-                                  <TableCell>{item.material}</TableCell>
-                                  <TableCell>{item.quantity}</TableCell>
-                                  <TableCell>{item.site}</TableCell>
+                                  <TableCell>{item.materials.map(m => m.materialName).join(', ')}</TableCell>
+                                  <TableCell>{item.requestingSite}</TableCell>
                                   <TableCell className="text-right">
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" size="sm">
-                                          Actions <ChevronDown className="ml-2 h-4 w-4" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => handleViewBill(item.id)}>
-                                          <Eye className="mr-2 h-4 w-4" /> View Details
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem onClick={() => handleStatusChange(item.id, 'Director Approved')}>
-                                          Approve
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleStatusChange(item.id, 'Director Rejected')} className="text-destructive">
-                                          Reject
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
+                                    <Button size="sm" onClick={() => handleProcessClick(item)}>
+                                      <Settings className="mr-2 h-4 w-4" />
+                                      Process
+                                    </Button>
                                   </TableCell>
                               </TableRow>
                           ))}
                           </TableBody>
                       </Table>
                     ) : (
-                      <p className="text-center text-muted-foreground p-4">No indents are awaiting approval.</p>
+                      <p className="text-center text-muted-foreground p-4">No indents are awaiting processing.</p>
                     )}
                   </CardContent>
                 </Card>
@@ -563,202 +495,13 @@ export default function CoordinatorDashboard() {
               </div>
             )}
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-              <CardHeader>
-                  <CardTitle>Material Indent Return Reminders</CardTitle>
-                  <CardDescription>All materials due for return or with extended dates.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                  {requests.length > 0 ? (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Material</TableHead>
-                                <TableHead>Site</TableHead>
-                                <TableHead>Return Date</TableHead>
-                                <TableHead>Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {requests.slice(0, 3).map(req => (
-                                <TableRow key={req.id}>
-                                    <TableCell className="font-medium">{req.material}</TableCell>
-                                    <TableCell>{req.site}</TableCell>
-                                    <TableCell>{req.returnDate}</TableCell>
-                                    <TableCell>
-                                        <Badge 
-                                            variant={
-                                                req.status === 'Director Rejected' || req.status === 'Purchase Rejected' ? 'destructive' :
-                                                req.status === 'Completed' ? 'outline' :
-                                                'default'
-                                            }
-                                            className={cn(
-                                                req.status === 'Pending Director Approval' && 'bg-yellow-500',
-                                                req.status === 'Director Approved' && 'bg-blue-500',
-                                                req.status === 'Issued' && 'bg-green-600',
-                                                req.status === 'PO Generated' && 'bg-purple-500',
-                                                req.status === 'Partially Issued' && 'bg-orange-500',
-                                                req.status !== 'Completed' && 'text-white'
-                                            )}
-                                        >
-                                            {req.status}
-                                        </Badge>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                  ) : (
-                    <p className="text-center text-muted-foreground">No return reminders.</p>
-                  )}
-              </CardContent>
-            </Card>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>All Material Indent Return Reminders</DialogTitle>
-              <DialogDescription>All materials due for return or with extended dates.</DialogDescription>
-            </DialogHeader>
-            <div className="max-h-[60vh] overflow-y-auto">
-              {requests.length > 0 ? (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Material</TableHead>
-                            <TableHead>Issuing Site</TableHead>
-                            <TableHead>Requesting Site</TableHead>
-                            <TableHead>Return Date</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {requests.map(req => (
-                            <TableRow key={req.id}>
-                                <TableCell className="font-medium">{req.material}</TableCell>
-                                <TableCell>{req.issuingSite || 'Pending'}</TableCell>
-                                <TableCell>{req.site}</TableCell>
-                                <TableCell>{req.returnDate}</TableCell>
-                                <TableCell>
-                                    <Badge 
-                                        variant={
-                                            req.status === 'Director Rejected' || req.status === 'Purchase Rejected' ? 'destructive' :
-                                            req.status === 'Completed' ? 'outline' :
-                                            'default'
-                                        }
-                                        className={cn(
-                                            req.status === 'Pending Director Approval' && 'bg-yellow-500',
-                                            req.status === 'Director Approved' && 'bg-blue-500',
-                                            req.status === 'Issued' && 'bg-green-600',
-                                            req.status === 'PO Generated' && 'bg-purple-500',
-                                            req.status === 'Partially Issued' && 'bg-orange-500',
-                                            req.status !== 'Completed' && 'text-white'
-                                        )}
-                                    >
-                                        {req.status}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell className="text-right space-x-2">
-                                  <Button variant="outline" size="sm" onClick={() => handleViewBill(req.id)}>
-                                      <Eye className="mr-2 h-4 w-4" />
-                                      View Bill
-                                  </Button>
-                              </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-              ) : (
-                <p className="text-center text-muted-foreground">No return reminders.</p>
-              )}
-            </div>
-            <div className="flex justify-end mt-4">
-              <Button onClick={() => handleDownloadExcel('Return Reminders Report', 'All Sites')}>
-                <Download className="mr-2 h-4 w-4" />
-                Download Excel
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-                <CardHeader>
-                    <CardTitle>Engineer-Wise Material Usage</CardTitle>
-                    <CardDescription>Material consumption handled by each engineer.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                {engineerUsage.length > 0 ? (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Engineer Name</TableHead>
-                                <TableHead>Materials</TableHead>
-                                <TableHead>Site</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {engineerUsage.slice(0, 4).map(eng => (
-                                <TableRow key={eng.name}>
-                                    <TableCell className="font-medium">{eng.name}</TableCell>
-                                    <TableCell>{eng.materials}</TableCell>
-                                    <TableCell>{eng.site}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                ) : (
-                    <p className="text-center text-muted-foreground">No engineer usage data available.</p>
-                )}
-                </CardContent>
-            </Card>
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>Engineer-Wise Material Usage</DialogTitle>
-              <DialogDescription>Material consumption handled by each engineer.</DialogDescription>
-            </DialogHeader>
-            <div className="max-h-[60vh] overflow-y-auto">
-              {engineerUsage.length > 0 ? (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Engineer Name</TableHead>
-                            <TableHead>Materials</TableHead>
-                            <TableHead>Site</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {engineerUsage.map(eng => (
-                            <TableRow key={eng.name}>
-                                <TableCell className="font-medium">{eng.name}</TableCell>
-                                <TableCell>{eng.materials}</TableCell>
-                                <TableCell>{eng.site}</TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-              ) : (
-                <p className="text-center text-muted-foreground">No engineer usage data available.</p>
-              )}
-            </div>
-            <div className="flex justify-end mt-4">
-              <Button onClick={() => handleDownloadExcel('Engineer Usage Report', 'All Sites')}>
-                <Download className="mr-2 h-4 w-4" />
-                Download Excel
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
       <Dialog open={!!selectedIndent} onOpenChange={(isOpen) => !isOpen && setSelectedIndent(null)}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Process Indent: {selectedIndent?.id}</DialogTitle>
             <DialogDescription>
-              Assign an issuing site or generate a PO for <span className="font-semibold">{selectedIndent?.quantity} units</span> of <span className="font-semibold">{selectedIndent?.material}</span> for <span className="font-semibold">{selectedIndent?.site}</span>.
+              Assign an issuing site or generate a PO for <span className="font-semibold">{selectedIndent?.materials.reduce((acc, m) => acc + m.quantity, 0)} units</span> of <span className="font-semibold">{selectedIndent?.materials.map(m=>m.materialName).join(', ')}</span> for <span className="font-semibold">{selectedIndent?.requestingSite}</span>.
             </DialogDescription>
           </DialogHeader>
 
@@ -772,13 +515,15 @@ export default function CoordinatorDashboard() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Location</TableHead>
-                                    <TableHead className="text-right">Available Quantity</TableHead>
+                                    <TableHead>Material</TableHead>
+                                    <TableHead className="text-right">Available Qty</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {materialAvailability.map(stock => (
                                     <TableRow key={stock.id}>
                                         <TableCell>{stock.site}</TableCell>
+                                        <TableCell>{stock.material}</TableCell>
                                         <TableCell className="text-right">{stock.quantity}</TableCell>
                                     </TableRow>
                                 ))}
@@ -805,7 +550,7 @@ export default function CoordinatorDashboard() {
                             </Select>
 
                             <Button onClick={() => handleFinalApproval('Issued')} disabled={!issuingSite} className="w-full mt-2">
-                                <Building className="mr-2 h-4 w-4" /> Issue from Selected Site
+                                <Send className="mr-2 h-4 w-4" /> Issue from Selected Site
                             </Button>
                         </div>
 
@@ -822,9 +567,14 @@ export default function CoordinatorDashboard() {
 
                         <div>
                             <Label className="text-sm font-normal text-muted-foreground">Option 2: Purchase new material</Label>
-                             <Button variant="secondary" className="w-full" onClick={handleGeneratePo}>
-                                Generate New Purchase Order
-                            </Button>
+                            <Form {...poForm}>
+                              <form onSubmit={poForm.handleSubmit(onGeneratePo)} className="space-y-4">
+                                <FormField control={poForm.control} name="vendorName" render={({ field }) => (
+                                  <FormItem><FormLabel className="sr-only">Vendor</FormLabel><FormControl><Input placeholder="Vendor Name" {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <Button type="submit" className="w-full"> <FilePlus className="mr-2 h-4 w-4" /> Generate New PO</Button>
+                              </form>
+                            </Form>
                         </div>
 
                         <Separator />
@@ -840,11 +590,25 @@ export default function CoordinatorDashboard() {
                 <div className="text-center p-8 border rounded-lg bg-secondary/50">
                     <h3 className="font-semibold text-lg">No Stock Found</h3>
                     <p className="text-muted-foreground mb-4">
-                        This material is not available at any site or the central store. Please generate a new Purchase Order.
+                        This material is not available at any site or the central store. Please enter purchase details to generate a PO.
                     </p>
-                    <Button onClick={handleGeneratePo}>
-                        Generate New Purchase Order
-                    </Button>
+                    <Form {...poForm}>
+                      <form onSubmit={poForm.handleSubmit(onGeneratePo)} className="space-y-4 max-w-sm mx-auto text-left">
+                          <FormField control={poForm.control} name="vendorName" render={({ field }) => (
+                            <FormItem><FormLabel>Vendor Name</FormLabel><FormControl><Input placeholder="e.g., Acme Suppliers" {...field} /></FormControl><FormMessage /></FormItem>
+                          )}/>
+                           <FormField control={poForm.control} name="vendorContact" render={({ field }) => (
+                            <FormItem><FormLabel>Vendor Contact (Optional)</FormLabel><FormControl><Input placeholder="Phone or Email" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>
+                          )}/>
+                          <FormField control={poForm.control} name="billNumber" render={({ field }) => (
+                            <FormItem><FormLabel>Reference/Bill Number (Optional)</FormLabel><FormControl><Input placeholder="e.g., Q-12345" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>
+                          )}/>
+                          <Button type="submit" className="w-full">
+                              <FilePlus className="mr-2 h-4 w-4" />
+                              Generate & Download PO
+                          </Button>
+                      </form>
+                    </Form>
                 </div>
             </div>
           )}
