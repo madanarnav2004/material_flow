@@ -48,17 +48,8 @@ export default function TenderToolsPage() {
                 }
                 const header = content.substring(0, commaIndex);
                 
-                // Get raw base64 data
-                let base64Data = content.substring(commaIndex + 1);
-
-                // Decode any URL encoding and remove whitespace
-                try {
-                    base64Data = decodeURIComponent(base64Data).replace(/\s/g, '');
-                } catch (e) {
-                    // If decodeURIComponent fails, it's likely not URL encoded.
-                    // We can proceed with the original data after cleaning.
-                    base64Data = base64Data.replace(/\s/g, '');
-                }
+                // Get raw base64 data and clean it.
+                const base64Data = content.substring(commaIndex + 1).replace(/\s/g, '');
 
                 const mimeTypeFromHeader = header.split(':')[1]?.split(';')[0];
                 
@@ -113,7 +104,7 @@ export default function TenderToolsPage() {
         const fileName = `model-3d.${extension}`;
         
         // Placeholder image that looks like a blueprint to simulate a rendered model
-        const blueprintImageBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAMAAACahl6sAAAAFVBMVEX///92d3d4eHh5eXl6enp7e3t8fHwLpC72AAACnElEQVR4nO3c6W6bMBQFYfF+sA3Y+1/b1SoEEkLgxFw6nS/LhU+gB/M3BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAh5D9rF3n/x8n13L/2oP9wGBeT/d+P8v4Pbf+86w+sLw977j3P651lP5R/Xk/Ld28H/KPy/j6X/uG0P7B+/pT/8a7/UP6sH+X/pI/yf9L9fwP2v/79P8P+/s39L0L+R2j/kP0vYv/LyP+6/p9//f+vHwCAwDHyf7s7oF/yv7d76Bf8r9s99Av+t7sH/e/uA33kH2gH/QPaQT+D/oZ20I+g/9gO+gn6H9tBP4H+f3agH0D/LztAfwP99+yAfwD9B+2gH0D/ZztAf4L+JztgXwL+oztgv4T+8Rt0gH5jB+0g/cYOkA7SLm6gA/QbO0gH6Dd2gA7Qb+wAHaBf3AA7QL+xQ/qf9B87SAfoN3aADtBv7AAdgL/ZATtAP7FDdoB+YwftoB/YQTug/8UO0A/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAB2g/8EO0A/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAB2gX9xA/e/v12/oAP3GdtAN0m/sgA7Qb+wAHaDf2AE7QL+xQ/SAfsUO0A/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAB2gX9xAuwz/xx2gH9hBO6D/xQ7QD+wA/cb+f7/+B/s/7w8A8L+7P/D9i1//+b+l/p9//f/T/r9+/v8d/X//fv3//vv6v0f+/f+d/oH/lfbv5X3//pP+l/bv5f2/L++/6H9R/qD/wT+V9u8P+H9f/qH/3j7239L3t3+sP83+8SgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYhf8B8A6jM57PZ+gAAAAASUVORK5CYII=';
+        const blueprintImageBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAMAAACahl6sAAAAFVBMVEX///92d3d4eHh5eXl6enp7e3t8fHwLpC72AAACnElEQVR4nO3c6W6bMBQFYfF+sA3Y+1/b1SoEEkLgxFw6nS/LhU+gB/M3BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAh5D9rF3n/x8n13L/2oP9wGBeT/d+P8v4Pbf+86w+sLw977j3P651lP5R/Xk/Ld28H/KPy/j6X/uG0P7B+/pT/8a7/UP6sH+X/pI/yf9L9fwP2v/79P8P+/s39L0L+R2j/kP0vYv/LyP+6/p9//f+vHwCAwDHyf7s7oF/yv7d76Bf8r9s99Av+t7sH/e/uA33kH2gH/QPaQT+D/oZ20I+g/9gO+gn6H9tBP4H+f3agH0D/LztAfwP99+yAfwD9B+2gH0D/ZztAf4L+JztgXwL+oztgv4T+8Rt0gH5jB+0g/cYOkA7SLm6gA/QbO0gH6Dd2gA7Qb+wAHaBf3AA7QL+xQ/qf9B87SAfoN3aADtBv7AAdgL/ZATtAP7FDdoB+YwftoB/YQTug/8UO0A/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAB2g/8EO0A/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAB2gX9xA/e/v12/oAP3GdtAN0m/sgA7Qb+wAHaDf2AE7QL+xQ/SAfsUO0A/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAB2gX9xAuwz/xx2gH9hBO6D/xQ7QD+wA/cb+f7/+B/s/7w8A8L+7P/D9i1//+b+l/p9//f/T/r9+/v8d/X//fv3//vv6v0f+/f+d/oH/lfbv5X3//pP+l/bv5f2/L++/6H9R/qD/wT+V9u8P+H9f/qH/3j7239L3t3+sP83+8SgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYhf8B8A6jM57PZ+gAAAAASUVORK5CYII=';
 
         if (format === 'PNG' || format === 'JPG') {
             handleFileDownload(blueprintImageBase64, fileName, format === 'PNG' ? 'image/png' : 'image/jpeg');
