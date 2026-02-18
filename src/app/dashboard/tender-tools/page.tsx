@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Upload, Download, RefreshCw, Ruler, FileText, Layers, ChevronDown, Edit, FileType, FileSpreadsheet, ImageIcon, ToyBrick } from 'lucide-react';
@@ -38,9 +38,16 @@ export default function TenderToolsPage() {
     const drawingForm = useForm<DrawingFormValues>({ resolver: zodResolver(drawingSchema) });
     const boqUploadForm = useForm<BoqUploadFormValues>({ resolver: zodResolver(boqUploadSchema) });
 
-    const handleFileDownload = (content: string, fileName: string, mimeType: string) => {
+    const handleFileDownload = async (content: string, fileName: string, mimeType: string) => {
         try {
-            const blob = new Blob([content], { type: mimeType });
+            let blob;
+            if (content.startsWith('data:')) {
+                const response = await fetch(content);
+                blob = await response.blob();
+            } else {
+                blob = new Blob([content], { type: mimeType });
+            }
+            
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -69,7 +76,19 @@ export default function TenderToolsPage() {
             'STEP': 'step', 'IFC': 'ifc', 'SKP': 'skp'
         };
         const extension = extensions[format] || 'txt';
-        handleFileDownload(`Mock 3D Model Data (${format})`, `model-3d.${extension}`, 'text/plain');
+        const fileName = `model-3d.${extension}`;
+        
+        // Placeholder for a small black PNG image. This is a valid data URI.
+        const placeholderImageBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+        if (format === 'PNG' || format === 'JPG') {
+            // For images, we use the data URI. handleFileDownload will convert it to a blob.
+            handleFileDownload(placeholderImageBase64, fileName, format === 'PNG' ? 'image/png' : 'image/jpeg');
+        } else {
+            // For other formats, use mock text data and a generic binary mime type for better simulation.
+            const mockContent = `This is a mock 3D model file for the ${format} format.\nThis file is for testing purposes and is not a valid ${format} file.`;
+            handleFileDownload(mockContent, fileName, 'application/octet-stream');
+        }
     };
 
     const convertToCsv = (data: any[]) => {
