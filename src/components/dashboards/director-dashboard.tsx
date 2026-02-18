@@ -46,7 +46,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useMaterialContext, type IndentStatus, type InventoryItem } from '@/context/material-context';
+import { useMaterialContext, type IndentStatus, type InventoryItem, MaterialIndentBill } from '@/context/material-context';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 
@@ -55,23 +55,6 @@ const chartConfig: ChartConfig = {
     label: 'Consumption',
     color: 'hsl(var(--primary))',
   },
-};
-
-type RequestFormValues = {
-  requesterName: string;
-  requestingSite: string;
-  materials: { materialName: string; quantity: number; rate: number }[];
-  requiredPeriod: { from: Date; to: Date };
-  remarks?: string;
-};
-type MaterialIndentBill = RequestFormValues & {
-  requestId: string;
-  requestDate: Date;
-  issuedId: string;
-  issuingSite?: string;
-  shiftingDate: Date;
-  requester: { name: string } | null;
-  totalValue: number;
 };
 
 export default function DirectorDashboard() {
@@ -101,7 +84,15 @@ export default function DirectorDashboard() {
   const lowStockCount = lowStockMaterials.length;
 
   const stockLocations = ['Overall', 'MAPI Godown', ...new Set(inventory.map(s => s.site).filter(s => s !== 'MAPI Godown'))];
-  const consumptionSites = ['All', ...new Set(detailedMonthlyConsumption.Jun.siteWise.map((s:any) => s.site))];
+  
+  const consumptionSites = React.useMemo(() => {
+    const junData = detailedMonthlyConsumption.Jun;
+    if (junData && Array.isArray(junData.siteWise)) {
+      const sites = new Set(junData.siteWise.map((s: any) => s.site));
+      return ['All', ...Array.from(sites)];
+    }
+    return ['All'];
+  }, []);
 
   const totalMaterials = React.useMemo(() => {
     return inventory.reduce((acc, item) => acc + item.quantity, 0);
@@ -139,7 +130,7 @@ export default function DirectorDashboard() {
         requesterName: 'Sample Requester',
         requestingSite: request.site,
         issuingSite: request.issuingSite || 'Pending Assignment',
-        materials: [{ materialName: request.material, quantity: request.quantity, rate: 10 }], // Mock rate
+        materials: [{ materialName: request.material, quantity: request.quantity, rate: 10, unit: 'unit' }], // Mock rate
         requiredPeriod: { from: fromDate, to: returnDate },
         remarks: `This is a sample bill for request ${request.id}`,
         issuedId: `ISS-${siteCode}-${datePart}-${countPart}`,
