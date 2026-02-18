@@ -125,7 +125,7 @@ export default function MaterialsIssuedPage() {
             issuedId: newBillId,
             materialName: material.materialName,
             issuedQuantity: material.issuedQuantity,
-            issuingSite: selectedRequest.issuingSite || 'MAPI Store',
+            issuingSite: selectedRequest.issuingSite || 'MAPI Godown',
             receivingSite: selectedRequest.site,
             unit: material.materialUnit,
             rate: material.rate || 0,
@@ -134,7 +134,7 @@ export default function MaterialsIssuedPage() {
 
         // Decrement inventory from issuing site
         setInventory(prevInventory => {
-            const issuingSite = selectedRequest.issuingSite || 'MAPI Store';
+            const issuingSite = selectedRequest.issuingSite || 'MAPI Godown';
             const itemIndex = prevInventory.findIndex(item => item.site === issuingSite && item.material.toLowerCase() === material.materialName.toLowerCase());
             if(itemIndex > -1) {
                 const newInventory = [...prevInventory];
