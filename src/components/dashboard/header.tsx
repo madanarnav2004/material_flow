@@ -12,7 +12,7 @@ import { format } from 'date-fns';
 import { useUser } from '@/hooks/use-user';
 import DashboardSearch from './search';
 
-export default function DashboardHeader({ user }: { user: { name: string; email: string } | null }) {
+export default function DashboardHeader({ user }: { user: { name: string; email: string, profilePicture?: string; } | null }) {
   const router = useRouter();
   const { role } = useUser();
   const [lastLogin, setLastLogin] = React.useState<string | null>(null);
@@ -25,8 +25,14 @@ export default function DashboardHeader({ user }: { user: { name: string; email:
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('userRole');
+    localStorage.removeItem('userKey');
     localStorage.removeItem('lastLogin');
+    // Clear all user-specific data as well
+    Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('user-')) {
+            localStorage.removeItem(key);
+        }
+    });
     router.push('/');
   };
 
@@ -51,7 +57,7 @@ export default function DashboardHeader({ user }: { user: { name: string; email:
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={`https://picsum.photos/seed/${user?.email}/40/40`} />
+                <AvatarImage src={user?.profilePicture} />
                 <AvatarFallback>{user ? getInitials(user.name) : 'U'}</AvatarFallback>
               </Avatar>
             </Button>

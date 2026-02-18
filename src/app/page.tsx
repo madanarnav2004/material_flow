@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useUser } from "@/hooks/use-user";
 
 const ROLES = [
   { value: 'director', label: 'Director', icon: User, site: 'Global', role: 'director' },
@@ -33,8 +34,8 @@ export default function LoginPage() {
     if (!selectedRole) return;
 
     if (typeof window !== "undefined") {
-      localStorage.setItem("userRole", selectedRole.role);
-      localStorage.setItem("userSite", selectedRole.site);
+      // Store a unique key for the user instead of just the role
+      localStorage.setItem("userKey", selectedRole.value);
       localStorage.setItem("lastLogin", new Date().toISOString());
     }
     router.push("/dashboard");
