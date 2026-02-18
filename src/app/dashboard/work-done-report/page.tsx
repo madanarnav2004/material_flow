@@ -1,11 +1,10 @@
-
 'use client';
 
 import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, PlusCircle, Trash, Download, Calendar as CalendarIcon, FileText, DollarSign } from 'lucide-react';
+import { Save, PlusCircle, Trash, Download, Calendar as CalendarIcon, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,10 +15,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { mockBoqData } from '@/lib/mock-data';
+import { detailedBoqAnalysis, mockBoqData } from '@/lib/mock-data';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { useUser } from '@/hooks/use-user';
+import { useMaterialContext, type WorkDoneReport } from '@/context/material-context';
 
 const materialSchema = z.object({
   materialName: z.string().min(1, 'Material name is required.'),
@@ -49,16 +50,14 @@ const workforceSchema = z.object({
 const workDoneSchema = z.object({
   siteName: z.string(),
   reportDate: z.date(),
-  descriptionOfWork: z.string().min(1, 'Description of work is required.'),
-  categoryNumber: z.string(),
   itemOfWork: z.string().min(1, 'Item of work is required.'),
-  itemNumber: z.string(),
   subItemOfWork: z.string().optional(),
   quantityOfWork: z.coerce.number().min(0.1, 'Quantity must be greater than 0.'),
   materials: z.array(materialSchema).optional(),
   equipment: z.array(equipmentSchema).optional(),
   workforce: z.array(workforceSchema).optional(),
 });
+
 
 type WorkDoneFormValues = z.infer<typeof workDoneSchema>;
 
@@ -80,23 +79,35 @@ type DownloadFormValues = z.infer<typeof downloadSchema>;
 
 export default function WorkDoneReportPage() {
   const { toast } = useToast();
+  const { site } = useUser();
+  const { setWorkDoneReports } = useMaterialContext();
   const [submittedReport, setSubmittedReport] = React.useState<SubmittedReport | null>(null);
 
   const form = useForm<WorkDoneFormValues>({
     resolver: zodResolver(workDoneSchema),
     defaultValues: {
-      siteName: 'North Site', // This would be dynamic based on user
+      siteName: site || '',
       reportDate: new Date(),
-      descriptionOfWork: '',
-      categoryNumber: '',
       itemOfWork: '',
-      itemNumber: '',
       quantityOfWork: 0,
       materials: [{ materialName: '', quantity: 0, unit: '', rate: 0 }],
       equipment: [{ source: '', name: '', usage: 0, unit: '', rate: 0 }],
       workforce: [{ skill: '', designation: '', count: 0, hours: 0, otHours: 0, rate: 0, otRate: 0 }],
     },
   });
+
+  React.useEffect(() => {
+    if (site) {
+        form.setValue('siteName', site);
+    }
+  }, [site, form]);
+
+  const siteBoqItems = React.useMemo(() => {
+    if (!site) return [];
+    // Use detailedBoqAnalysis as the source of truth for site-specific BOQ
+    return detailedBoqAnalysis.filter(item => item.site === site);
+  }, [site]);
+
 
   const downloadForm = useForm<DownloadFormValues>({
     resolver: zodResolver(downloadSchema),
@@ -115,25 +126,9 @@ export default function WorkDoneReportPage() {
     name: 'workforce',
   });
   
-  const handleDescriptionChange = (value: string) => {
-    form.setValue('descriptionOfWork', value);
-    const selectedDesc = mockBoqData.descriptions.find(d => d.description === value);
-    form.setValue('categoryNumber', selectedDesc?.categoryNumber || '');
-    form.setValue('itemOfWork', '');
-    form.setValue('itemNumber', '');
-  };
-  
   const handleItemChange = (value: string) => {
     form.setValue('itemOfWork', value);
-    const selectedItem = mockBoqData.items.find(i => i.item === value);
-    form.setValue('itemNumber', selectedItem?.itemNumber || '');
   };
-
-  const selectedDescription = form.watch('descriptionOfWork');
-  const availableItems = React.useMemo(() => {
-    if (!selectedDescription) return [];
-    return mockBoqData.items.filter(i => i.description === selectedDescription);
-  }, [selectedDescription]);
 
   const selectedEquipmentSource = form.watch('equipment');
   const availableEquipment = (index: number) => {
@@ -180,6 +175,16 @@ export default function WorkDoneReportPage() {
       ...values,
       costs: { materialCost, equipmentCost, workforceCost, totalCost },
     });
+
+    const workDoneEntry: WorkDoneReport = {
+        siteName: values.siteName,
+        reportDate: values.reportDate.toISOString(),
+        itemOfWork: values.itemOfWork,
+        quantityOfWork: values.quantityOfWork,
+        totalCost: totalCost
+    };
+    setWorkDoneReports(prev => [...prev, workDoneEntry]);
+
 
     toast({
       title: 'Report Submitted & Costs Calculated',
@@ -329,85 +334,43 @@ export default function WorkDoneReportPage() {
 
                   <div className="space-y-4 rounded-lg border p-4">
                     <h3 className="text-lg font-medium">Work Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <FormField
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="itemOfWork"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Item of Work</FormLabel>
+                            <Select onValueChange={handleItemChange} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Select work item for your site" /></SelectTrigger></FormControl>
+                              <SelectContent>
+                                {siteBoqItems.map(item => (
+                                  <SelectItem key={item.item} value={item.item}>{item.item}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                       <FormField
                           control={form.control}
-                          name="descriptionOfWork"
+                          name="subItemOfWork"
                           render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Description of Work</FormLabel>
-                              <Select onValueChange={handleDescriptionChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Select work description" /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                  {mockBoqData.descriptions.map(desc => (
-                                    <SelectItem key={desc.description} value={desc.description}>{desc.description}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <FormItem>
+                              <FormLabel>Sub Item of Work (Optional)</FormLabel>
+                              <FormControl><Input placeholder="e.g., Waterproofing" {...field} /></FormControl>
                               <FormMessage />
-                            </FormItem>
+                              </FormItem>
                           )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="categoryNumber"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Category Number</FormLabel>
-                                <FormControl><Input {...field} readOnly disabled /></FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="itemOfWork"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Item of Work</FormLabel>
-                              <Select onValueChange={handleItemChange} value={field.value} disabled={!selectedDescription}>
-                                 <FormControl><SelectTrigger><SelectValue placeholder="Select work item" /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                  {availableItems.map(item => (
-                                    <SelectItem key={item.item} value={item.item}>{item.item}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="itemNumber"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Item Number</FormLabel>
-                                <FormControl><Input {...field} readOnly disabled /></FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="subItemOfWork"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Sub Item of Work (Optional)</FormLabel>
-                                <FormControl><Input placeholder="e.g., Waterproofing" {...field} /></FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                      />
                     </div>
                     <FormField
                         control={form.control}
                         name="quantityOfWork"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Quantity of Work</FormLabel>
+                            <FormLabel>Quantity of Work Done Today</FormLabel>
                             <FormControl><Input type="number" placeholder="e.g., 10" {...field} /></FormControl>
                             <FormMessage />
                             </FormItem>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -81,6 +80,14 @@ export interface MaterialReceivedBill {
   status: ReceiptStatus;
 }
 
+export interface WorkDoneReport {
+  siteName: string;
+  reportDate: string; // Storing as string for easier serialization
+  itemOfWork: string;
+  quantityOfWork: number;
+  totalCost: number;
+}
+
 
 // Helper function to get item from localStorage
 function getFromLocalStorage<T>(key: string, defaultValue: T): T {
@@ -123,6 +130,8 @@ interface MaterialContextType {
   setInventory: React.Dispatch<React.SetStateAction<InventoryItem[]>>;
   receipts: MaterialReceivedBill[];
   setReceipts: React.Dispatch<React.SetStateAction<MaterialReceivedBill[]>>;
+  workDoneReports: WorkDoneReport[];
+  setWorkDoneReports: React.Dispatch<React.SetStateAction<WorkDoneReport[]>>;
 }
 
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
@@ -132,14 +141,17 @@ export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [issuedMaterials, setIssuedMaterials] = useState<IssuedMaterial[]>(() => getFromLocalStorage('materialflow-issued', initialIssuedMaterials));
   const [inventory, setInventory] = useState<InventoryItem[]>(() => getFromLocalStorage('materialflow-inventory', initialInventory));
   const [receipts, setReceipts] = useState<MaterialReceivedBill[]>(() => getFromLocalStorage('materialflow-receipts', []));
+  const [workDoneReports, setWorkDoneReports] = useState<WorkDoneReport[]>(() => getFromLocalStorage('materialflow-work-done-reports', []));
 
   useEffect(() => { setInLocalStorage('materialflow-requests', requests) }, [requests]);
   useEffect(() => { setInLocalStorage('materialflow-issued', issuedMaterials) }, [issuedMaterials]);
   useEffect(() => { setInLocalStorage('materialflow-inventory', inventory) }, [inventory]);
   useEffect(() => { setInLocalStorage('materialflow-receipts', receipts) }, [receipts]);
+  useEffect(() => { setInLocalStorage('materialflow-work-done-reports', workDoneReports) }, [workDoneReports]);
+
 
   return (
-    <MaterialContext.Provider value={{ requests, setRequests, issuedMaterials, setIssuedMaterials, inventory, setInventory, receipts, setReceipts }}>
+    <MaterialContext.Provider value={{ requests, setRequests, issuedMaterials, setIssuedMaterials, inventory, setInventory, receipts, setReceipts, workDoneReports, setWorkDoneReports }}>
       {children}
     </MaterialContext.Provider>
   );
