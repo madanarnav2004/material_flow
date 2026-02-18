@@ -14,51 +14,41 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useMaterialContext } from '@/context/material-context';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const reportTypes = [
   {
+    id: "material-shifting",
     title: "Material Shifting Report",
     description: "Tracks material movement between sites and overall organizational shifts.",
     variants: ["Site-wise", "Organization-wise"],
+    headers: ['GRN ID', 'Material', 'Received Qty', 'Issuing Site', 'Receiving Site', 'Status'],
+    dataKeys: ['receivedBillId', 'materialName', 'receivedQuantity', 'issuingSite', 'receivingSite', 'status'],
   },
   {
-    title: "Returnable Material Report",
-    description: "Details on materials that are returnable to the godown or another site.",
-    variants: ["Site-wise", "Organization-wise", "Godown-wise"],
-  },
-  {
+    id: "material-stock",
     title: "Material Stock Report",
     description: "Current inventory levels across different locations.",
     variants: ["Site-wise", "Store-wise", "Organization-wise"],
+    headers: ['Material', 'Site', 'Quantity', 'Unit', 'Classification'],
+    dataKeys: ['material', 'site', 'quantity', 'unit', 'classification'],
   },
   {
-    title: "BOQ Item-wise Material Issued",
-    description: "Details on materials issued against Bill of Quantities items, including cost.",
-    variants: [],
-    hasSiteDropdown: true,
-  },
-  {
-    title: "Site-wise BOQ Report",
-    description: "Consumption and budget tracking per site based on BOQ (includes quantity, rate, amount).",
-    variants: [],
-    hasSiteDropdown: true,
-  },
-  {
+    id: "grn-report",
     title: "Goods Received Note (GRN) Report",
     description: "Confirmation of materials received at various locations.",
     variants: ["Site-wise", "Organization-wise"],
+    headers: ['GRN ID', 'Indent ID', 'Material', 'Received Qty', 'Receiving Site', 'Status'],
+    dataKeys: ['receivedBillId', 'requestId', 'materialName', 'receivedQuantity', 'receivingSite', 'status'],
   },
   {
+    id: "indent-register",
     title: "Material Indent Register",
     description: "A complete log of all material indents.",
     variants: ["Site-wise", "Organization-wise"],
-  },
-  {
-    title: "Indent vs. GRN Comparison",
-    description: "Analysis of discrepancies between requested and received quantities.",
-    variants: [],
+    headers: ['Indent ID', 'Material', 'Qty', 'Site', 'Status', 'Return Date'],
+    dataKeys: ['id', 'material', 'quantity', 'site', 'status', 'returnDate'],
   },
 ];
 
@@ -68,32 +58,35 @@ export default function ReportsPage() {
   const [reportTitle, setReportTitle] = React.useState('');
   const [reportData, setReportData] = React.useState<any[]>([]);
   const [reportHeaders, setReportHeaders] = React.useState<string[]>([]);
+  const [reportKeys, setReportKeys] = React.useState<string[]>([]);
   
-  const sitesList = React.useMemo(() => ["MAPI Godown", ...Array.from(new Set(inventory.map(i => i.site)))], [inventory]);
+  const sitesList = React.useMemo(() => ["MAPI Godown", ...Array.from(new Set(inventory.map(i => i.site)))].filter(s => s !== "MAPI Godown"), [inventory]);
 
-  const handleGenerateReport = (reportTitle: string, filter?: string) => {
-    setReportTitle(filter ? `${reportTitle} (${filter})` : reportTitle);
+  const handleGenerateReport = (reportId: string, filter?: string) => {
+    const reportInfo = reportTypes.find(r => r.id === reportId);
+    if (!reportInfo) return;
+
+    setReportTitle(filter ? `${reportInfo.title} (${filter})` : reportInfo.title);
+    setReportHeaders(reportInfo.headers);
+    setReportKeys(reportInfo.dataKeys);
     let data: any[] = [];
-    let headers: string[] = [];
 
-    switch (reportTitle) {
-      case 'Material Indent Register':
-        headers = ['Indent ID', 'Material', 'Qty', 'Site', 'Status', 'Return Date'];
-        data = filter === 'Organization-wise' 
+    switch (reportInfo.id) {
+      case 'indent-register':
+        data = filter === 'Organization-wise' || filter === 'All'
           ? requests 
           : requests.filter(r => r.site === filter);
         break;
       
-      case 'Material Stock Report':
-         headers = ['Material', 'Site', 'Quantity', 'Unit'];
-         data = filter === 'Organization-wise'
+      case 'material-stock':
+         data = filter === 'Organization-wise' || filter === 'All'
             ? inventory
-            : inventory.filter(i => i.site === filter);
+            : inventory.filter(i => i.site === filter || (filter === "Store-wise" && i.site === "MAPI Godown"));
          break;
-
-      case 'Goods Received Note (GRN) Report':
-        headers = ['GRN ID', 'Indent ID', 'Material', 'Received Qty', 'Receiving Site', 'Status'];
-        data = filter === 'Organization-wise'
+      
+      case 'material-shifting':
+      case 'grn-report':
+        data = filter === 'Organization-wise' || filter === 'All'
             ? receipts
             : receipts.filter(r => r.receivingSite === filter);
         break;
@@ -106,10 +99,14 @@ export default function ReportsPage() {
     }
 
     setReportData(data);
-    setReportHeaders(headers);
     setDialogOpen(true);
   };
   
+  const handleDownload = () => {
+    // In a real app, this would trigger a file download (e.g., CSV generation)
+    console.log("Downloading report:", reportTitle, reportData);
+    setDialogOpen(false);
+  }
 
   return (
     <>
@@ -123,7 +120,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             {reportTypes.map((report) => (
-              <Card key={report.title} className="shadow-none">
+              <Card key={report.id} className="shadow-none">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                       <FileSpreadsheet className="h-5 w-5 text-primary" />
@@ -147,8 +144,8 @@ export default function ReportsPage() {
                             <DropdownMenuContent>
                               <DropdownMenuLabel>Select a Location</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              {sitesList.map((site) => (
-                                <DropdownMenuItem key={site} onClick={() => handleGenerateReport(report.title, site)}>
+                              {(variant === 'Site-wise' ? sitesList : ['MAPI Godown']).map((site) => (
+                                <DropdownMenuItem key={site} onClick={() => handleGenerateReport(report.id, site)}>
                                   {site}
                                 </DropdownMenuItem>
                               ))}
@@ -157,14 +154,14 @@ export default function ReportsPage() {
                         );
                       }
                       return (
-                        <Button key={variant} variant="outline" onClick={() => handleGenerateReport(report.title, variant)}>
+                        <Button key={variant} variant="outline" onClick={() => handleGenerateReport(report.id, variant)}>
                           <Download className="mr-2 h-4 w-4" />
                           Preview {variant}
                         </Button>
                       );
                     })
                   ) : (
-                    <Button onClick={() => handleGenerateReport(report.title, 'All')}>
+                    <Button onClick={() => handleGenerateReport(report.id, 'All')}>
                       <Download className="mr-2 h-4 w-4" />
                       Preview Report
                     </Button>
@@ -195,9 +192,14 @@ export default function ReportsPage() {
                 <TableBody>
                   {reportData.map((row, index) => (
                     <TableRow key={index}>
-                      {Object.values(row).map((cell: any, cellIndex: number) => (
-                          <TableCell key={cellIndex}>{typeof cell === 'object' ? JSON.stringify(cell) : cell}</TableCell>
-                      )).slice(0, reportHeaders.length)}
+                      {reportKeys.map((key) => {
+                        const cellData = row[key];
+                        return (
+                          <TableCell key={key}>
+                            {typeof cellData === 'boolean' ? (cellData ? 'Yes' : 'No') : cellData}
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -206,6 +208,10 @@ export default function ReportsPage() {
               <p className="text-center text-muted-foreground p-8">No data available for this report.</p>
             )}
           </div>
+          <DialogFooter>
+             <Button variant="outline" onClick={() => setDialogOpen(false)}>Close</Button>
+             <Button onClick={handleDownload}><Download className="mr-2 h-4 w-4" /> Download</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
