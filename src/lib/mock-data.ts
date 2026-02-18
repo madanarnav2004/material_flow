@@ -9,20 +9,9 @@ export const monthlyConsumption = [
   { month: 'Jun', consumption: 412 },
 ];
 
-export const materialStock = [
-    { name: 'Cement', value: 400, unit: 'bags' },
-    { name: 'Steel', value: 300, unit: 'tons' },
-    { name: 'Sand', value: 500, unit: 'cu.m.' },
-    { name: 'Bricks', value: 200, unit: 'pcs' },
-    { name: 'Gravel', value: 100, unit: 'cu.m.' },
-];
+export const materialStock: any[] = [];
 
-export const recentTransfers = [
-    { id: '1', material: '500 Bags of Cement', issuingSite: 'MAPI Godown', receivingSite: 'North Site', status: 'In Transit', date: '2024-07-20' },
-    { id: '2', material: '10 tons of Steel', issuingSite: 'Vendor A', receivingSite: 'North Site', status: 'Completed', date: '2024-07-19' },
-    { id: '3', material: '2000 Bricks', issuingSite: 'Purchase Dept', receivingSite: 'West Site', status: 'PO Generated', date: '2024-07-17' },
-    { id: '4', material: '20 cu.m. Sand', issuingSite: 'East Site', receivingSite: 'MAPI Godown', status: 'Completed', date: '2024-07-22' },
-];
+export const recentTransfers: any[] = [];
 
 export const allMaterials = [
     { id: 'mat-1', name: 'Cement', unit: 'bag', description: 'Portland cement, 50kg bag', rate: 10 },
@@ -34,24 +23,11 @@ export const allMaterials = [
     { id: 'mat-7', name: 'Specialized Adhesive', unit: 'kg', description: 'High-strength construction adhesive', rate: 15 },
 ];
 
-export const lowStockMaterials = [
-    { id: 'ls-1', material: 'Gravel', site: 'North Site', quantity: 5, unit: 'cu.m.', threshold: 10 },
-    { id: 'ls-2', material: 'Paint', site: 'MAPI Godown', quantity: 20, unit: 'liters', threshold: 50 },
-    { id: 'ls-3', material: 'Bricks', site: 'West Site', quantity: 900, unit: 'pcs', threshold: 1000 },
-];
+export const lowStockMaterials: any[] = [];
 
-export const initialIndents: MaterialIndent[] = [
-    { id: 'REQ-NORTH-20240720-001', material: 'Cement', quantity: 500, site: 'North Site', status: 'Issued', returnDate: '2024-08-15', issuingSite: 'MAPI Godown', materials: [{ materialName: 'Cement', quantity: 500, unit: 'bags', rate: 10 }] },
-    { id: 'REQ-EAST-20240718-002', material: 'Steel Rebar', quantity: 10, site: 'East Site', status: 'Completed', returnDate: '2024-08-10', issuingSite: 'MAPI Godown', materials: [{ materialName: 'Steel Rebar', quantity: 10, unit: 'tons', rate: 800 }] },
-    { id: 'REQ-WEST-20240721-004', material: 'Bricks', quantity: 2000, site: 'West Site', status: 'Pending Director Approval', returnDate: '2024-08-20', materials: [{ materialName: 'Bricks', quantity: 2000, unit: 'pcs', rate: 0.5 }] },
-    { id: 'REQ-SOUTH-20240720-003', material: 'Sand', quantity: 50, site: 'South Site', status: 'Director Approved', returnDate: '2024-08-18', materials: [{ materialName: 'Sand', quantity: 50, unit: 'cu.m.', rate: 25 }] },
-    { id: 'REQ-NORTH-20240722-005', material: 'Specialized Adhesive', quantity: 25, site: 'North Site', status: 'Pending Director Approval', returnDate: '2024-08-25', materials: [{ materialName: 'Specialized Adhesive', quantity: 25, unit: 'kg', rate: 15 }] },
-];
+export const initialIndents: MaterialIndent[] = [];
 
-export const issuedMaterialsForReceipt = [
-    { requestId: 'REQ-NORTH-20240720-001', issuedId: 'ISS-NORTH-20240720-001', materialName: 'Cement', issuedQuantity: 500, issuingSite: 'MAPI Godown', receivingSite: 'North Site', unit: 'bags', rate: 10 },
-    { requestId: 'REQ-EAST-20240718-002', issuedId: 'ISS-EAST-20240718-002', materialName: 'Steel Rebar', issuedQuantity: 10, issuingSite: 'MAPI Godown', receivingSite: 'East Site', unit: 'tons', rate: 800 },
-];
+export const issuedMaterialsForReceipt: any[] = [];
 
 const generateSiteConsumption = (materials: {name: string, unit: string}[], sites: string[]) => {
     return sites.map(site => ({
@@ -94,80 +70,28 @@ const generateMonthlyDetailedData = (months: string[]) => {
 
 export const detailedMonthlyConsumption = generateMonthlyDetailedData(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']);
 
-export const detailedStock = [
-    { id: 'ds-1', material: 'Cement', site: 'North Site', quantity: 480, type: 'Site Stock', mismatch: false },
-    { id: 'ds-2', material: 'Cement', site: 'MAPI Godown', quantity: 1500, type: 'Central Godown', mismatch: false },
-    { id: 'ds-3', material: 'Steel Rebar', site: 'North Site', quantity: 9, type: 'Site Stock', mismatch: true, expected: 10 },
-    { id: 'ds-4', material: 'Gravel', site: 'North Site', quantity: 5, type: 'Site Stock', mismatch: false },
-    { id: 'ds-5', material: 'Bricks', site: 'West Site', quantity: 5000, type: 'Site Stock', mismatch: false },
-    { id: 'ds-6', material: 'Bricks', site: 'MAPI Godown', quantity: 10000, type: 'Central Godown', mismatch: false },
-    { id: 'ds-7', material: 'Sand', site: 'South Site', quantity: 120, type: 'Site Stock', mismatch: false },
-];
+export const detailedStock: any[] = [];
 
-export const stockUpdates = [
-    { id: 'su-1', material: 'Cement', site: 'North Site', change: '+500 bags', date: '2024-07-20' },
-    { id: 'su-2', material: 'Cement', site: 'North Site', change: '-20 bags', date: '2024-07-21' },
-    { id: 'su-3', material: 'Steel Rebar', site: 'MAPI Godown', change: '-10 tons', date: '2024-07-18' },
-    { id: 'su-4', material: 'Steel Rebar', site: 'East Site', change: '+10 tons', date: '2024-07-19' },
-    { id: 'su-5', material: 'Bricks', site: 'Purchase', change: '+5000 pcs', date: '2024-07-17' },
-];
+export const stockUpdates: any[] = [];
 
-export const boqUsage = [
-    { item: 'Concrete Works', consumed: 450, budget: 1000, status: 'Within Budget' },
-    { item: 'Excavation', consumed: 120, budget: 100, status: 'Over Budget' },
-    { item: 'Brickwork', consumed: 800, budget: 2000, status: 'Within Budget' },
-    { item: 'Finishing', consumed: 50, budget: 500, status: 'Within Budget' },
-];
+export const boqUsage: any[] = [];
 
-export const engineerUsage = [
-    { name: 'John Smith', materials: 'Cement, Sand', site: 'North Site' },
-    { name: 'Maria Garcia', materials: 'Steel Rebar', site: 'East Site' },
-    { name: 'Chen Wei', materials: 'Bricks, Gravel', site: 'West Site' },
-];
+export const engineerUsage: any[] = [];
 
-export const siteStock = [
-  { id: 'ss-1', name: 'Cement', quantity: '480 bags', status: 'In Stock' },
-  { id: 'ss-2', name: 'Steel Rebar', quantity: '9 tons', status: 'In Stock' },
-  { id: 'ss-3', name: 'Gravel', quantity: '5 cu.m.', status: 'Low Stock' },
-];
+export const siteStock: any[] = [];
 
-export const recentSiteActivity = [
-    { id: 'sa-1', type: 'GRN', details: '500 Bags of Cement', from: 'MAPI Godown', site: 'North Site', status: 'Completed', date: '2024-07-20' },
-    { id: 'sa-2', type: 'Indent', details: '100 cu.m. Sand', to: 'MAPI Godown', site: 'North Site', status: 'Pending', date: '2024-07-21' },
-    { id: 'sa-3', type: 'Material Transfer', details: '20 bags Cement', to: 'Block A', site: 'North Site', status: 'Completed', date: '2024-07-21' },
-];
+export const recentSiteActivity: any[] = [];
 
-export const pendingSiteRequests = [
-    { id: 'psr-1', material: 'Sand', quantity: '100 cu.m.', requestedFrom: 'MAPI Godown', site: 'North Site'},
-];
+export const pendingSiteRequests: any[] = [];
 
-export const lowStockSite = [
-    { id: 'lss-1', material: 'Gravel', quantity: 5, unit: 'cu.m.', threshold: 10 },
-];
+export const lowStockSite: any[] = [];
 
 
-export const storeInventory = [
-    { id: 'si-1', name: 'Cement', quantity: '1500 bags', siteDistribution: 'North, South' },
-    { id: 'si-2', name: 'Steel Rebar', quantity: '80 tons', siteDistribution: 'East, West' },
-    { id: 'si-3', name: 'Sand', quantity: '300 cu.m.', siteDistribution: 'North, West' },
-    { id: 'si-4', name: 'Paint', quantity: '20 liters', siteDistribution: 'South' },
-];
+export const storeInventory: any[] = [];
 
-export const recentStoreActivity = [
-    { id: 'rsa-1', type: 'Issue', details: '500 Bags Cement', site: 'North Site', status: 'Completed', date: '2024-07-20' },
-    { id: 'rsa-2', type: 'GRN', details: '100 tons Steel', site: 'Vendor A', status: 'Accepted', date: '2024-07-19' },
-    { id: 'rsa-3', type: 'Indent', details: '2000 Bricks', site: 'West Site', status: 'Pending', date: '2024-07-21' },
-    { id: 'rsa-4', type: 'Transfer In', details: '10 cu.m. Gravel', site: 'West Site', status: 'Completed', date: '2024-07-18' },
-];
+export const recentStoreActivity: any[] = [];
 
-export const detailedMaterialValue = [
-    { id: 'dmv-1', name: 'Cement', site: 'North Site', quantity: 480, unit: 'bags', rate: 10 },
-    { id: 'dmv-2', name: 'Cement', site: 'MAPI Godown', quantity: 1500, unit: 'bags', rate: 9.5 },
-    { id: 'dmv-3', name: 'Steel Rebar', site: 'East Site', quantity: 10, unit: 'tons', rate: 800 },
-    { id: 'dmv-4', name: 'Steel Rebar', site: 'MAPI Godown', quantity: 80, unit: 'tons', rate: 790 },
-    { id: 'dmv-5', name: 'Sand', site: 'MAPI Godown', quantity: 300, unit: 'cu.m.', rate: 20 },
-    { id: 'dmv-6', name: 'Gravel', site: 'North Site', quantity: 5, unit: 'cu.m.', rate: 22 },
-];
+export const detailedMaterialValue: any[] = [];
 
 // Mock Data for Work Done Report BOQ
 export const mockBoqData = {
@@ -193,133 +117,7 @@ export const mockBoqData = {
   ]
 };
 
-export const detailedBoqAnalysis = [
-  {
-    site: 'North Site',
-    item: 'Concrete Works',
-    boqQty: 1000,
-    boqRate: 150,
-    actualMaterialQty: 950,
-    actualMaterialRate: 155,
-    actualManpower: [
-      { designation: 'Masons', count: 12 },
-      { designation: 'Helpers', count: 8 }
-    ],
-    actualManpowerHours: 160,
-    actualManpowerOtHours: 20,
-    actualManpowerCost: 5200,
-    actualEquipmentName: 'Concrete Mixer',
-    actualEquipmentHours: 16,
-    actualEquipmentOtHours: 2,
-    actualEquipmentCost: 800,
-  },
-  {
-    site: 'North Site',
-    item: 'Excavation',
-    boqQty: 100,
-    boqRate: 50,
-    actualMaterialQty: 120,
-    actualMaterialRate: 52,
-    actualManpower: [
-      { designation: 'Operators', count: 2 },
-      { designation: 'Laborers', count: 3 }
-    ],
-    actualManpowerHours: 40,
-    actualManpowerOtHours: 10,
-    actualManpowerCost: 1500,
-    actualEquipmentName: 'JCB',
-    actualEquipmentHours: 40,
-    actualEquipmentOtHours: 5,
-    actualEquipmentCost: 2000,
-  },
-  {
-    site: 'South Site',
-    item: 'Brickwork',
-    boqQty: 2000,
-    boqRate: 20,
-    actualMaterialQty: 1800,
-    actualMaterialRate: 18,
-    actualManpower: [
-      { designation: 'Masons', count: 8 },
-      { designation: 'Helpers', count: 7 }
-    ],
-    actualManpowerHours: 120,
-    actualManpowerOtHours: 0,
-    actualManpowerCost: 3600,
-    actualEquipmentName: 'Scaffolding',
-    actualEquipmentHours: 120,
-    actualEquipmentOtHours: 0,
-    actualEquipmentCost: 600,
-  },
-  {
-    site: 'South Site',
-    item: 'Finishing',
-    boqQty: 500,
-    boqRate: 100,
-    actualMaterialQty: 500,
-    actualMaterialRate: 95,
-    actualManpower: [
-      { designation: 'Painters', count: 4 },
-      { designation: 'Assistants', count: 6 }
-    ],
-    actualManpowerHours: 80,
-    actualManpowerOtHours: 15,
-    actualManpowerCost: 4000,
-    actualEquipmentName: 'Paint Sprayer',
-    actualEquipmentHours: 30,
-    actualEquipmentOtHours: 4,
-    actualEquipmentCost: 300,
-  },
-   {
-    site: 'West Site',
-    item: 'Concrete Works',
-    boqQty: 1200,
-    boqRate: 140,
-    actualMaterialQty: 1300,
-    actualMaterialRate: 145,
-    actualManpower: [
-      { designation: 'Masons', count: 15 },
-      { designation: 'Helpers', count: 10 }
-    ],
-    actualManpowerHours: 200,
-    actualManpowerOtHours: 40,
-    actualManpowerCost: 8000,
-    actualEquipmentName: 'Concrete Mixer',
-    actualEquipmentHours: 20,
-    actualEquipmentOtHours: 5,
-    actualEquipmentCost: 1000,
-  },
-  {
-    site: 'East Site',
-    item: 'Brickwork',
-    boqQty: 2500,
-    boqRate: 22,
-    actualMaterialQty: 2400,
-    actualMaterialRate: 22,
-    actualManpower: [
-      { designation: 'Masons', count: 12 },
-      { designation: 'Helpers', count: 8 }
-    ],
-    actualManpowerHours: 160,
-    actualManpowerOtHours: 10,
-    actualManpowerCost: 4800,
-    actualEquipmentName: 'Scaffolding',
-    actualEquipmentHours: 160,
-    actualEquipmentOtHours: 0,
-    actualEquipmentCost: 800,
-  },
-];
+export const detailedBoqAnalysis: any[] = [];
 
 
-export const liveInventory = [
-  { id: 'inv-1', site: 'North Site', material: 'Cement', classification: 'Consumable' as const, quantity: 480, unit: 'bags', minQty: 100, maxQty: 1000 },
-  { id: 'inv-2', site: 'North Site', material: 'Steel Rebar', classification: 'Asset' as const, ownership: 'Own' as const, quantity: 9, unit: 'tons', minQty: 5, maxQty: 20 },
-  { id: 'inv-3', site: 'North Site', material: 'Gravel', classification: 'Consumable' as const, quantity: 5, unit: 'cu.m.', minQty: 10, maxQty: 50 },
-  { id: 'inv-4', site: 'West Site', material: 'Bricks', classification: 'Consumable' as const, quantity: 5000, unit: 'pcs', minQty: 2000, maxQty: 10000 },
-  { id: 'inv-5', site: 'South Site', material: 'Sand', classification: 'Consumable' as const, quantity: 120, unit: 'cu.m.', minQty: 50, maxQty: 200 },
-  { id: 'inv-6', site: 'MAPI Godown', material: 'Cement', classification: 'Consumable' as const, quantity: 1500, unit: 'bags', minQty: 500, maxQty: 3000 },
-  { id: 'inv-7', site: 'MAPI Godown', material: 'Bricks', classification: 'Consumable' as const, quantity: 10000, unit: 'pcs', minQty: 5000, maxQty: 20000 },
-  { id: 'inv-8', site: 'MAPI Godown', material: 'Paint', classification: 'Consumable' as const, quantity: 20, unit: 'liters', minQty: 50, maxQty: 200 },
-  { id: 'inv-9', site: 'MAPI Godown', material: 'Steel Rebar', classification: 'Asset' as const, ownership: 'Own' as const, quantity: 80, unit: 'tons', minQty: 20, maxQty: 100 },
-  { id: 'inv-10', site: 'North Site', material: 'JCB', classification: 'Asset' as const, ownership: 'Rent' as const, vendorName: 'Reliable Rentals Co.', quantity: 1, unit: 'unit', minQty: 1, maxQty: 1 },
-];
+export const liveInventory: any[] = [];
