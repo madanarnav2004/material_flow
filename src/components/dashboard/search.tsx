@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { engineerUsage, boqUsage, recentSiteActivity, materialReturnReminders as indents, liveInventory } from '@/lib/mock-data';
+import { engineerUsage, boqUsage, recentSiteActivity, initialIndents as indents, liveInventory } from '@/lib/mock-data';
 
 
 type SearchCategory = {
