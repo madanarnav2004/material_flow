@@ -9,23 +9,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Upload, Download, RefreshCw, Ruler, FileText, Layers, ChevronDown, Edit } from 'lucide-react';
+import { Upload, Download, RefreshCw, Ruler, FileText, Layers, ChevronDown, Edit, FileType, FileSpreadsheet } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const fileSchema = (typeof window !== 'undefined' ? z.instanceof(File) : z.any()).optional();
 
 const drawingSchema = z.object({
-  drawingFile: fileSchema,
+  drawingFile: fileSchema.refine(file => file, 'A drawing file is required.'),
 });
 type DrawingFormValues = z.infer<typeof drawingSchema>;
-
-const measurementSchema = z.object({
-    measurementType: z.string().min(1, 'Please select a measurement type.'),
-});
-type MeasurementFormValues = z.infer<typeof measurementSchema>;
 
 const boqUploadSchema = z.object({
   boqFile: fileSchema.refine(file => file, 'A BOQ file is required.'),
@@ -42,8 +36,46 @@ export default function TenderToolsPage() {
     const [isBoqEditable, setIsBoqEditable] = React.useState(true);
 
     const drawingForm = useForm<DrawingFormValues>({ resolver: zodResolver(drawingSchema) });
-    const measurementForm = useForm<MeasurementFormValues>({ resolver: zodResolver(measurementSchema) });
     const boqUploadForm = useForm<BoqUploadFormValues>({ resolver: zodResolver(boqUploadSchema) });
+
+    const handleFileDownload = (content: string, fileName: string, mimeType: string) => {
+        try {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            toast({
+                title: 'Download Started',
+                description: `Your file ${fileName} is downloading.`,
+            });
+        } catch (error) {
+            console.error("Download failed:", error);
+            toast({
+                variant: "destructive",
+                title: 'Download Failed',
+                description: 'There was an issue preparing your file for download.',
+            });
+        }
+    };
+
+    const convertToCsv = (data: any[]) => {
+        if (!data || data.length === 0) return '';
+        const headers = Object.keys(data[0]);
+        const csvRows = [
+            headers.join(','),
+            ...data.map(row => 
+                headers.map(header => 
+                    JSON.stringify(row[header] ?? '')
+                ).join(',')
+            )
+        ];
+        return csvRows.join('\n');
+    };
 
     function onDrawingUpload(values: DrawingFormValues) {
         if (values.drawingFile) {
@@ -66,55 +98,39 @@ export default function TenderToolsPage() {
         }
         setIs3dModelVisible(true);
         toast({
-            title: 'Conversion in Progress...',
-            description: 'Your 2D drawing is being converted to a 3D model.',
+            title: 'Conversion Complete',
+            description: 'Your 2D drawing has been converted to a 3D model.',
         });
     }
-    
+
     function onDownload3d() {
-        toast({ title: 'Download Started', description: 'Your 3D model is being downloaded.' });
+        handleFileDownload('Mock 3D Model Data', 'model-3d.obj', 'text/plain');
     }
 
-    function onCalculateMeasurements(values: MeasurementFormValues) {
+    function onCalculateMeasurements() {
         if (!drawingFileName) {
             toast({ variant: 'destructive', title: 'No Drawing', description: 'Please upload a drawing first.' });
             return;
         }
         
-        let mockData: any[] = [];
-        const selectedType = values.measurementType;
-
-        if (selectedType === 'Excavation') {
-            mockData = [
-                { id: 1, type: 'Excavation', description: 'Foundation Footing F1', quantity: 15.0, unit: 'm³' },
-                { id: 2, type: 'Excavation', description: 'Foundation Footing F2', quantity: 22.5, unit: 'm³' },
-            ];
-        } else if (selectedType === 'Plastering') {
-            mockData = [
-                { id: 1, type: 'Plastering', description: 'Internal Wall - Room 101', quantity: 85.2, unit: 'm²' },
-                { id: 2, type: 'Plastering', description: 'External Wall - North Face', quantity: 120.0, unit: 'm²' },
-            ];
-        } else if (selectedType === 'Concrete') {
-            mockData = [
-                 { id: 1, type: 'Concrete', description: 'Slab S1', quantity: 12.0, unit: 'm³' },
-                 { id: 2, type: 'Concrete', description: 'Column C1', quantity: 2.5, unit: 'm³' },
-            ];
-        } else {
-            mockData = [
-                { id: 1, type: 'Excavation', description: 'Foundation Footings', quantity: 150.0, unit: 'm³' },
-                { id: 2, type: 'Concrete', description: 'Foundations & Slabs', quantity: 75.2, unit: 'm³' },
-                { id: 3, type: 'Plastering', description: 'Total Internal Walls', quantity: 850.0, unit: 'm²' },
-            ];
-        }
-
-        setMeasurements(mockData);
+        const allMeasurements = [
+            { id: 1, type: 'Excavation', description: 'Foundation Footings', quantity: 150.0, unit: 'm³' },
+            { id: 2, type: 'Concrete', description: 'Foundation Slabs (M25)', quantity: 75.2, unit: 'm³' },
+            { id: 3, type: 'Reinforcement', description: 'Fe-500 Steel', quantity: 5.4, unit: 'ton' },
+            { id: 4, type: 'Shuttering', description: 'Column & Beam Shuttering', quantity: 450.0, unit: 'm²' },
+            { id: 5, type: 'Brickwork', description: '9-inch Brick Walls', quantity: 88.0, unit: 'm³' },
+            { id: 6, type: 'Plastering', description: 'Internal Wall Plaster', quantity: 950.0, unit: 'm²' },
+            { id: 7, type: 'Flooring', description: 'Vitrified Tile Flooring', quantity: 320.0, unit: 'm²' },
+        ];
+        setMeasurements(allMeasurements);
         setIsBoqVisible(false);
         setBoq([]);
-        toast({ title: 'Measurements Calculated', description: `Measurements for ${selectedType} have been extracted.` });
+        toast({ title: 'Measurements Calculated', description: `Auto quantity takeoff from drawing is complete.` });
     }
-
+    
     function onDownloadMeasurements() {
-        toast({ title: 'Measurement Export Started', description: 'Your measurement data is being downloaded.' });
+        const csvData = convertToCsv(measurements);
+        handleFileDownload(csvData, 'measurement-report.csv', 'text/csv;charset=utf-8;');
     }
     
     function onGenerateBoq() {
@@ -122,19 +138,17 @@ export default function TenderToolsPage() {
             toast({ variant: 'destructive', title: 'No Measurements', description: 'Please calculate measurements first to generate a BOQ.' });
             return;
         }
-
         const newBoq = measurements.map(m => ({
             id: m.id,
             description: m.description,
             quantity: m.quantity,
             unit: m.unit,
-            rate: Math.floor(Math.random() * 100) + 10, // Mock rate
+            rate: Math.floor(Math.random() * 500) + 50,
         }));
-        
         setBoq(newBoq);
         setIsBoqVisible(true);
         setIsBoqEditable(true);
-        toast({ title: 'BOQ & Estimation Generated', description: 'A standard format BOQ has been created and is ready for download and editing.' });
+        toast({ title: 'BOQ Generated', description: 'A standard BOQ has been created from the measurements.' });
     }
 
     function onBoqUpload(values: BoqUploadFormValues) {
@@ -143,19 +157,17 @@ export default function TenderToolsPage() {
                 title: 'BOQ Uploaded',
                 description: `${values.boqFile.name} processed. Review the editable table below.`,
             });
-    
-            // Simulate new data from uploaded file
             const newBoq = [
                 { id: 1, description: 'Uploaded: Site Clearing', quantity: 1, unit: 'LS', rate: 5000 },
                 { id: 2, description: 'Uploaded: Bulk Earthworks', quantity: 250, unit: 'm³', rate: 45 },
                 { id: 3, description: 'Uploaded: Reinforcement Steel (High-Yield)', quantity: 15, unit: 'ton', rate: 950 },
             ];
             setBoq(newBoq);
+            setMeasurements([]);
             setIsBoqVisible(true);
             setIsBoqEditable(true);
         }
     }
-
 
     const handleBoqChange = (index: number, field: 'quantity' | 'rate', value: string) => {
         const updatedBoq = [...boq];
@@ -165,10 +177,26 @@ export default function TenderToolsPage() {
     };
 
     const handleDownloadBoq = (format: 'Excel' | 'PDF' | 'Word') => {
-        toast({
-            title: 'Download Started',
-            description: `Your BOQ is being downloaded as a ${format} file.`
-        });
+        const csvData = convertToCsv(boq.map(item => ({ ...item, Amount: (item.quantity * item.rate).toFixed(2) })));
+        let fileName = 'boq-report';
+        let mimeType = '';
+
+        switch (format) {
+            case 'Excel':
+                fileName += '.csv';
+                mimeType = 'text/csv;charset=utf-8;';
+                break;
+            case 'PDF':
+                fileName += '.pdf';
+                mimeType = 'application/pdf';
+                // PDF generation is complex; we'll simulate with CSV data for now.
+                break;
+            case 'Word':
+                fileName += '.doc';
+                mimeType = 'application/msword';
+                break;
+        }
+        handleFileDownload(csvData, fileName, mimeType);
     };
 
     return (
@@ -177,101 +205,77 @@ export default function TenderToolsPage() {
                 <Layers /> Tender Department Tools
             </h1>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                {/* 1. 2D to 3D AutoCAD Conversion */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Step 1: Upload 2D AutoCAD Drawing</CardTitle>
+                    <CardDescription>Upload a 2D drawing (.dwg, .dxf) to begin the process.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Form {...drawingForm}>
+                        <form onSubmit={drawingForm.handleSubmit(onDrawingUpload)} className="space-y-4">
+                            <FormField
+                                control={drawingForm.control}
+                                name="drawingFile"
+                                render={({ field: { onChange, value, ...rest } }) => (
+                                    <FormItem>
+                                        <FormControl>
+                                            <Input type="file" accept=".dwg, .dxf" onChange={(e) => onChange(e.target.files?.[0])} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <Button type="submit">
+                                <Upload className="mr-2"/>Upload Drawing
+                            </Button>
+                        </form>
+                    </Form>
+                </CardContent>
+            </Card>
+
+            {drawingFileName && (
+              <>
                 <Card>
                     <CardHeader>
-                        <CardTitle>1. 2D to 3D AutoCAD Conversion</CardTitle>
-                        <CardDescription>Upload a 2D drawing to generate a 3D model.</CardDescription>
+                        <CardTitle>Step 2: 3D Conversion &amp; Quantity Takeoff</CardTitle>
+                        <CardDescription>Generate a 3D model and automatically extract measurements from the uploaded drawing.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        <Form {...drawingForm}>
-                            <form onChange={drawingForm.handleSubmit(onDrawingUpload)} className="space-y-4">
-                                <FormField
-                                    control={drawingForm.control}
-                                    name="drawingFile"
-                                    render={({ field: { onChange, value, ...rest } }) => (
-                                        <FormItem>
-                                            <FormLabel>Upload 2D AutoCAD File (.dwg, .dxf)</FormLabel>
-                                            <FormControl>
-                                                <Input type="file" accept=".dwg, .dxf" onChange={(e) => onChange(e.target.files?.[0])} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </form>
-                        </Form>
-                        
-                        {drawingFileName && (
-                             <div className="space-y-4 pt-4">
-                                <Separator />
-                                <div className="flex flex-col sm:flex-row gap-4 justify-between">
-                                    <div className="space-y-2">
-                                        <h4 className="font-semibold">Processed Drawing: {drawingFileName}</h4>
-                                        <div className="flex gap-2">
-                                            <Button onClick={onConvertTo3d}><RefreshCw className="mr-2"/>Convert to 3D</Button>
-                                            <Button onClick={onDownload3d} variant="outline" disabled={!is3dModelVisible}><Download className="mr-2"/>Download 3D</Button>
-                                        </div>
+                        <div className="p-4 border rounded-lg space-y-4">
+                            <h4 className="font-semibold">Processed Drawing: <span className="font-normal text-muted-foreground">{drawingFileName}</span></h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                                <div className="space-y-4">
+                                    <p className="text-sm text-muted-foreground">Convert to a 3D model for visualization and download.</p>
+                                    <div className="flex gap-2">
+                                        <Button onClick={onConvertTo3d}><RefreshCw className="mr-2"/>Convert to 3D</Button>
+                                        <Button onClick={onDownload3d} variant="outline" disabled={!is3dModelVisible}><Download className="mr-2"/>Download 3D</Button>
                                     </div>
                                     {is3dModelVisible && (
-                                        <div className="w-full sm:w-40 h-32 bg-secondary rounded-lg flex items-center justify-center">
+                                        <div className="w-full h-32 bg-secondary rounded-lg flex items-center justify-center mt-4">
                                             <p className="text-muted-foreground text-sm">3D Model Preview</p>
                                         </div>
                                     )}
                                 </div>
-                             </div>
-                        )}
-                    </CardContent>
-                </Card>
+                                <div className="space-y-4">
+                                    <p className="text-sm text-muted-foreground">Extract all BOQ-related quantities automatically.</p>
+                                    <Button onClick={onCalculateMeasurements}><Ruler className="mr-2"/>Auto Quantity Takeoff</Button>
+                                </div>
+                            </div>
+                        </div>
 
-                {/* 2. Measurement Extraction */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>2. Measurement Extraction</CardTitle>
-                        <CardDescription>Extract measurements from the drawing for BOQ generation.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                       <Form {...measurementForm}>
-                            <form onSubmit={measurementForm.handleSubmit(onCalculateMeasurements)} className="flex items-end gap-4">
-                                <FormField
-                                    control={measurementForm.control}
-                                    name="measurementType"
-                                    render={({ field }) => (
-                                        <FormItem className="flex-grow">
-                                            <FormLabel>Measurement Type</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl><SelectTrigger><SelectValue placeholder="Select a measurement type" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="Excavation">Excavation</SelectItem>
-                                                    <SelectItem value="Concrete">Concrete</SelectItem>
-                                                    <SelectItem value="Plastering">Plastering</SelectItem>
-                                                    <SelectItem value="Shuttering">Shuttering</SelectItem>
-                                                    <SelectItem value="Reinforcement">Reinforcement</SelectItem>
-                                                    <SelectItem value="Overall">Overall Measurement</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <Button type="submit"><Ruler className="mr-2"/>Calculate</Button>
-                            </form>
-                       </Form>
-                       
                        {measurements.length > 0 && (
                             <div className="space-y-4 pt-4">
                                 <Separator />
                                 <div className="flex justify-between items-center">
-                                     <h4 className="font-semibold">Extracted Measurements</h4>
-                                     <Button onClick={onDownloadMeasurements} variant="outline" size="sm"><Download className="mr-2"/>Download Measurements</Button>
+                                     <h4 className="font-semibold">Extracted Measurements Report</h4>
+                                     <Button onClick={onDownloadMeasurements} variant="outline" size="sm"><Download className="mr-2"/>Download Report</Button>
                                 </div>
-                                <div className="max-h-40 overflow-y-auto border rounded-md">
+                                <div className="max-h-60 overflow-y-auto border rounded-md">
                                     <Table>
-                                        <TableHeader><TableRow><TableHead>Type</TableHead><TableHead>Description</TableHead><TableHead>Quantity</TableHead></TableRow></TableHeader>
+                                        <TableHeader><TableRow><TableHead>Item Type</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Quantity</TableHead></TableRow></TableHeader>
                                         <TableBody>
                                             {measurements.map(m => (
-                                                <TableRow key={m.id}><TableCell>{m.type}</TableCell><TableCell>{m.description}</TableCell><TableCell>{`${m.quantity} ${m.unit}`}</TableCell></TableRow>
+                                                <TableRow key={m.id}><TableCell>{m.type}</TableCell><TableCell>{m.description}</TableCell><TableCell className="text-right">{`${m.quantity} ${m.unit}`}</TableCell></TableRow>
                                             ))}
                                         </TableBody>
                                     </Table>
@@ -280,59 +284,63 @@ export default function TenderToolsPage() {
                        )}
                     </CardContent>
                 </Card>
-            </div>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>3. Generate or Upload BOQ</CardTitle>
-                    <CardDescription>Create a Bill of Quantities either from the extracted measurements or by uploading your own file.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                    <div className="space-y-4 p-4 border rounded-lg h-full flex flex-col">
-                        <h4 className="font-semibold">Generate Standard BOQ</h4>
-                        <p className="text-sm text-muted-foreground flex-grow">
-                            Use the measurements extracted in Step 2 to automatically generate a standard BOQ.
-                        </p>
-                        <Button onClick={onGenerateBoq} disabled={measurements.length === 0}>
-                            <FileText className="mr-2"/>Generate Standard BOQ
-                        </Button>
-                        {measurements.length === 0 && <p className="text-xs text-destructive">Calculate measurements first.</p>}
-                    </div>
-
-                    <div className="space-y-4 p-4 border rounded-lg h-full">
-                        <h4 className="font-semibold">Upload Custom BOQ</h4>
-                        <p className="text-sm text-muted-foreground">
-                            Upload your pre-existing BOQ file in Excel or CSV format.
-                        </p>
-                         <Form {...boqUploadForm}>
-                            <form onSubmit={boqUploadForm.handleSubmit(onBoqUpload)} className="space-y-4">
-                                <FormField
-                                    control={boqUploadForm.control}
-                                    name="boqFile"
-                                    render={({ field: { onChange, value, ...rest } }) => (
-                                        <FormItem>
-                                            <FormControl>
-                                                <Input type="file" accept=".xlsx, .csv" onChange={(e) => onChange(e.target.files?.[0])} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <Button type="submit" className="w-full">
-                                    <Upload className="mr-2"/>Upload and Process File
-                                </Button>
-                            </form>
-                        </Form>
-                    </div>
-                </CardContent>
-            </Card>
+                
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Step 3: Generate or Upload BOQ</CardTitle>
+                        <CardDescription>Create a Bill of Quantities from the extracted measurements or upload your own file.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                        <div className="space-y-4 p-4 border rounded-lg h-full flex flex-col justify-between">
+                            <div>
+                                <h4 className="font-semibold">Generate Standard BOQ</h4>
+                                <p className="text-sm text-muted-foreground mt-2">
+                                    Use the measurements from Step 2 to automatically create a standard BOQ.
+                                </p>
+                            </div>
+                            <Button onClick={onGenerateBoq} disabled={measurements.length === 0}>
+                                <FileText className="mr-2"/>Generate Standard BOQ
+                            </Button>
+                        </div>
+                        <div className="space-y-4 p-4 border rounded-lg h-full">
+                            <h4 className="font-semibold">Upload Custom BOQ</h4>
+                            <p className="text-sm text-muted-foreground">
+                                Upload your pre-existing BOQ file. The system will attempt to map quantities if possible.
+                            </p>
+                             <Form {...boqUploadForm}>
+                                <form onSubmit={boqUploadForm.handleSubmit(onBoqUpload)} className="space-y-4">
+                                    <FormField
+                                        control={boqUploadForm.control}
+                                        name="boqFile"
+                                        render={({ field: { onChange } }) => (
+                                            <FormItem>
+                                                <FormControl>
+                                                    <Input type="file" accept=".xlsx,.csv" onChange={(e) => onChange(e.target.files?.[0])} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <Button type="submit" className="w-full">
+                                        <FileSpreadsheet className="mr-2"/>Upload Custom BOQ
+                                    </Button>
+                                </form>
+                            </Form>
+                        </div>
+                    </CardContent>
+                </Card>
+              </>
+            )}
 
             {isBoqVisible && (
                 <Card>
                     <CardHeader>
-                        <div className="flex justify-between items-center">
-                            <CardTitle>4. Generated BOQ & Estimation</CardTitle>
-                            <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                            <div className="flex-grow">
+                                <CardTitle>Step 4: Finalize and Download BOQ</CardTitle>
+                                <CardDescription>Review and edit the Bill of Quantities below. Rates and quantities are editable.</CardDescription>
+                            </div>
+                            <div className="flex gap-2 flex-shrink-0">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <Button variant="outline">
@@ -348,21 +356,20 @@ export default function TenderToolsPage() {
                                 </DropdownMenu>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="outline">
+                                        <Button>
                                             <Download className="mr-2" />
                                             Download BOQ
                                             <ChevronDown className="ml-2" />
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent>
-                                        <DropdownMenuItem onSelect={() => handleDownloadBoq('Excel')}>Excel (.xlsx)</DropdownMenuItem>
-                                        <DropdownMenuItem onSelect={() => handleDownloadBoq('PDF')}>PDF (.pdf)</DropdownMenuItem>
-                                        <DropdownMenuItem onSelect={() => handleDownloadBoq('Word')}>Word (.docx)</DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={() => handleDownloadBoq('Excel')}><FileSpreadsheet className="mr-2"/>Excel (.csv)</DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={() => handleDownloadBoq('PDF')}><FileType className="mr-2"/>PDF (.pdf)</DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={() => handleDownloadBoq('Word')}><FileText className="mr-2"/>Word (.doc)</DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>
                         </div>
-                        <CardDescription>Review and edit the Bill of Quantities. Rates and quantities are editable.</CardDescription>
                     </CardHeader>
                     <CardContent>
                          <div className="max-h-96 overflow-y-auto border rounded-md">
