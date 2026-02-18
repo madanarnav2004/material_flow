@@ -16,6 +16,7 @@ import {
 import { useMaterialContext } from '@/context/material-context';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 
 const reportTypes = [
   {
@@ -50,10 +51,26 @@ const reportTypes = [
     headers: ['Indent ID', 'Material', 'Qty', 'Site', 'Status', 'Return Date'],
     dataKeys: ['id', 'material', 'quantity', 'site', 'status', 'returnDate'],
   },
+  {
+    id: 'daily-issue-report',
+    title: 'Daily Material Issue Report',
+    description: 'Materials issued from a site on a specific day.',
+    variants: ['Site-wise'],
+    headers: ['Voucher ID', 'Issued To', 'Building', 'Materials', 'Date'],
+    dataKeys: ['voucherId', 'issuedTo', 'buildingName', 'materials', 'issueDate'],
+  },
+  {
+    id: 'site-issue-report',
+    title: 'Site-wise Issue Report',
+    description: 'All materials issued from a specific site.',
+    variants: ['Site-wise'],
+    headers: ['Voucher ID', 'Issued To', 'Building', 'Materials', 'Date'],
+    dataKeys: ['voucherId', 'issuedTo', 'buildingName', 'materials', 'issueDate'],
+  }
 ];
 
 export default function ReportsPage() {
-  const { requests, inventory, receipts } = useMaterialContext();
+  const { requests, inventory, receipts, siteIssues } = useMaterialContext();
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [reportTitle, setReportTitle] = React.useState('');
   const [reportData, setReportData] = React.useState<any[]>([]);
@@ -70,6 +87,7 @@ export default function ReportsPage() {
     setReportHeaders(reportInfo.headers);
     setReportKeys(reportInfo.dataKeys);
     let data: any[] = [];
+    const today = new Date();
 
     switch (reportInfo.id) {
       case 'indent-register':
@@ -91,6 +109,17 @@ export default function ReportsPage() {
             : receipts.filter(r => r.receivingSite === filter);
         break;
       
+      case 'daily-issue-report':
+        data = siteIssues.filter(issue => {
+            const issueDate = new Date(issue.issueDate);
+            return issue.siteName === filter && isWithinInterval(issueDate, { start: startOfDay(today), end: endOfDay(today) });
+        });
+        break;
+
+      case 'site-issue-report':
+        data = siteIssues.filter(issue => issue.siteName === filter);
+        break;
+      
       default:
         setReportData([]);
         setReportHeaders([]);
@@ -106,6 +135,25 @@ export default function ReportsPage() {
     // In a real app, this would trigger a file download (e.g., CSV generation)
     console.log("Downloading report:", reportTitle, reportData);
     setDialogOpen(false);
+  }
+
+  const renderCellData = (row: any, key: string) => {
+    const cellData = row[key];
+
+    if (key === 'materials' && Array.isArray(cellData)) {
+      return (
+        <ul className="list-disc pl-4">
+          {cellData.map((mat, i) => <li key={i}>{mat.quantity} {mat.unit} of {mat.materialName}</li>)}
+        </ul>
+      );
+    }
+    if (key === 'issueDate' || key === 'returnDate') {
+        return format(new Date(cellData), 'PPP');
+    }
+    if (typeof cellData === 'boolean') {
+      return cellData ? 'Yes' : 'No';
+    }
+    return cellData;
   }
 
   return (
@@ -192,14 +240,11 @@ export default function ReportsPage() {
                 <TableBody>
                   {reportData.map((row, index) => (
                     <TableRow key={index}>
-                      {reportKeys.map((key) => {
-                        const cellData = row[key];
-                        return (
-                          <TableCell key={key}>
-                            {typeof cellData === 'boolean' ? (cellData ? 'Yes' : 'No') : cellData}
-                          </TableCell>
-                        );
-                      })}
+                      {reportKeys.map((key) => (
+                        <TableCell key={key}>
+                          {renderCellData(row, key)}
+                        </TableCell>
+                      ))}
                     </TableRow>
                   ))}
                 </TableBody>

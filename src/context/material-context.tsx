@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -88,6 +89,23 @@ export interface WorkDoneReport {
   totalCost: number;
 }
 
+export interface SiteIssueItem {
+  materialName: string;
+  quantity: number;
+  unit: string;
+  returnable: boolean;
+  remarks?: string;
+}
+
+export interface SiteIssueVoucher {
+  voucherId: string;
+  siteName: string;
+  issueDate: string;
+  issuedTo: string;
+  buildingName: string;
+  materials: SiteIssueItem[];
+}
+
 
 // Helper function to get item from localStorage
 function getFromLocalStorage<T>(key: string, defaultValue: T): T {
@@ -132,6 +150,8 @@ interface MaterialContextType {
   setReceipts: React.Dispatch<React.SetStateAction<MaterialReceivedBill[]>>;
   workDoneReports: WorkDoneReport[];
   setWorkDoneReports: React.Dispatch<React.SetStateAction<WorkDoneReport[]>>;
+  siteIssues: SiteIssueVoucher[];
+  setSiteIssues: React.Dispatch<React.SetStateAction<SiteIssueVoucher[]>>;
 }
 
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
@@ -142,16 +162,18 @@ export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [inventory, setInventory] = useState<InventoryItem[]>(() => getFromLocalStorage('materialflow-inventory', initialInventory));
   const [receipts, setReceipts] = useState<MaterialReceivedBill[]>(() => getFromLocalStorage('materialflow-receipts', []));
   const [workDoneReports, setWorkDoneReports] = useState<WorkDoneReport[]>(() => getFromLocalStorage('materialflow-work-done-reports', []));
+  const [siteIssues, setSiteIssues] = useState<SiteIssueVoucher[]>(() => getFromLocalStorage('materialflow-site-issues', []));
 
   useEffect(() => { setInLocalStorage('materialflow-requests', requests) }, [requests]);
   useEffect(() => { setInLocalStorage('materialflow-issued', issuedMaterials) }, [issuedMaterials]);
   useEffect(() => { setInLocalStorage('materialflow-inventory', inventory) }, [inventory]);
   useEffect(() => { setInLocalStorage('materialflow-receipts', receipts) }, [receipts]);
   useEffect(() => { setInLocalStorage('materialflow-work-done-reports', workDoneReports) }, [workDoneReports]);
+  useEffect(() => { setInLocalStorage('materialflow-site-issues', siteIssues) }, [siteIssues]);
 
 
   return (
-    <MaterialContext.Provider value={{ requests, setRequests, issuedMaterials, setIssuedMaterials, inventory, setInventory, receipts, setReceipts, workDoneReports, setWorkDoneReports }}>
+    <MaterialContext.Provider value={{ requests, setRequests, issuedMaterials, setIssuedMaterials, inventory, setInventory, receipts, setReceipts, workDoneReports, setWorkDoneReports, siteIssues, setSiteIssues }}>
       {children}
     </MaterialContext.Provider>
   );
