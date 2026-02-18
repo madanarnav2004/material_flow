@@ -20,21 +20,38 @@ export type IndentStatus =
   | 'Extended' 
   | 'Partially Issued';
 
+export interface MaterialItem {
+    materialName: string;
+    unit: string;
+    quantity: number;
+    remarks?: string;
+    rate?: number;
+}
+  
 export interface MaterialIndent {
   id: string;
-  material: string;
-  quantity: number;
-  site: string;
+  requesterName: string;
+  requestingSite: string;
+  materials: MaterialItem[];
+  requiredPeriod: {
+    from: string;
+    to: string;
+  };
+  remarks?: string;
   status: IndentStatus;
-  returnDate: string;
-  issuingSite?: string;
+  requestDate: string;
+  // Related to PO
   poDate?: string;
   vendorName?: string;
   vendorContact?: string;
   billNumber?: string;
+  // Related to Issue
+  issuingSite?: string;
+  issuedId?: string;
 }
 
-interface IssuedMaterial {
+
+export interface IssuedMaterial {
     requestId: string;
     issuedId: string;
     materialName: string;
@@ -43,6 +60,9 @@ interface IssuedMaterial {
     receivingSite: string;
     unit: string;
     rate: number;
+    vehicleNumber?: string;
+    dispatchDetails?: string;
+    driverName?: string;
 }
 
 export interface InventoryItem {
@@ -73,7 +93,7 @@ export interface MaterialReceivedBill {
   isDamaged: boolean;
   damageDescription?: string;
   remarks?: string;
-  receivedDate: Date;
+  receivedDate: string;
   rate?: number;
   // added properties
   receivedBillId: string;
@@ -156,7 +176,7 @@ interface MaterialContextType {
 
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
 
-const STORAGE_KEY_VERSION = 'v2';
+const STORAGE_KEY_VERSION = 'v4-fresh-start';
 
 export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [requests, setRequests] = useState<MaterialIndent[]>(() => getFromLocalStorage(`materialflow-requests-${STORAGE_KEY_VERSION}`, initialIndents));
