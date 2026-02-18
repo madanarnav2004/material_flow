@@ -48,8 +48,8 @@ export default function TenderToolsPage() {
                 }
                 const header = content.substring(0, commaIndex);
                 
-                // Get raw base64 data and clean it.
-                const base64Data = content.substring(commaIndex + 1).replace(/\s/g, '');
+                // Get raw base64 data and clean it of any characters not in the base64 alphabet.
+                const base64Data = content.substring(commaIndex + 1).replace(/[^A-Za-z0-9+/=]/g, '');
 
                 const mimeTypeFromHeader = header.split(':')[1]?.split(';')[0];
                 
