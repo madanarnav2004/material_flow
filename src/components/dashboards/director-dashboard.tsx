@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts';
@@ -86,7 +87,7 @@ export default function DirectorDashboard() {
   const stockLocations = ['Overall', 'MAPI Godown', ...new Set(inventory.map(s => s.site).filter(s => s !== 'MAPI Godown'))];
   
   const consumptionSites = React.useMemo(() => {
-    const junData = detailedMonthlyConsumption.Jun;
+    const junData = detailedMonthlyConsumption?.Jun;
     if (junData && Array.isArray(junData.siteWise)) {
       const sites = new Set(junData.siteWise.map((s: any) => s.site));
       return ['All', ...Array.from(sites)];
@@ -420,52 +421,56 @@ export default function DirectorDashboard() {
                 </DialogHeader>
                 {selectedMonthData ? (
                   <div className="max-h-[60vh] overflow-y-auto space-y-6">
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2">Organization-wise Consumption</h3>
-                       <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Material</TableHead>
-                              <TableHead className="text-right">Total Quantity</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {selectedMonthData.organizationWise.map((item:any) => (
-                              <TableRow key={item.name}>
-                                <TableCell>{item.name}</TableCell>
-                                <TableCell className="text-right">{item.quantity} {item.unit}</TableCell>
+                    {selectedMonthData.organizationWise && Array.isArray(selectedMonthData.organizationWise) && (
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">Organization-wise Consumption</h3>
+                         <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Material</TableHead>
+                                <TableHead className="text-right">Total Quantity</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2">Site-wise Consumption</h3>
-                       {(selectedMonthData.siteWise.filter((s:any) => consumptionSite === 'All' || s.site === consumptionSite)).map((siteData:any) => (
-                         <div key={siteData.site} className="mb-4">
-                           <h4 className="font-medium text-md mb-1">{siteData.site}</h4>
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Material</TableHead>
-                                  <TableHead className="text-right">Quantity</TableHead>
+                            </TableHeader>
+                            <TableBody>
+                              {selectedMonthData.organizationWise.map((item:any) => (
+                                <TableRow key={item.name}>
+                                  <TableCell>{item.name}</TableCell>
+                                  <TableCell className="text-right">{item.quantity} {item.unit}</TableCell>
                                 </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {siteData.materials.map((material:any) => (
-                                  <TableRow key={material.name}>
-                                    <TableCell>{material.name}</TableCell>
-                                    <TableCell className="text-right">{material.quantity} {material.unit}</TableCell>
+                              ))}
+                            </TableBody>
+                          </Table>
+                      </div>
+                    )}
+                    {selectedMonthData.siteWise && Array.isArray(selectedMonthData.siteWise) && (
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">Site-wise Consumption</h3>
+                         {(selectedMonthData.siteWise.filter((s:any) => consumptionSite === 'All' || s.site === consumptionSite)).map((siteData:any) => (
+                           <div key={siteData.site} className="mb-4">
+                             <h4 className="font-medium text-md mb-1">{siteData.site}</h4>
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Material</TableHead>
+                                    <TableHead className="text-right">Quantity</TableHead>
                                   </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                         </div>
-                       ))}
-                    </div>
+                                </TableHeader>
+                                <TableBody>
+                                  {siteData.materials?.map((material:any) => (
+                                    <TableRow key={material.name}>
+                                      <TableCell>{material.name}</TableCell>
+                                      <TableCell className="text-right">{material.quantity} {material.unit}</TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                           </div>
+                         ))}
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <p>Select a month from the chart to see details.</p>
+                  <p className="p-4 text-center text-muted-foreground">Select a month from the chart to see details, or no data is available for this month.</p>
                 )}
                 <DialogFooter>
                   <Button onClick={() => handleDownloadExcel(`Consumption for ${selectedMonth}`, consumptionSite)}>
