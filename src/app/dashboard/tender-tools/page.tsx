@@ -46,20 +46,22 @@ export default function TenderToolsPage() {
                 if (commaIndex === -1) throw new Error('Invalid data URI: comma not found.');
                 
                 const header = content.substring(0, commaIndex);
-                const base64Data = content.substring(commaIndex + 1).replace(/[^A-Za-z0-9+/=]/g, '');
+                const base64Data = content.substring(commaIndex + 1);
                 const mimeTypeFromHeader = header.split(':')[1]?.split(';')[0];
                 
                 try {
-                    const byteCharacters = atob(base64Data);
-                    const byteNumbers = new Array(byteCharacters.length);
+                    // Aggressively clean the base64 string to remove any characters not in the Base64 alphabet
+                    const cleanBase64 = base64Data.replace(/[^A-Za-z0-9+/=]/g, '');
+                    const byteCharacters = atob(cleanBase64);
+                    const byteNumbers = new Uint8Array(byteCharacters.length);
                     for (let i = 0; i < byteCharacters.length; i++) {
                         byteNumbers[i] = byteCharacters.charCodeAt(i);
                     }
-                    const byteArray = new Uint8Array(byteNumbers);
-                    blob = new Blob([byteArray], { type: mimeTypeFromHeader || mimeType });
-                } catch (e) {
-                    console.error("Base64 decoding failed.", e);
-                    throw new Error("Failed to decode file content.");
+                    blob = new Blob([byteNumbers], { type: mimeTypeFromHeader || mimeType });
+                } catch (error) {
+                    console.error('Base64 decoding failed. Check if the input is a valid base64 string.', { error, sample: base64Data.substring(0, 50) });
+                    const message = error instanceof Error ? error.message : 'Invalid file data.';
+                    throw new Error(`Failed to decode file content: ${message}`);
                 }
 
             } else {
