@@ -38,36 +38,8 @@ export default function TenderToolsPage() {
     const drawingForm = useForm<DrawingFormValues>({ resolver: zodResolver(drawingSchema) });
     const boqUploadForm = useForm<BoqUploadFormValues>({ resolver: zodResolver(boqUploadSchema) });
 
-    const handleFileDownload = async (content: string, fileName: string, mimeType: string) => {
+    const handleFileDownload = (blob: Blob, fileName: string) => {
         try {
-            let blob;
-            if (content.startsWith('data:')) {
-                const commaIndex = content.indexOf(',');
-                if (commaIndex === -1) throw new Error('Invalid data URI: comma not found.');
-                
-                const header = content.substring(0, commaIndex);
-                const base64Data = content.substring(commaIndex + 1);
-                const mimeTypeFromHeader = header.split(':')[1]?.split(';')[0];
-                
-                try {
-                    // Aggressively clean the base64 string to remove any characters not in the Base64 alphabet
-                    const cleanBase64 = base64Data.replace(/[^A-Za-z0-9+/=]/g, '');
-                    const byteCharacters = atob(cleanBase64);
-                    const byteNumbers = new Uint8Array(byteCharacters.length);
-                    for (let i = 0; i < byteCharacters.length; i++) {
-                        byteNumbers[i] = byteCharacters.charCodeAt(i);
-                    }
-                    blob = new Blob([byteNumbers], { type: mimeTypeFromHeader || mimeType });
-                } catch (error) {
-                    console.error('Base64 decoding failed. Check if the input is a valid base64 string.', { error, sample: base64Data.substring(0, 50) });
-                    const message = error instanceof Error ? error.message : 'Invalid file data.';
-                    throw new Error(`Failed to decode file content: ${message}`);
-                }
-
-            } else {
-                blob = new Blob([content], { type: mimeType });
-            }
-            
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -91,7 +63,7 @@ export default function TenderToolsPage() {
         }
     };
     
-    const handle3dDownload = (format: string) => {
+    const handle3dDownload = async (format: string) => {
         const extensions: Record<string, string> = {
             'PNG': 'png', 'JPG': 'jpg', 'DWG': 'dwg', 'DXF': 'dxf',
             'STEP': 'step', 'IFC': 'ifc', 'SKP': 'skp'
@@ -101,13 +73,37 @@ export default function TenderToolsPage() {
         
         const blueprintImageBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAMAAACahl6sAAAAFVBMVEX///92d3d4eHh5eXl6enp7e3t8fHwLpC72AAACnElEQVR4nO3c6W6bMBQFYfF+sA3Y+1/b1SoEEkLgxFw6nS/LhU+gB/M3BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAh5D9rF3n/x8n13L/2oP9wGBeT/d+P8v4Pbf+86w+sLw977j3P651lP5R/Xk/Ld28H/KPy/j6X/uG0P7B+/pT/8a7/UP6sH+X/pI/yf9L9fwP2v/79P8P+/s39L0L+R2j/kP0vYv/LyP+6/p9//f+vHwCAwDHyf7s7oF/yv7d76Bf8r9s99Av+t7sH/e/uA33kH2gH/QPaQT+D/oZ20I+g/9gO+gn6H9tBP4H+f3agH0D/LztAfwP99+yAfwD9B+2gH0D/ZztAf4L+JztgXwL+oztgv4T+8Rt0gH5jB+0g/cYOkA7SLm6gA/QbO0gH6Dd2gA7Qb+wAHaBf3AA7QL+xQ/qf9B87SAfoN3aADtBv7AAdgL/ZATtAP7FDdoB+YwftoB/YQTug/8UO0A/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAB2g/8EO0A/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAB2gX9xA/e/v12/oAP3GdtAN0m/sgA7Qb+wAHaDf2AE7QL+xQ/SAfsUO0A/sAP0G/sAP0G/sAP0G/sAP0G/sAP0G/sAB2gX9xAuwz/xx2gH9hBO6D/xQ7QD+wA/cb+f7/+B/s/7w8A8L+7P/D9i1//+b+l/p9//f/T/r9+/v8d/X//fv3//vv6v0f+/f+d/oH/lfbv5X3//pP+l/bv5f2/L++/6H9R/qD/wT+V9u8P+H9f/qH/3j7239L3t3+sP83+8SgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYhf8B8A6jM57PZ+gAAAAASUVORK5CYII=';
 
+        let contentUrl: string;
+
         if (format === 'PNG' || format === 'JPG') {
-            handleFileDownload(blueprintImageBase64, fileName, format === 'PNG' ? 'image/png' : 'image/jpeg');
+            contentUrl = blueprintImageBase64;
         } else {
             const mockContent = `This is a mock 3D model file for the ${format} format.\nThis file is for testing purposes and is not a valid ${format} file.`;
-            handleFileDownload(mockContent, fileName, 'application/octet-stream');
+            const blob = new Blob([mockContent], { type: 'text/plain' });
+            contentUrl = URL.createObjectURL(blob);
+        }
+
+        try {
+            console.log('🔗 FETCHING 3D MODEL:', contentUrl.substring(0, 100));
+            const response = await fetch(contentUrl, { 
+              method: 'GET',
+              headers: { 'Cache-Control': 'no-cache' }
+            });
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            const blob = await response.blob();
+            handleFileDownload(blob, fileName);
+    
+            if (contentUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(contentUrl);
+            }
+        } catch (error) {
+            console.error('🔥 3D DOWNLOAD FAILED:', error);
+            alert('Failed to download 3D model. Check console for details.');
         }
     };
+
 
     const convertToCsv = (data: any[]) => {
         if (!data || data.length === 0) return '';
@@ -174,7 +170,8 @@ export default function TenderToolsPage() {
     
     function onDownloadMeasurements() {
         const csvData = convertToCsv(measurements);
-        handleFileDownload(csvData, 'measurement-report.csv', 'text/csv;charset=utf-8;');
+        const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+        handleFileDownload(blob, 'measurement-report.csv');
     }
     
     function onGenerateBoq() {
@@ -231,16 +228,18 @@ export default function TenderToolsPage() {
                 mimeType = 'text/csv;charset=utf-8;';
                 break;
             case 'PDF':
+                 // PDF generation is complex; we'll simulate with text data for now.
                 fileName += '.pdf';
                 mimeType = 'application/pdf';
-                // PDF generation is complex; we'll simulate with CSV data for now.
-                break;
+                handleFileDownload(new Blob([`This is a mock PDF for ${fileName}`], { type: mimeType }), fileName);
+                return;
             case 'Word':
                 fileName += '.doc';
                 mimeType = 'application/msword';
-                break;
+                 handleFileDownload(new Blob([`This is a mock Word doc for ${fileName}`], { type: mimeType }), fileName);
+                return;
         }
-        handleFileDownload(csvData, fileName, mimeType);
+        handleFileDownload(new Blob([csvData], { type: mimeType }), fileName);
     };
 
     return (
