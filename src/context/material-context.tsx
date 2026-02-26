@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -81,7 +80,7 @@ export interface InventoryItem {
 export type ReceiptStatus = 'Accepted' | 'Mismatch' | 'Completed';
 
 export interface MaterialReceivedBill {
-  // from FromSiteFormValues
+  // from FromSiteFormValues / FromShopFormValues
   issuedId: string;
   receiverName: string;
   requestId: string;
@@ -95,10 +94,16 @@ export interface MaterialReceivedBill {
   remarks?: string;
   receivedDate: string;
   rate?: number;
+  // E-Way Bill details
+  eWayBillNumber?: string;
+  eWayBillDate?: string;
+  vehicleNumber?: string;
+  gstin?: string;
   // added properties
   receivedBillId: string;
   receiver: { name: string; } | null;
   status: ReceiptStatus;
+  invoiceNumber?: string;
 }
 
 export interface WorkDoneReport {
@@ -176,7 +181,7 @@ interface MaterialContextType {
 
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
 
-const STORAGE_KEY_VERSION = 'v4-fresh-start';
+const STORAGE_KEY_VERSION = 'v5-verified-workflow';
 
 export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [requests, setRequests] = useState<MaterialIndent[]>(() => getFromLocalStorage(`materialflow-requests-${STORAGE_KEY_VERSION}`, initialIndents));
