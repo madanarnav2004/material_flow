@@ -80,7 +80,6 @@ export interface InventoryItem {
 export type ReceiptStatus = 'Accepted' | 'Mismatch' | 'Completed';
 
 export interface MaterialReceivedBill {
-  // from FromSiteFormValues / FromShopFormValues
   issuedId: string;
   receiverName: string;
   requestId: string;
@@ -94,12 +93,10 @@ export interface MaterialReceivedBill {
   remarks?: string;
   receivedDate: string;
   rate?: number;
-  // E-Way Bill details
   eWayBillNumber?: string;
   eWayBillDate?: string;
   vehicleNumber?: string;
   gstin?: string;
-  // added properties
   receivedBillId: string;
   receiver: { name: string; } | null;
   status: ReceiptStatus;
@@ -108,7 +105,7 @@ export interface MaterialReceivedBill {
 
 export interface WorkDoneReport {
   siteName: string;
-  reportDate: string; // Storing as string for easier serialization
+  reportDate: string;
   itemOfWork: string;
   quantityOfWork: number;
   totalCost: number;
@@ -131,15 +128,12 @@ export interface SiteIssueVoucher {
   materials: SiteIssueItem[];
 }
 
-
-// Helper function to get item from localStorage
 function getFromLocalStorage<T>(key: string, defaultValue: T): T {
     if (typeof window === 'undefined') {
         return defaultValue;
     }
     try {
         const item = window.localStorage.getItem(key);
-        // If the item doesn't exist, initialize it with the default value.
         if (item === null) {
             setInLocalStorage(key, defaultValue);
             return defaultValue;
@@ -151,7 +145,6 @@ function getFromLocalStorage<T>(key: string, defaultValue: T): T {
     }
 }
 
-// Helper function to set item in localStorage
 function setInLocalStorage<T>(key: string, value: T) {
     if (typeof window === 'undefined') {
         return;
@@ -181,7 +174,7 @@ interface MaterialContextType {
 
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
 
-const STORAGE_KEY_VERSION = 'v5-verified-workflow';
+const STORAGE_KEY_VERSION = 'v6-verified-audit-workflow';
 
 export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [requests, setRequests] = useState<MaterialIndent[]>(() => getFromLocalStorage(`materialflow-requests-${STORAGE_KEY_VERSION}`, initialIndents));

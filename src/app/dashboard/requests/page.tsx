@@ -21,7 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useMaterialContext, type IndentStatus } from '@/context/material-context';
+import { useMaterialContext, type IndentStatus, MaterialIndent, MaterialIndentBill } from '@/context/material-context';
 import { useUser } from '@/hooks/use-user';
 import { mockBoqData } from '@/lib/mock-data';
 
@@ -46,14 +46,6 @@ const requestSchema = z.object({
 });
 
 type RequestFormValues = z.infer<typeof requestSchema>;
-type MaterialIndentBill = RequestFormValues & {
-  requestDate: Date;
-  issuedId: string;
-  shiftingDate: Date;
-  requester: { name: string; } | null;
-  totalValue: number;
-  issuingSite?: string;
-}
 
 const generateRequestId = (siteName: string, count: number) => {
     const today = new Date();
@@ -118,6 +110,19 @@ export default function RequestsPage() {
 
     const newIssuedId = `ISS-${idParts[1]}-${datePart}-${countPart}`;
 
+    const newIndent: MaterialIndent = {
+        ...values,
+        id: values.requestId,
+        status: 'Pending Director Approval',
+        requestDate: new Date().toISOString(),
+        requiredPeriod: {
+            from: values.requiredPeriod.from.toISOString(),
+            to: values.requiredPeriod.to.toISOString(),
+        }
+    };
+
+    setRequests(prev => [newIndent, ...prev]);
+
     const bill: MaterialIndentBill = {
       ...values,
       requestDate: new Date(),
@@ -130,19 +135,9 @@ export default function RequestsPage() {
     
     setLastGeneratedBill(bill);
 
-    const newRequestEntry = {
-      id: values.requestId,
-      material: values.materials.map(m => m.materialName).join(', '),
-      quantity: values.materials.reduce((acc, m) => acc + m.quantity, 0),
-      site: values.requestingSite,
-      status: 'Pending Director Approval' as IndentStatus,
-      returnDate: format(values.requiredPeriod.to, 'yyyy-MM-dd'),
-    };
-    setRequests(prev => [newRequestEntry, ...prev]);
-
     toast({
-      title: 'Indent Submitted!',
-      description: `Your material indent has been sent for processing.`,
+      title: 'Indent Submitted Successfully!',
+      description: `Indent ${values.requestId} is now awaiting Director approval.`,
     });
     
     form.reset({
@@ -157,30 +152,18 @@ export default function RequestsPage() {
   const handleViewBill = (reqId: string) => {
     const request = requests.find(r => r.id === reqId);
     if (request) {
-      const returnDate = new Date(request.returnDate);
-      const fromDate = new Date(returnDate.getTime() - 10 * 24 * 60 * 60 * 1000);
-      const requestDate = new Date(returnDate.getTime() - 11 * 24 * 60 * 60 * 1000);
-      
-      const idParts = request.id.split('-');
-      const datePart = idParts.length > 2 ? idParts[2] : format(requestDate, 'yyyyMMdd');
-      const countPart = idParts.length > 3 ? idParts[3] : request.id.slice(-3);
-      const siteCode = idParts.length > 1 ? idParts[1] : 'SITE';
-
-      const materialInfo = mockBoqData.materials.find(m => m.type.toLowerCase() === request.material.toLowerCase()) || {rate: 0};
-
       const bill: MaterialIndentBill = {
-        requestId: `REQ-${siteCode}-${datePart}-${countPart}`,
-        requestDate: requestDate,
-        requesterName: 'Sample Requester',
-        requestingSite: request.site,
-        materials: [{ materialName: request.material, unit: 'unit', quantity: request.quantity, remarks: '', rate: materialInfo.rate }], // Mock unit
-        requiredPeriod: { from: fromDate, to: returnDate },
-        remarks: `This is a sample bill for request ${request.id}`,
-        issuedId: `ISS-${siteCode}-${datePart}-${countPart}`,
-        shiftingDate: new Date(returnDate.getTime() - 9 * 24 * 60 * 60 * 1000),
-        requester: { name: 'Sample Requester' },
-        totalValue: request.quantity * materialInfo.rate,
-        issuingSite: request.issuingSite || 'Pending Assignment',
+        ...request,
+        requestId: request.id,
+        requestDate: new Date(request.requestDate),
+        requiredPeriod: {
+            from: new Date(request.requiredPeriod.from),
+            to: new Date(request.requiredPeriod.to),
+        },
+        issuedId: request.issuedId || `ISS-${request.id.substring(4)}`,
+        shiftingDate: new Date(),
+        requester: { name: request.requesterName },
+        totalValue: request.materials.reduce((acc, m) => acc + m.quantity * (m.rate || 0), 0),
       };
       setLastGeneratedBill(bill);
     }
@@ -189,7 +172,7 @@ export default function RequestsPage() {
   const handleDownload = (billId: string) => {
     if (billContentRef.current) {
       const billHtml = billContentRef.current.innerHTML;
-      const blob = new Blob([`<html><head><title>${billId}</title><style>body{font-family:sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:left}.grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}.font-semibold{font-weight:600}</style></head><body>${billHtml}</body></html>`], { type: 'text/html' });
+      const blob = new Blob([`<html><head><title>${billId}</title><style>body{font-family:sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:left}.font-semibold{font-weight:600}</style></head><body>${billHtml}</body></html>`], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -200,7 +183,7 @@ export default function RequestsPage() {
       URL.revokeObjectURL(url);
       toast({
         title: "Download Started",
-        description: `Bill ${billId} is downloading.`,
+        description: `Material Indent Bill ${billId} generated.`,
       });
     }
   };
@@ -212,8 +195,8 @@ export default function RequestsPage() {
         <div className="lg:col-span-3">
           <Card>
             <CardHeader>
-              <CardTitle>Create Material Indent</CardTitle>
-              <CardDescription>Fill in the details to request materials. The Purchase Department will assign an issuing site.</CardDescription>
+              <CardTitle>Submit Material Indent</CardTitle>
+              <CardDescription>Fill in required materials. Requires Director approval before site assignment.</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...form}>
@@ -224,11 +207,11 @@ export default function RequestsPage() {
                       name="requestingSite"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Requesting Site</FormLabel>
+                          <FormLabel>Source Site</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value} disabled={isSiteManager}>
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select a site" />
+                                <SelectValue placeholder="Select site" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -247,9 +230,9 @@ export default function RequestsPage() {
                       name="requestId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Indent ID</FormLabel>
+                          <FormLabel>Auto-Generated ID</FormLabel>
                           <FormControl>
-                            <Input {...field} readOnly disabled />
+                            <Input {...field} readOnly disabled className="bg-muted font-mono" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -261,9 +244,9 @@ export default function RequestsPage() {
                       name="requesterName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Requester Name</FormLabel>
+                          <FormLabel>Requester Full Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="e.g., John Doe" {...field} readOnly={!!user?.name}/>
+                            <Input placeholder="Enter name" {...field} readOnly={!!user?.name}/>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -271,17 +254,16 @@ export default function RequestsPage() {
                     />
                   
                   <div>
-                    <Label>Materials</Label>
+                    <Label className="text-primary font-bold">Materials List</Label>
                     <div className="mt-2 rounded-md border">
                       <Table>
-                        <TableHeader>
+                        <TableHeader className="bg-muted/50">
                           <TableRow>
-                            <TableHead className="w-2/5">Material Name</TableHead>
+                            <TableHead className="w-2/5">Material</TableHead>
                             <TableHead>Unit</TableHead>
-                            <TableHead>Quantity</TableHead>
+                            <TableHead>Qty</TableHead>
                             {canViewCost && <TableHead>Rate</TableHead>}
                             {canViewCost && <TableHead>Amount</TableHead>}
-                            <TableHead>Remarks</TableHead>
                             <TableHead className="w-12"></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -289,73 +271,35 @@ export default function RequestsPage() {
                           {fields.map((field, index) => (
                             <TableRow key={field.id}>
                               <TableCell>
-                                <FormField
-                                  control={form.control}
-                                  name={`materials.${index}.materialName`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormControl>
-                                        <Input placeholder="Material Name" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
+                                <FormField control={form.control} name={`materials.${index}.materialName`} render={({ field }) => (
+                                    <FormItem><FormControl><Input placeholder="Material" {...field} /></FormControl><FormMessage /></FormItem>
                                   )}
                                 />
                               </TableCell>
                                <TableCell>
-                                <FormField
-                                  control={form.control}
-                                  name={`materials.${index}.unit`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormControl>
-                                        <Input placeholder="Unit" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
+                                <FormField control={form.control} name={`materials.${index}.unit`} render={({ field }) => (
+                                    <FormItem><FormControl><Input placeholder="bag" {...field} /></FormControl><FormMessage /></FormItem>
                                   )}
                                 />
                               </TableCell>
                               <TableCell>
-                                <FormField
-                                  control={form.control}
-                                  name={`materials.${index}.quantity`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormControl>
-                                        <Input type="number" placeholder="e.g., 100" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
+                                <FormField control={form.control} name={`materials.${index}.quantity`} render={({ field }) => (
+                                    <FormItem><FormControl><Input type="number" placeholder="0" {...field} /></FormControl><FormMessage /></FormItem>
                                   )}
                                 />
                               </TableCell>
                               {canViewCost && (
                                 <TableCell>
                                     <FormField control={form.control} name={`materials.${index}.rate`} render={({ field }) => (
-                                      <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} /></FormControl><FormMessage /></FormItem>
+                                      <FormItem><FormControl><Input type="number" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
                                 </TableCell>
                               )}
                               {canViewCost && (
                                 <TableCell>
-                                  <p className="font-medium">${(materials?.[index]?.quantity * materials?.[index]?.rate || 0).toFixed(2)}</p>
+                                  <p className="font-bold text-primary">${(materials?.[index]?.quantity * (materials?.[index]?.rate || 0)).toFixed(2)}</p>
                                 </TableCell>
                               )}
-                              <TableCell>
-                                <FormField
-                                  control={form.control}
-                                  name={`materials.${index}.remarks`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormControl>
-                                        <Input placeholder="Optional" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                              </TableCell>
                               <TableCell>
                                 <Button variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
                                   <Trash className="h-4 w-4" />
@@ -366,17 +310,11 @@ export default function RequestsPage() {
                         </TableBody>
                       </Table>
                     </div>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => append({ materialName: '', unit: '', quantity: 1, remarks: '' })}
-                        className="mt-4"
-                      >
+                    <Button type="button" variant="outline" size="sm" onClick={() => append({ materialName: '', unit: '', quantity: 1, remarks: '', rate: 0 })} className="mt-4">
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Another Material
+                        Add Material Item
                       </Button>
-                    <FormMessage>{form.formState.errors.materials?.message}</FormMessage>
+                    <FormMessage className="mt-2">{form.formState.errors.materials?.message}</FormMessage>
                   </div>
 
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -385,15 +323,12 @@ export default function RequestsPage() {
                         name="requiredPeriod.from"
                         render={({ field }) => (
                             <FormItem className="flex flex-col">
-                            <FormLabel>Required From (Start Date)</FormLabel>
+                            <FormLabel>Required From</FormLabel>
                             <Popover>
                                 <PopoverTrigger asChild>
                                 <FormControl>
-                                    <Button
-                                    variant={'outline'}
-                                    className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                                    >
-                                    {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                    <Button variant={'outline'} className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}>
+                                    {field.value ? format(field.value, 'PPP') : <span>Pick start date</span>}
                                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                     </Button>
                                 </FormControl>
@@ -415,11 +350,8 @@ export default function RequestsPage() {
                             <Popover>
                                 <PopoverTrigger asChild>
                                 <FormControl>
-                                    <Button
-                                    variant={'outline'}
-                                    className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                                    >
-                                    {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                    <Button variant={'outline'} className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}>
+                                    {field.value ? format(field.value, 'PPP') : <span>Pick end date</span>}
                                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                     </Button>
                                 </FormControl>
@@ -439,18 +371,18 @@ export default function RequestsPage() {
                       name="remarks"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Remarks (Optional)</FormLabel>
+                          <FormLabel>Indent Justification / Remarks</FormLabel>
                           <FormControl>
-                            <Textarea placeholder="Add any additional instructions or justifications..." {...field} />
+                            <Textarea placeholder="Explain why these materials are needed..." {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
 
-                  <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
+                  <Button type="submit" size="lg" className="w-full" disabled={form.formState.isSubmitting}>
                     <Send className="mr-2 h-4 w-4" />
-                    {form.formState.isSubmitting ? 'Submitting...' : 'Submit Indent'}
+                    {form.formState.isSubmitting ? 'Processing Indent...' : 'Submit Official Indent'}
                   </Button>
                 </form>
               </Form>
@@ -458,88 +390,96 @@ export default function RequestsPage() {
           </Card>
         </div>
         
-        {lastGeneratedBill && (
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader className="flex flex-row items-start justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText /> Material Indent Bill
-                  </CardTitle>
-                  <CardDescription>
-                    This is the generated bill for your indent.
-                  </CardDescription>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => handleDownload(lastGeneratedBill.requestId)}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download
-                </Button>
-              </CardHeader>
-              <CardContent ref={billContentRef} className="space-y-4">
-                <div className="space-y-2 rounded-lg border p-4">
-                  <h3 className="font-semibold">Indent Information</h3>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <p><strong>Indent ID:</strong> {lastGeneratedBill.requestId}</p>
-                    <p><strong>Indent Date:</strong> {format(lastGeneratedBill.requestDate, 'PPP')}</p>
-                    <p><strong>Requesting Site:</strong> {lastGeneratedBill.requestingSite}</p>
-                    <p><strong>Requester:</strong> {lastGeneratedBill.requester?.name}</p>
-                  </div>
-                </div>
-                <div className="space-y-2 rounded-lg border p-4">
-                  <h3 className="font-semibold">Issue Information</h3>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <p><strong>Issuing Site:</strong> {lastGeneratedBill.issuingSite}</p>
-                    <p><strong>Issued ID:</strong> {lastGeneratedBill.issuedId}</p>
-                    <p><strong>Shifting Date:</strong> {format(lastGeneratedBill.shiftingDate, 'PPP')}</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="font-semibold">Material Details</h3>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Material</TableHead>
-                        <TableHead>Qty</TableHead>
-                        {canViewCost && <TableHead>Rate</TableHead>}
-                        {canViewCost && <TableHead className="text-right">Amount</TableHead>}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {lastGeneratedBill.materials.map((m, i) => (
-                        <TableRow key={i}>
-                          <TableCell>{m.materialName} ({m.unit})</TableCell>
-                          <TableCell>{m.quantity}</TableCell>
-                           {canViewCost && <TableCell>${(m.rate || 0).toFixed(2)}</TableCell>}
-                           {canViewCost && <TableCell className="text-right">${(m.quantity * (m.rate || 0)).toFixed(2)}</TableCell>}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  {canViewCost && (
-                    <>
-                      <Separator className="my-2"/>
-                      <div className="text-right font-bold text-lg">
-                        Total Value: ${lastGeneratedBill.totalValue.toFixed(2)}
-                      </div>
-                    </>
-                  )}
-                </div>
-                 {lastGeneratedBill.remarks && (
-                    <div className="space-y-2">
-                        <h3 className="font-semibold">Remarks</h3>
-                        <p className="text-sm text-muted-foreground">{lastGeneratedBill.remarks}</p>
+        <div className="lg:col-span-2">
+            {lastGeneratedBill ? (
+                <Card className="border-primary/20 shadow-lg">
+                <CardHeader className="flex flex-row items-start justify-between bg-primary/5 rounded-t-lg">
+                    <div>
+                    <CardTitle className="flex items-center gap-2">
+                        <FileText className="text-primary" /> Material Indent Bill
+                    </CardTitle>
+                    <CardDescription>
+                        Consolidated request for site materials.
+                    </CardDescription>
                     </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
+                    <Button variant="outline" size="sm" onClick={() => handleDownload(lastGeneratedBill.requestId)}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download
+                    </Button>
+                </CardHeader>
+                <CardContent ref={billContentRef} className="space-y-4 py-6">
+                    <div className="space-y-2 rounded-lg border p-4 bg-secondary/10">
+                    <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Request Headers</h3>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                        <p><strong>Indent ID:</strong> {lastGeneratedBill.requestId}</p>
+                        <p><strong>Indent Date:</strong> {format(lastGeneratedBill.requestDate, 'PPP')}</p>
+                        <p><strong>Source Site:</strong> {lastGeneratedBill.requestingSite}</p>
+                        <p><strong>Requester:</strong> {lastGeneratedBill.requester?.name}</p>
+                    </div>
+                    </div>
+                    <div className="space-y-2 rounded-lg border p-4 bg-secondary/10">
+                    <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Logistics Planning</h3>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                        <p><strong>Issuing Site:</strong> {lastGeneratedBill.issuingSite}</p>
+                        <p><strong>Issued ID:</strong> {lastGeneratedBill.issuedId}</p>
+                        <p><strong>Planned Shift:</strong> {format(lastGeneratedBill.shiftingDate, 'PPP')}</p>
+                    </div>
+                    </div>
+                    <div className="space-y-2">
+                    <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Material Line Items</h3>
+                    <Table>
+                        <TableHeader>
+                        <TableRow>
+                            <TableHead className="text-[10px]">Material</TableHead>
+                            <TableHead className="text-[10px]">Qty</TableHead>
+                            {canViewCost && <TableHead className="text-[10px]">Rate</TableHead>}
+                            {canViewCost && <TableHead className="text-right text-[10px]">Amount</TableHead>}
+                        </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {lastGeneratedBill.materials.map((m, i) => (
+                            <TableRow key={i}>
+                            <TableCell className="text-xs">{m.materialName} ({m.unit})</TableCell>
+                            <TableCell className="text-xs font-bold">{m.quantity}</TableCell>
+                            {canViewCost && <TableCell className="text-xs">${(m.rate || 0).toFixed(2)}</TableCell>}
+                            {canViewCost && <TableCell className="text-right text-xs font-bold">${(m.quantity * (m.rate || 0)).toFixed(2)}</TableCell>}
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                    {canViewCost && (
+                        <>
+                        <Separator className="my-2"/>
+                        <div className="text-right">
+                            <p className="text-[10px] uppercase text-muted-foreground">Total Taxable Value</p>
+                            <p className="text-2xl font-black text-primary">${lastGeneratedBill.totalValue.toFixed(2)}</p>
+                        </div>
+                        </>
+                    )}
+                    </div>
+                    {lastGeneratedBill.remarks && (
+                        <div className="space-y-1 mt-4 p-3 border rounded bg-muted/20">
+                            <h3 className="font-bold text-[10px] uppercase text-muted-foreground">Justification</h3>
+                            <p className="text-xs italic text-muted-foreground">"{lastGeneratedBill.remarks}"</p>
+                        </div>
+                    )}
+                </CardContent>
+                </Card>
+            ) : (
+                <div className="h-full flex items-center justify-center border-2 border-dashed rounded-lg bg-muted/30 p-12 text-center">
+                    <div className="space-y-2">
+                        <FileText className="h-12 w-12 mx-auto opacity-20" />
+                        <p className="text-muted-foreground text-sm">Select an indent from the list below or create a new one to view the official bill document.</p>
+                    </div>
+                </div>
+            )}
+        </div>
       </div>
 
       <Card>
         <CardHeader>
-            <CardTitle>Recent Material Indents</CardTitle>
-            <CardDescription>A log of the most recent indents and their statuses, which become Material Indent Bills upon approval.</CardDescription>
+            <CardTitle>Material Indent Ledger</CardTitle>
+            <CardDescription>Track all submitted requests and their real-time verification status.</CardDescription>
         </CardHeader>
         <CardContent>
           {requests.length > 0 ? (
@@ -547,22 +487,22 @@ export default function RequestsPage() {
                 <TableHeader>
                     <TableRow>
                         <TableHead>Indent ID</TableHead>
-                        <TableHead>Material</TableHead>
-                        <TableHead>Quantity</TableHead>
+                        <TableHead>Material Details</TableHead>
+                        <TableHead>Qty</TableHead>
                         <TableHead>Site</TableHead>
-                        <TableHead>Return Date</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Audit Status</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {requests.map(req => (
                         <TableRow key={req.id}>
-                            <TableCell className="font-medium">{req.id}</TableCell>
-                            <TableCell>{req.material}</TableCell>
-                            <TableCell>{req.quantity}</TableCell>
-                            <TableCell>{req.site}</TableCell>
-                            <TableCell>{req.returnDate}</TableCell>
+                            <TableCell className="font-bold text-xs">{req.id}</TableCell>
+                            <TableCell className="text-xs">{req.materials.map(m => m.materialName).join(', ')}</TableCell>
+                            <TableCell className="text-xs">{req.materials.reduce((acc, m) => acc + m.quantity, 0)}</TableCell>
+                            <TableCell className="text-xs">{req.requestingSite}</TableCell>
+                            <TableCell className="text-xs">{format(new Date(req.requiredPeriod.to), 'dd MMM yyyy')}</TableCell>
                             <TableCell>
                                 <Badge 
                                     variant={
@@ -571,6 +511,7 @@ export default function RequestsPage() {
                                         'default'
                                     }
                                     className={cn(
+                                        "text-[10px] uppercase font-bold",
                                         req.status === 'Pending Director Approval' && 'bg-yellow-500/80',
                                         req.status === 'Director Approved' && 'bg-blue-500/80',
                                         req.status === 'Issued' && 'bg-green-600/80',
@@ -582,9 +523,9 @@ export default function RequestsPage() {
                                     {req.status}
                                 </Badge>
                             </TableCell>
-                            <TableCell className="text-right space-x-2">
-                                <Button variant="outline" size="sm" onClick={() => handleViewBill(req.id)}>
-                                    <Eye className="mr-2 h-4 w-4" />
+                            <TableCell className="text-right">
+                                <Button variant="outline" size="sm" className="h-8" onClick={() => handleViewBill(req.id)}>
+                                    <Eye className="mr-2 h-3 w-3" />
                                     View Bill
                                 </Button>
                             </TableCell>
@@ -593,8 +534,8 @@ export default function RequestsPage() {
                 </TableBody>
             </Table>
             ) : (
-                <div className="flex items-center justify-center p-8">
-                    <p className="text-center text-muted-foreground">No indents submitted yet.</p>
+                <div className="flex items-center justify-center p-12 bg-muted/20 rounded-lg border-2 border-dashed">
+                    <p className="text-center text-muted-foreground text-sm">The indent ledger is empty. Start by submitting a material request.</p>
                 </div>
             )}
         </CardContent>
