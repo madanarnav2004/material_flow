@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet, ChevronDown, PackageCheck, ClipboardList, Calendar as CalendarIcon, Filter, LayoutDashboard } from "lucide-react";
+import { Download, FileSpreadsheet, ChevronDown, PackageCheck, ClipboardList, Calendar as CalendarIcon, Filter, LayoutDashboard, FileUp, ClipboardCheck, BrainCircuit } from "lucide-react";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
+import { detailedBoqAnalysis } from '@/lib/mock-data';
 
 const reportTypes = [
   {
@@ -39,6 +40,38 @@ const reportTypes = [
     variants: ["Site-wise", "Store-wise", "Organization-wise"],
     headers: ['Material', 'Site', 'Quantity', 'Unit', 'Classification'],
     dataKeys: ['material', 'site', 'quantity', 'unit', 'classification'],
+  },
+  {
+    id: "work-done-report",
+    title: "Daily Work Done Register",
+    description: "Audit list of all daily work progress reported from project sites.",
+    variants: ["Site-wise", "Organization-wise"],
+    headers: ['Site', 'Date', 'Work Item', 'Quantity', 'Total Cost ($)'],
+    dataKeys: ['siteName', 'reportDate', 'itemOfWork', 'quantityOfWork', 'totalCost'],
+  },
+  {
+    id: "boq-analysis",
+    title: "BOQ vs Actual Analysis",
+    description: "Comparison of planned BOQ quantities against actual reported work.",
+    variants: ["Site-wise", "Organization-wise"],
+    headers: ['BOQ Item', 'BOQ Qty', 'Actual Qty', 'Balance Qty', 'BOQ Cost', 'Actual Cost'],
+    dataKeys: ['item', 'boqQty', 'actualQty', 'balanceQty', 'boqCost', 'actualCost'],
+  },
+  {
+    id: "boq-management",
+    title: "BOQ Management Log",
+    description: "Audit trail of BOQ file uploads and master configurations.",
+    variants: ["Site-wise", "Organization-wise"],
+    headers: ['Filename', 'Site', 'Uploaded By', 'Items', 'Timestamp'],
+    dataKeys: ['filename', 'site', 'uploadedBy', 'itemsCount', 'timestamp'],
+  },
+  {
+    id: "ai-review",
+    title: "AI Bill Review History",
+    description: "Log of automated bill checks and discrepancy findings.",
+    variants: ["Organization-wise"],
+    headers: ['Audit Date', 'Bill Reference', 'Accuracy', 'Summary'],
+    dataKeys: ['date', 'billRef', 'isAccurate', 'summary'],
   },
   {
     id: "returnable-material",
@@ -67,7 +100,7 @@ const reportTypes = [
 ];
 
 export default function ReportsPage() {
-  const { requests, inventory, receipts, issueSlips } = useMaterialContext();
+  const { requests, inventory, receipts, issueSlips, workDoneReports, inventoryUploads } = useMaterialContext();
   const searchParams = useSearchParams();
   
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -83,7 +116,6 @@ export default function ReportsPage() {
 
   const sitesList = React.useMemo(() => Array.from(new Set(inventory.map(i => i.site))), [inventory]);
 
-  // Handle direct navigation from dashboard cards
   React.useEffect(() => {
     const moduleId = searchParams.get('module');
     const site = searchParams.get('site');
@@ -127,6 +159,45 @@ export default function ReportsPage() {
             ? inventory
             : inventory.filter(i => i.site === filter || (filter === "Store-wise" && i.site === "MAPI Godown"));
          break;
+
+      case 'work-done-report':
+        data = workDoneReports.filter(r => {
+            const siteMatch = filter === 'Organization-wise' || r.siteName === filter;
+            return siteMatch && dateRange(r.reportDate);
+        });
+        break;
+
+      case 'boq-analysis':
+        // Simplified analysis data for report
+        data = detailedBoqAnalysis.filter(b => filter === 'Organization-wise' || b.site === filter).map(b => {
+            const actuals = workDoneReports.filter(w => w.siteName === b.site && w.itemOfWork === b.item);
+            const totalActualQty = actuals.reduce((acc, curr) => acc + curr.quantityOfWork, 0);
+            const totalActualCost = actuals.reduce((acc, curr) => acc + curr.totalCost, 0);
+            const boqCost = b.boqQty * b.boqRate;
+            return {
+                ...b,
+                actualQty: totalActualQty,
+                actualCost: totalActualCost,
+                balanceQty: b.boqQty - totalActualQty,
+                pendingCost: boqCost - totalActualCost
+            };
+        });
+        break;
+
+      case 'boq-management':
+        data = inventoryUploads.filter(u => {
+            const siteMatch = filter === 'Organization-wise' || u.site === filter;
+            return siteMatch && dateRange(u.timestamp);
+        });
+        break;
+
+      case 'ai-review':
+        // Mocked AI Audit history
+        data = [
+            { date: new Date().toISOString(), billRef: 'INV-2024-001', isAccurate: 'Yes', summary: 'Matched perfectly with GRN and PO.' },
+            { date: new Date(Date.now() - 86400000).toISOString(), billRef: 'INV-2024-002', isAccurate: 'No', summary: 'Qty mismatch found in Cement bags.' },
+        ].filter(r => dateRange(r.date));
+        break;
       
       case 'returnable-material':
         data = issueSlips.filter(slip => {
@@ -165,15 +236,16 @@ export default function ReportsPage() {
   
   const handleDownload = () => {
     console.log("Downloading report:", reportTitle, reportData);
-    // In a real app, this would trigger an XLSX export
     setDialogOpen(false);
   }
 
   const renderCellData = (row: any, key: string) => {
     const cellData = row[key];
-    if (key === 'date' || key === 'receivedDate' || key === 'requestDate') return format(new Date(cellData), 'dd MMM yyyy');
+    if (key === 'date' || key === 'receivedDate' || key === 'requestDate' || key === 'reportDate' || key === 'timestamp') return format(new Date(cellData), 'dd MMM yyyy');
     if (key === 'status') return <Badge variant="outline" className="text-[9px] h-4 uppercase">{cellData}</Badge>;
+    if (key === 'isAccurate') return <Badge variant={cellData === 'Yes' ? 'default' : 'destructive'} className="text-[9px] uppercase px-2">{cellData}</Badge>;
     if (key === 'eWayBillNumber') return cellData || <span className="text-[10px] opacity-40">N/A</span>;
+    if (key === 'totalCost' || key === 'boqCost' || key === 'actualCost') return `$${Number(cellData).toLocaleString()}`;
     return cellData;
   }
 
@@ -187,56 +259,59 @@ export default function ReportsPage() {
             </Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Category 1: Site Operations */}
             <Card className="border-primary/20 shadow-md">
                 <CardHeader className="bg-primary/5 border-b">
-                    <CardTitle className="flex items-center gap-2"><ClipboardList className="text-primary" /> Site Issue Slips (MIS)</CardTitle>
-                    <CardDescription>Track daily issuance and returnable project assets.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><ClipboardList className="text-primary" /> Site & Field Logs</CardTitle>
+                    <CardDescription>Site Issue Slips and Progress reports.</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-4">
-                    {reportTypes.slice(0, 3).map(report => (
+                    {reportTypes.filter(r => ['mis-register', 'work-done-report', 'returnable-material'].includes(r.id)).map(report => (
                         <div key={report.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                             <div>
                                 <p className="font-bold text-sm">{report.title}</p>
-                                <p className="text-xs text-muted-foreground">{report.description}</p>
+                                <p className="text-[10px] text-muted-foreground">{report.description}</p>
                             </div>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild><Button size="sm" variant="outline"><Download className="h-3 w-3 mr-1"/> Download</Button></DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel className="text-[10px] uppercase font-bold text-muted-foreground">Select Scope</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => handleGenerateReport(report.id, 'Organization-wise')}>Organization-wise</DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuLabel className="text-[10px] uppercase font-bold text-muted-foreground">Individual Sites</DropdownMenuLabel>
-                                    {sitesList.map(site => <DropdownMenuItem key={site} onClick={() => handleGenerateReport(report.id, site)}>{site}</DropdownMenuItem>)}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                            <Button size="sm" variant="outline" onClick={() => handleGenerateReport(report.id)}>View</Button>
                         </div>
                     ))}
                 </CardContent>
             </Card>
 
+            {/* Category 2: Inventory & Logistics */}
             <Card className="border-amber-500/20 shadow-md">
                 <CardHeader className="bg-amber-500/5 border-b">
-                    <CardTitle className="flex items-center gap-2"><PackageCheck className="text-amber-600" /> Logistics & Indents</CardTitle>
-                    <CardDescription>Consolidated shifting and indent registers.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><PackageCheck className="text-amber-600" /> Logistics & Stock</CardTitle>
+                    <CardDescription>Inventory balance and GRN monitoring.</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-4">
-                    {reportTypes.slice(3).map(report => (
+                    {reportTypes.filter(r => ['material-stock', 'material-shifting', 'indent-register'].includes(r.id)).map(report => (
                         <div key={report.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                             <div>
                                 <p className="font-bold text-sm">{report.title}</p>
-                                <p className="text-xs text-muted-foreground">{report.description}</p>
+                                <p className="text-[10px] text-muted-foreground">{report.description}</p>
                             </div>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild><Button size="sm" variant="outline"><Download className="h-3 w-3 mr-1"/> Download</Button></DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel className="text-[10px] uppercase font-bold text-muted-foreground">Select Scope</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => handleGenerateReport(report.id, 'Organization-wise')}>Organization-wise</DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuLabel className="text-[10px] uppercase font-bold text-muted-foreground">Individual Sites</DropdownMenuLabel>
-                                    {sitesList.map(site => <DropdownMenuItem key={site} onClick={() => handleGenerateReport(report.id, site)}>{site}</DropdownMenuItem>)}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                            <Button size="sm" variant="outline" onClick={() => handleGenerateReport(report.id)}>View</Button>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+
+            {/* Category 3: Management & AI */}
+            <Card className="border-indigo-500/20 shadow-md">
+                <CardHeader className="bg-indigo-500/5 border-b">
+                    <CardTitle className="flex items-center gap-2"><FileSpreadsheet className="text-indigo-600" /> Audit & Analysis</CardTitle>
+                    <CardDescription>BOQ comparisons and AI discrepancies.</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-4">
+                    {reportTypes.filter(r => ['boq-analysis', 'boq-management', 'ai-review'].includes(r.id)).map(report => (
+                        <div key={report.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <div>
+                                <p className="font-bold text-sm">{report.title}</p>
+                                <p className="text-[10px] text-muted-foreground">{report.description}</p>
+                            </div>
+                            <Button size="sm" variant="outline" onClick={() => handleGenerateReport(report.id)}>View</Button>
                         </div>
                     ))}
                 </CardContent>
@@ -280,7 +355,7 @@ export default function ReportsPage() {
                                 <PopoverContent className="w-auto p-0" align="end">
                                     <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
                                 </PopoverContent>
-                            </Popover>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -313,7 +388,7 @@ export default function ReportsPage() {
           
           <DialogFooter className="bg-muted/30 p-4 shrink-0 flex justify-between items-center sm:justify-between">
              <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">
-                Showing {reportData.length} entries for current criteria
+                Showing {reportData.length} entries
              </div>
              <div className="flex gap-3">
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>Close Review</Button>

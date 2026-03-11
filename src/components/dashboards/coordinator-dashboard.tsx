@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -11,22 +10,22 @@ import {
   Download,
   AlertTriangle,
   FileSpreadsheet,
-  PlusCircle,
   Package,
   ArrowRightLeft,
+  ClipboardCheck,
+  BrainCircuit,
+  LayoutDashboard,
 } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useMaterialContext } from '@/context/material-context';
-import { useToast } from '@/hooks/use-toast';
 
 export default function CoordinatorDashboard() {
   const router = useRouter();
   const { requests, inventory } = useMaterialContext();
 
   const toProcess = requests.filter(r => r.status === 'Director Approved').length;
-  const activeTransfers = inventory.filter(i => i.quantity < i.minQty).length;
 
   return (
     <div className="space-y-8">
@@ -45,11 +44,11 @@ export default function CoordinatorDashboard() {
           onClick={() => router.push('/dashboard/requests')}
         />
         <StatCard
-          title="Stock Sync"
-          value="Excel Upload"
-          icon={FileUp}
-          description="Update field levels"
-          onClick={() => router.push('/dashboard/inventory')}
+          title="Execution Audit"
+          value="BOQ Track"
+          icon={FileSpreadsheet}
+          description="Compare work vs plan"
+          onClick={() => router.push('/dashboard/boq-analysis')}
         />
         <StatCard
           title="Logistics"
@@ -59,10 +58,10 @@ export default function CoordinatorDashboard() {
           onClick={() => router.push('/dashboard/material-issue')}
         />
         <StatCard
-          title="Site Reports"
+          title="Audit Reports"
           value="Detailed"
           icon={Download}
-          description="Download audit data"
+          description="Download all logs"
           onClick={() => router.push('/dashboard/reports')}
         />
       </div>
@@ -71,28 +70,42 @@ export default function CoordinatorDashboard() {
         <Card className="lg:col-span-2 shadow-lg border-primary/10">
           <CardHeader className="border-b bg-muted/30">
             <CardTitle>Management Suite</CardTitle>
-            <CardDescription>Core coordination tools</CardDescription>
+            <CardDescription>Core coordination and execution tools</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2 pt-6">
-            <Button variant="outline" className="h-28 flex-col gap-2 border-2 hover:bg-muted/50" onClick={() => router.push('/dashboard/requests')}>
-              <Package className="h-6 w-6 text-primary" />
+          <CardContent className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 pt-6">
+            <Button variant="outline" className="h-28 flex-col gap-2 border-2 hover:bg-muted/50" onClick={() => router.push('/dashboard/boq-management')}>
+              <FileUp className="h-6 w-6 text-primary" />
               <div className="text-center">
-                <span className="font-bold block">Indent Dispatch</span>
-                <span className="text-[10px] text-muted-foreground">Fulfill approved requests</span>
+                <span className="font-bold block">BOQ Management</span>
+                <span className="text-[10px] text-muted-foreground">Upload Master BOQs</span>
+              </div>
+            </Button>
+            <Button variant="outline" className="h-28 flex-col gap-2 border-2 hover:bg-muted/50" onClick={() => router.push('/dashboard/work-done-report')}>
+              <ClipboardCheck className="h-6 w-6 text-primary" />
+              <div className="text-center">
+                <span className="font-bold block">Work Reports</span>
+                <span className="text-[10px] text-muted-foreground">Verify daily progress</span>
               </div>
             </Button>
             <Button variant="outline" className="h-28 flex-col gap-2 border-2 hover:bg-muted/50" onClick={() => router.push('/dashboard/boq-analysis')}>
               <FileSpreadsheet className="h-6 w-6 text-primary" />
               <div className="text-center">
-                <span className="font-bold block">Execution Audit</span>
-                <span className="text-[10px] text-muted-foreground">Work-done vs BOQ</span>
+                <span className="font-bold block">BOQ Analysis</span>
+                <span className="text-[10px] text-muted-foreground">Cost vs Execution</span>
+              </div>
+            </Button>
+            <Button variant="outline" className="h-28 flex-col gap-2 border-2 hover:bg-muted/50" onClick={() => router.push('/dashboard/ai-review')}>
+              <BrainCircuit className="h-6 w-6 text-primary" />
+              <div className="text-center">
+                <span className="font-bold block">AI Bill Review</span>
+                <span className="text-[10px] text-muted-foreground">Automated Auditing</span>
               </div>
             </Button>
             <Button variant="outline" className="h-28 flex-col gap-2 border-2 hover:bg-muted/50" onClick={() => router.push('/dashboard/material-issue')}>
               <ArrowRightLeft className="h-6 w-6 text-primary" />
               <div className="text-center">
-                <span className="font-bold block">Material Shifting</span>
-                <span className="text-[10px] text-muted-foreground">Site-to-site movement</span>
+                <span className="font-bold block">Inter-Site Shifting</span>
+                <span className="text-[10px] text-muted-foreground">Logistics control</span>
               </div>
             </Button>
             <Button variant="outline" className="h-28 flex-col gap-2 border-2 hover:bg-muted/50" onClick={() => router.push('/dashboard/inventory')}>
@@ -108,23 +121,23 @@ export default function CoordinatorDashboard() {
         <Card className="shadow-lg border-primary/10">
           <CardHeader className="border-b bg-muted/30">
             <CardTitle className="flex items-center gap-2">
-              <Download className="h-5 w-5 text-primary" /> Reports Hub
+              <Download className="h-5 w-5 text-primary" /> Download Hub
             </CardTitle>
-            <CardDescription>Tailored logistics data</CardDescription>
+            <CardDescription>Export site-specific registers</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pt-6">
-            <Button variant="secondary" className="w-full justify-between h-11" onClick={() => router.push('/dashboard/reports')}>
-              Shifting Register <Download className="h-4 w-4" />
+            <Button variant="secondary" className="w-full justify-between h-11" onClick={() => router.push('/dashboard/reports?module=work-done-report')}>
+              Daily Work Register <Download className="h-4 w-4" />
             </Button>
-            <Button variant="secondary" className="w-full justify-between h-11" onClick={() => router.push('/dashboard/reports')}>
+            <Button variant="secondary" className="w-full justify-between h-11" onClick={() => router.push('/dashboard/reports?module=boq-analysis')}>
+              BOQ Progress Report <Download className="h-4 w-4" />
+            </Button>
+            <Button variant="secondary" className="w-full justify-between h-11" onClick={() => router.push('/dashboard/reports?module=material-stock')}>
               Global Stock Status <Download className="h-4 w-4" />
-            </Button>
-            <Button variant="secondary" className="w-full justify-between h-11" onClick={() => router.push('/dashboard/reports')}>
-              Site Activity Log <Download className="h-4 w-4" />
             </Button>
             <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex items-center gap-3 mt-4">
               <AlertTriangle className="h-5 w-5 text-primary" />
-              <span className="text-xs font-bold leading-tight">Coordinators must verify stock sync weekly.</span>
+              <span className="text-xs font-bold leading-tight">Coordinators must audit AI discrepancies weekly.</span>
             </div>
           </CardContent>
         </Card>

@@ -5,10 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   FileSpreadsheet,
   PackageSearch,
-  Users,
   AreaChart,
-  Download,
-  AlertTriangle,
   CheckCircle2,
   Package,
   Building2,
@@ -16,6 +13,11 @@ import {
   ClipboardList,
   Receipt,
   Car,
+  FileUp,
+  ClipboardCheck,
+  BrainCircuit,
+  RefreshCw,
+  AlertTriangle,
 } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,6 +49,10 @@ export default function DirectorDashboard() {
     { id: 'indent-register', title: 'Material Indents', icon: Package, color: 'text-amber-600', desc: 'Authorized requests & status' },
     { id: 'mis-register', title: 'Issue Slips (MIS)', icon: ClipboardList, color: 'text-green-600', desc: 'On-site material distribution' },
     { id: 'material-shifting', title: 'Bill Checking (GRN)', icon: Receipt, color: 'text-purple-600', desc: 'Audit verified receipts' },
+    { id: 'work-done-report', title: 'Work Done Report', icon: ClipboardCheck, color: 'text-indigo-600', desc: 'Daily site progress tracking' },
+    { id: 'boq-analysis', title: 'BOQ Analysis', icon: FileSpreadsheet, color: 'text-emerald-600', desc: 'Planned vs Actual comparison' },
+    { id: 'boq-management', title: 'BOQ Management', icon: FileUp, color: 'text-cyan-600', desc: 'Master BOQ & configurations' },
+    { id: 'ai-review', title: 'AI Bill Review', icon: BrainCircuit, color: 'text-pink-600', desc: 'Automated audit & discrepancies' },
     { id: 'returnable-material', title: 'Returnable Assets', icon: RefreshCw, color: 'text-orange-600', desc: 'Track tools & machinery' },
     { id: 'vehicle-usage', title: 'Vehicle Entries', icon: Car, color: 'text-rose-600', desc: 'Logistics & fuel tracking' },
   ];
@@ -90,11 +96,11 @@ export default function DirectorDashboard() {
           onClick={() => router.push('/dashboard/inventory')}
         />
         <StatCard
-          title="Active Tenders"
-          value="12"
-          icon={FileSpreadsheet}
-          description="Project estimations"
-          onClick={() => router.push('/dashboard/tender-tools')}
+          title="Daily Progress"
+          value="Reports"
+          icon={ClipboardCheck}
+          description="View work done"
+          onClick={() => router.push('/dashboard/work-done-report')}
         />
         <StatCard
           title="Consolidated Audit"
@@ -109,17 +115,17 @@ export default function DirectorDashboard() {
         <h2 className="text-xl font-bold font-headline flex items-center gap-2">
           <Building2 className="h-5 w-5 text-primary"/> Project Modules for {selectedSite}
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {modules.map((m) => (
             <Card key={m.id} className="hover:shadow-lg transition-all cursor-pointer group border-primary/10 overflow-hidden" onClick={() => router.push(`/dashboard/reports?module=${m.id}&site=${selectedSite}`)}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-muted/20">
-                <CardTitle className="text-base font-bold">{m.title}</CardTitle>
+                <CardTitle className="text-sm font-bold">{m.title}</CardTitle>
                 <m.icon className={cn("h-5 w-5", m.color)} />
               </CardHeader>
               <CardContent className="pt-4">
-                <p className="text-xs text-muted-foreground mb-4">{m.desc}</p>
-                <Button variant="ghost" size="sm" className="w-full justify-between font-bold text-[10px] uppercase tracking-widest text-primary group-hover:bg-primary/5">
-                  Open Audit Page <ArrowUpRight className="h-3 w-3" />
+                <p className="text-[10px] text-muted-foreground mb-4 h-8 line-clamp-2">{m.desc}</p>
+                <Button variant="ghost" size="sm" className="w-full justify-between font-bold text-[9px] uppercase tracking-widest text-primary group-hover:bg-primary/5">
+                  View Audit Data <ArrowUpRight className="h-3 w-3" />
                 </Button>
               </CardContent>
             </Card>
@@ -128,26 +134,4 @@ export default function DirectorDashboard() {
       </div>
     </div>
   );
-}
-
-function RefreshCw(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-      <path d="M21 3v5h-5" />
-      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-      <path d="M3 21v-5h5" />
-    </svg>
-  )
 }
