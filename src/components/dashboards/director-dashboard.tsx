@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   AlertCircle,
   ArrowRight,
+  Clock,
 } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,7 +28,7 @@ import { Button } from '@/components/ui/button';
 import { useMaterialContext } from '@/context/material-context';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { isSameDay, subDays } from 'date-fns';
+import { isSameDay, subDays, differenceInDays } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function DirectorDashboard() {
@@ -46,21 +47,30 @@ export default function DirectorDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  const sitesList = Array.from(new Set(inventory.map(i => i.site)));
-  const yesterday = subDays(new Date(), 1);
+  const sitesList = React.useMemo(() => 
+    Array.from(new Set(inventory.map(i => i.site))).filter(s => s !== 'Global' && s !== 'All' && s !== 'MAPI Godown'),
+    [inventory]
+  );
 
-  const missingSites = React.useMemo(() => {
-    return sitesList.filter(siteName => {
-      if (siteName === 'MAPI Godown' || siteName === 'Global' || siteName === 'All') return false;
-      const hasReport = workDoneReports.some(report => 
-        report.siteName === siteName && 
-        isSameDay(new Date(report.reportDate), yesterday)
-      );
-      return !hasReport;
-    });
-  }, [sitesList, workDoneReports, yesterday]);
+  const delinquentSites = React.useMemo(() => {
+    return sitesList.map(siteName => {
+      let missingCount = 0;
+      let checkDate = subDays(new Date(), 1);
+      
+      // Check back up to 30 days for missing reports
+      while (missingCount < 30) {
+        const hasReport = workDoneReports.some(r => 
+          r.siteName === siteName && isSameDay(new Date(r.reportDate), checkDate)
+        );
+        if (hasReport) break;
+        missingCount++;
+        checkDate = subDays(checkDate, 1);
+      }
+      return { siteName, missingCount };
+    }).filter(s => s.missingCount > 0);
+  }, [sitesList, workDoneReports]);
 
-  const showMissingAlert = isPastEightAM && missingSites.length > 0;
+  const showMissingAlert = isPastEightAM && delinquentSites.length > 0;
 
   const filteredInventory = selectedSite === 'Organization-wise' 
     ? inventory 
@@ -93,7 +103,7 @@ export default function DirectorDashboard() {
           <h1 className="text-3xl font-black font-headline uppercase tracking-tight text-primary">Executive Oversight</h1>
           <p className="text-muted-foreground">MaterialFlow Organizational Control</p>
         </div>
-        <div className="flex items-center gap-3 bg-card p-2 rounded-xl border shadow-sm">
+        <div className="flex items-center gap-3 bg-card p-2 rounded-xl border shadow-sm text-sm">
           <Building2 className="h-4 w-4 text-muted-foreground ml-2" />
           <Select value={selectedSite} onValueChange={setSelectedSite}>
             <SelectTrigger className="w-[220px] border-none focus:ring-0 shadow-none font-bold">
@@ -101,31 +111,44 @@ export default function DirectorDashboard() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="Organization-wise">All Sites Combined</SelectItem>
-              {sitesList.filter(s => s !== 'Global' && s !== 'All').map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
+              {sitesList.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
       </div>
 
       {showMissingAlert && (
-        <Alert variant="destructive" className="border-2 border-destructive bg-destructive/5 animate-pulse shadow-xl py-6">
-          <AlertCircle className="h-8 w-8" />
-          <div className="ml-4 flex-1">
-            <AlertTitle className="text-xl font-black uppercase tracking-tight mb-1">
-              Audit Alert: Overdue Site Reports
-            </AlertTitle>
-            <AlertDescription className="text-base font-medium opacity-90">
-              Yesterday's Daily Work Done Report is missing for the following sites: <span className="font-black underline">{missingSites.join(', ')}</span>. 
-              Site Managers must update these logs immediately.
-            </AlertDescription>
+        <Alert variant="destructive" className="border-2 border-destructive bg-destructive/5 animate-pulse shadow-2xl py-8">
+          <div className="flex items-start gap-6">
+            <div className="bg-destructive text-white p-3 rounded-2xl shadow-lg">
+              <AlertCircle className="h-10 w-10" />
+            </div>
+            <div className="flex-1 space-y-2">
+              <AlertTitle className="text-2xl font-black uppercase tracking-tighter flex items-center gap-2">
+                Audit Critical: Sites Delinquent in Daily Reporting
+              </AlertTitle>
+              <div className="flex flex-wrap gap-3">
+                {delinquentSites.map(s => (
+                  <div key={s.siteName} className="bg-destructive/10 border border-destructive/20 rounded-full px-4 py-1 flex items-center gap-2">
+                    <span className="font-black text-sm">{s.siteName}</span>
+                    <span className="text-[10px] uppercase font-bold text-destructive/80 bg-white/50 px-2 rounded-full flex items-center gap-1">
+                      <Clock className="h-3 w-3" /> {s.missingCount} {s.missingCount === 1 ? 'day' : 'days'} missing
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-sm font-medium opacity-80 pt-2">
+                Operational oversight requires 100% daily log consistency. Coordinate with Project Managers immediately.
+              </p>
+            </div>
+            <Button 
+              size="lg" 
+              className="font-black uppercase tracking-widest bg-destructive hover:bg-destructive/90 text-white h-16 px-8 shadow-xl"
+              onClick={() => router.push('/dashboard/work-done-report')}
+            >
+              Action Hub <ArrowRight className="ml-2 h-6 w-6" />
+            </Button>
           </div>
-          <Button 
-            size="lg" 
-            className="ml-4 font-black uppercase tracking-widest bg-destructive hover:bg-destructive/90 text-white"
-            onClick={() => router.push('/dashboard/work-done-report')}
-          >
-            Review Reports <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
         </Alert>
       )}
 
@@ -169,7 +192,7 @@ export default function DirectorDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {modules.map((m) => (
             <Card key={m.id} className="hover:shadow-lg transition-all cursor-pointer group border-primary/10 overflow-hidden" onClick={() => router.push(`/dashboard/reports?module=${m.id}&site=${selectedSite}`)}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-muted/20">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-muted/20 text-sm">
                 <CardTitle className="text-sm font-bold">{m.title}</CardTitle>
                 <m.icon className={cn("h-5 w-5", m.color)} />
               </CardHeader>

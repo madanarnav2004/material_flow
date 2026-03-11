@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   AlertCircle,
   ArrowRight,
+  Clock,
 } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,49 +41,67 @@ export default function CoordinatorDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  const sitesList = Array.from(new Set(inventory.map(i => i.site)));
-  const yesterday = subDays(new Date(), 1);
+  const sitesList = React.useMemo(() => 
+    Array.from(new Set(inventory.map(i => i.site))).filter(s => s !== 'Global' && s !== 'All' && s !== 'MAPI Godown'),
+    [inventory]
+  );
 
-  const missingSites = React.useMemo(() => {
-    return sitesList.filter(siteName => {
-      if (siteName === 'MAPI Godown' || siteName === 'Global' || siteName === 'All') return false;
-      const hasReport = workDoneReports.some(report => 
-        report.siteName === siteName && 
-        isSameDay(new Date(report.reportDate), yesterday)
-      );
-      return !hasReport;
-    });
-  }, [sitesList, workDoneReports, yesterday]);
+  const delinquentSites = React.useMemo(() => {
+    return sitesList.map(siteName => {
+      let missingCount = 0;
+      let checkDate = subDays(new Date(), 1);
+      
+      while (missingCount < 30) {
+        const hasReport = workDoneReports.some(r => 
+          r.siteName === siteName && isSameDay(new Date(r.reportDate), checkDate)
+        );
+        if (hasReport) break;
+        missingCount++;
+        checkDate = subDays(checkDate, 1);
+      }
+      return { siteName, missingCount };
+    }).filter(s => s.missingCount > 0);
+  }, [sitesList, workDoneReports]);
 
-  const showMissingAlert = isPastEightAM && missingSites.length > 0;
+  const showMissingAlert = isPastEightAM && delinquentSites.length > 0;
   const toProcess = requests.filter(r => r.status === 'Director Approved').length;
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 text-sm">
         <h1 className="text-3xl font-black font-headline text-primary">Project Operations Hub</h1>
         <p className="text-muted-foreground">Manage logistics, BOQs, and organization-wide synchronization</p>
       </div>
 
       {showMissingAlert && (
-        <Alert variant="destructive" className="border-2 border-destructive bg-destructive/5 animate-pulse shadow-xl py-6">
-          <AlertCircle className="h-8 w-8" />
-          <div className="ml-4 flex-1">
-            <AlertTitle className="text-xl font-black uppercase tracking-tight mb-1">
-              Operational Delay: Sites Missing Daily Reports
-            </AlertTitle>
-            <AlertDescription className="text-base font-medium opacity-90">
-              The following sites have not updated their progress for yesterday: <span className="font-black underline">{missingSites.join(', ')}</span>. 
-              Coordinate with Site Managers to resolve these audit gaps.
-            </AlertDescription>
+        <Alert variant="destructive" className="border-2 border-destructive bg-destructive/5 animate-pulse shadow-2xl py-8">
+          <div className="flex items-start gap-6">
+            <div className="bg-destructive text-white p-3 rounded-2xl shadow-lg">
+              <AlertCircle className="h-10 w-10" />
+            </div>
+            <div className="flex-1 space-y-3">
+              <AlertTitle className="text-2xl font-black uppercase tracking-tighter">
+                Operational Alert: Missing Site Progress Reports
+              </AlertTitle>
+              <div className="flex flex-wrap gap-2">
+                {delinquentSites.map(s => (
+                  <div key={s.siteName} className="bg-white/80 border border-destructive/20 rounded-xl px-4 py-2 flex flex-col">
+                    <span className="font-black text-xs text-destructive">{s.siteName}</span>
+                    <span className="text-[10px] uppercase font-bold flex items-center gap-1 opacity-70">
+                      <Clock className="h-3 w-3" /> {s.missingCount} {s.missingCount === 1 ? 'day' : 'days'} overdue
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <Button 
+              size="lg" 
+              className="font-black uppercase tracking-widest bg-destructive hover:bg-destructive/90 text-white h-16 px-8 shadow-xl"
+              onClick={() => router.push('/dashboard/work-done-report')}
+            >
+              Resolve Gaps <ArrowRight className="ml-2 h-6 w-6" />
+            </Button>
           </div>
-          <Button 
-            size="lg" 
-            className="ml-4 font-black uppercase tracking-widest bg-destructive hover:bg-destructive/90 text-white"
-            onClick={() => router.push('/dashboard/work-done-report')}
-          >
-            Review Hub <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
         </Alert>
       )}
 
@@ -120,7 +139,7 @@ export default function CoordinatorDashboard() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2 shadow-lg border-primary/10">
-          <CardHeader className="border-b bg-muted/30">
+          <CardHeader className="border-b bg-muted/30 text-sm">
             <CardTitle>Management Suite</CardTitle>
             <CardDescription>Core coordination and execution tools</CardDescription>
           </CardHeader>
@@ -171,7 +190,7 @@ export default function CoordinatorDashboard() {
         </Card>
 
         <Card className="shadow-lg border-primary/10">
-          <CardHeader className="border-b bg-muted/30">
+          <CardHeader className="border-b bg-muted/30 text-sm">
             <CardTitle className="flex items-center gap-2">
               <Download className="h-5 w-5 text-primary" /> Download Hub
             </CardTitle>
@@ -187,7 +206,7 @@ export default function CoordinatorDashboard() {
             <Button variant="secondary" className="w-full justify-between h-11" onClick={() => router.push('/dashboard/reports?module=material-stock')}>
               Global Stock Status <Download className="h-4 w-4" />
             </Button>
-            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex items-center gap-3 mt-4">
+            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex items-center gap-3 mt-4 text-sm">
               <AlertTriangle className="h-5 w-5 text-primary" />
               <span className="text-xs font-bold leading-tight">Coordinators must audit AI discrepancies weekly.</span>
             </div>
