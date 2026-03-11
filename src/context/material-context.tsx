@@ -74,7 +74,9 @@ export interface MasterRateItem {
 
 export interface BOQItem {
   id: string;
-  category: string;
+  categoryNo: string;
+  itemNo: string;
+  itemOfWork: string;
   subItemOfWork: string;
   boqQty: number;
   unit: string;
@@ -137,13 +139,15 @@ export interface MaterialReceivedBill {
 
 export interface WorkDoneEntry {
   id: string;
+  categoryNo: string;
+  itemNo: string;
   itemOfWork: string;
-  category: string;
+  subItemOfWork: string;
   quantityOfWork: number;
   unit: string;
   materialName?: string;
   materialQty?: number;
-  equipmentSource?: string;
+  equipmentSource?: 'Owned' | 'Rented';
   equipmentName?: string;
   equipmentUsage?: number;
   workerType?: string;
@@ -254,7 +258,7 @@ interface MaterialContextType {
 
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
 
-const STORAGE_KEY_VERSION = 'v12-excel-grid-work-reports';
+const STORAGE_KEY_VERSION = 'v15-end-to-end-workflow-audit';
 
 export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [requests, setRequests] = useState<MaterialIndent[]>(() => getFromLocalStorage(`mf-requests-${STORAGE_KEY_VERSION}`, initialIndents));
