@@ -43,16 +43,13 @@ export interface MaterialIndent {
   remarks?: string;
   status: IndentStatus;
   requestDate: string;
-  // Related to PO
   poDate?: string;
   vendorName?: string;
   vendorContact?: string;
   billNumber?: string;
-  // Related to Issue
   issuingSite?: string;
   issuedId?: string;
 }
-
 
 export interface IssuedMaterial {
     requestId: string;
@@ -73,6 +70,21 @@ export interface MasterRateItem {
   name: string;
   unit: string;
   rate: number;
+}
+
+export interface BOQItem {
+  id: string;
+  category: string;
+  subItemOfWork: string;
+  boqQty: number;
+  unit: string;
+  boqRate: number;
+  materialTypes?: string;
+  equipment?: string;
+  source?: string;
+  workforce?: string;
+  skillsAndRates?: string;
+  site?: string;
 }
 
 export interface InventoryItem {
@@ -143,8 +155,8 @@ export interface SiteIssueVoucher {
   voucherId: string;
   siteName: string;
   issueDate: string;
-  issuedTo: string; // Engineer/Contractor
-  buildingName: string; // Site Location
+  issuedTo: string;
+  buildingName: string;
   issueType: 'Local' | 'Shifting';
   receivingSite?: string;
   materials: SiteIssueItem[];
@@ -194,7 +206,6 @@ function setInLocalStorage<T>(key: string, value: T) {
     }
 }
 
-
 interface MaterialContextType {
   requests: MaterialIndent[];
   setRequests: React.Dispatch<React.SetStateAction<MaterialIndent[]>>;
@@ -220,11 +231,13 @@ interface MaterialContextType {
   setWorkersRate: React.Dispatch<React.SetStateAction<MasterRateItem[]>>;
   helpersRate: MasterRateItem[];
   setHelpersRate: React.Dispatch<React.SetStateAction<MasterRateItem[]>>;
+  boqItems: BOQItem[];
+  setBoqItems: React.Dispatch<React.SetStateAction<BOQItem[]>>;
 }
 
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
 
-const STORAGE_KEY_VERSION = 'v10-rates-integration';
+const STORAGE_KEY_VERSION = 'v11-boq-analysis-integration';
 
 export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [requests, setRequests] = useState<MaterialIndent[]>(() => getFromLocalStorage(`mf-requests-${STORAGE_KEY_VERSION}`, initialIndents));
@@ -235,11 +248,11 @@ export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [siteIssues, setSiteIssues] = useState<SiteIssueVoucher[]>(() => getFromLocalStorage(`mf-site-issues-${STORAGE_KEY_VERSION}`, []));
   const [issueSlips, setIssueSlips] = useState<MaterialIssueSlip[]>(() => getFromLocalStorage(`mf-issue-slips-${STORAGE_KEY_VERSION}`, []));
   const [inventoryUploads, setInventoryUploads] = useState<InventoryUploadRecord[]>(() => getFromLocalStorage(`mf-inv-uploads-${STORAGE_KEY_VERSION}`, []));
-  
   const [materialsRate, setMaterialsRate] = useState<MasterRateItem[]>(() => getFromLocalStorage(`mf-mat-rates-${STORAGE_KEY_VERSION}`, initialMaterialsRate));
   const [equipmentRate, setEquipmentRate] = useState<MasterRateItem[]>(() => getFromLocalStorage(`mf-eq-rates-${STORAGE_KEY_VERSION}`, initialEquipmentRate));
   const [workersRate, setWorkersRate] = useState<MasterRateItem[]>(() => getFromLocalStorage(`mf-worker-rates-${STORAGE_KEY_VERSION}`, initialWorkersRate));
   const [helpersRate, setHelpersRate] = useState<MasterRateItem[]>(() => getFromLocalStorage(`mf-helper-rates-${STORAGE_KEY_VERSION}`, initialHelpersRate));
+  const [boqItems, setBoqItems] = useState<BOQItem[]>(() => getFromLocalStorage(`mf-boq-items-${STORAGE_KEY_VERSION}`, []));
 
   useEffect(() => { setInLocalStorage(`mf-requests-${STORAGE_KEY_VERSION}`, requests) }, [requests]);
   useEffect(() => { setInLocalStorage(`mf-issued-${STORAGE_KEY_VERSION}`, issuedMaterials) }, [issuedMaterials]);
@@ -253,7 +266,7 @@ export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => { setInLocalStorage(`mf-eq-rates-${STORAGE_KEY_VERSION}`, equipmentRate) }, [equipmentRate]);
   useEffect(() => { setInLocalStorage(`mf-worker-rates-${STORAGE_KEY_VERSION}`, workersRate) }, [workersRate]);
   useEffect(() => { setInLocalStorage(`mf-helper-rates-${STORAGE_KEY_VERSION}`, helpersRate) }, [helpersRate]);
-
+  useEffect(() => { setInLocalStorage(`mf-boq-items-${STORAGE_KEY_VERSION}`, boqItems) }, [boqItems]);
 
   return (
     <MaterialContext.Provider value={{ 
@@ -268,7 +281,8 @@ export const MaterialProvider = ({ children }: { children: ReactNode }) => {
       materialsRate, setMaterialsRate,
       equipmentRate, setEquipmentRate,
       workersRate, setWorkersRate,
-      helpersRate, setHelpersRate
+      helpersRate, setHelpersRate,
+      boqItems, setBoqItems
     }}>
       {children}
     </MaterialContext.Provider>

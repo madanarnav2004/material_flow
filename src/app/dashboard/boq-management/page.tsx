@@ -1,303 +1,391 @@
-
 'use client';
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { FileUp, Upload, Download, FileClock, Calendar as CalendarIcon } from 'lucide-react';
+import { 
+  FileUp, 
+  Upload, 
+  Download, 
+  FileSpreadsheet, 
+  PlusCircle, 
+  Trash, 
+  Save, 
+  CheckCircle2, 
+  RefreshCcw,
+  Search,
+  Table as TableIcon
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useMaterialContext, type BOQItem } from '@/context/material-context';
+import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
 
-const fileSchema = (typeof window !== 'undefined' ? z.instanceof(File) : z.any()).optional();
-
-const uploadSchema = z.object({
-  siteName: z.string().min(1, 'Please select a site.'),
-  overallBoqFile: fileSchema,
-  descriptionFile: fileSchema,
-  itemFile: fileSchema,
-  materialFile: fileSchema,
-  equipmentFile: fileSchema,
-  workforceFile: fileSchema,
+const boqItemSchema = z.object({
+  id: z.string(),
+  category: z.string().min(1, 'Category is required.'),
+  subItemOfWork: z.string().min(1, 'Sub-item is required.'),
+  boqQty: z.coerce.number().min(0.1, 'Qty must be > 0.'),
+  unit: z.string().min(1, 'Unit is required.'),
+  boqRate: z.coerce.number().min(0, 'Rate must be positive.'),
+  materialTypes: z.string().optional(),
+  equipment: z.string().optional(),
+  source: z.string().optional(),
+  workforce: z.string().optional(),
+  skillsAndRates: z.string().optional(),
 });
 
-type UploadFormValues = z.infer<typeof uploadSchema>;
-
-const reportSchema = z.object({
-  reportSiteName: z.string().min(1, 'Please select a site.'),
-  startDate: z.date({ required_error: 'A start date is required.' }),
-  endDate: z.date({ required_error: 'An end date is required.' }),
+const boqFormSchema = z.object({
+  site: z.string().min(1, 'Please select a site.'),
+  items: z.array(boqItemSchema),
 });
 
-type ReportFormValues = z.infer<typeof reportSchema>;
+type BOQFormValues = z.infer<typeof boqFormSchema>;
 
-export default function BoqManagementPage() {
+export default function BOQManagementPage() {
   const { toast } = useToast();
+  const { boqItems, setBoqItems, inventory } = useMaterialContext();
+  const [isProcessing, setIsProcessing] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState('');
 
-  const uploadForm = useForm<UploadFormValues>({
-    resolver: zodResolver(uploadSchema),
+  const sites = Array.from(new Set(inventory.map(i => i.site))).filter(s => s !== 'MAPI Godown' && s !== 'Global');
+
+  const form = useForm<BOQFormValues>({
+    resolver: zodResolver(boqFormSchema),
     defaultValues: {
-      siteName: '',
+      site: '',
+      items: [],
     },
   });
 
-  const reportForm = useForm<ReportFormValues>({
-    resolver: zodResolver(reportSchema),
+  const { fields, append, remove, replace } = useFieldArray({
+    control: form.control,
+    name: 'items',
   });
 
-  const selectedSiteForUpload = uploadForm.watch('siteName');
-  const selectedSiteForReport = reportForm.watch('reportSiteName');
-  
-  function onUploadSubmit(values: UploadFormValues) {
-    console.log('Uploaded files for site:', values.siteName, values);
-    toast({
-      title: 'BOQ Configuration Submitted!',
-      description: `Your BOQ files for ${values.siteName} have been uploaded for processing.`,
-    });
-    toast({
-      title: 'Note: Demo Only',
-      description: 'In a real application, this data would update dropdowns. Currently, dropdowns use mock data.',
-      duration: 6000
-    });
-    // Reset file inputs if needed, but keep site selection
-    uploadForm.reset({
-      siteName: values.siteName,
-      overallBoqFile: undefined,
-      descriptionFile: undefined,
-      itemFile: undefined,
-      materialFile: undefined,
-      equipmentFile: undefined,
-      workforceFile: undefined,
-    });
-  }
-  
-  function onReportSubmit(values: ReportFormValues) {
-    console.log('Generating report with values:', values);
-    const reportDetails = `Report from ${format(values.startDate, 'PPP')} to ${format(values.endDate, 'PPP')}`;
+  const activeSite = form.watch('site');
+
+  // Load existing site BOQ into the editable table
+  React.useEffect(() => {
+    if (activeSite) {
+      const siteBoq = boqItems.filter(item => item.site === activeSite);
+      replace(siteBoq.length > 0 ? siteBoq : [{ 
+        id: Date.now().toString(), 
+        category: '', 
+        subItemOfWork: '', 
+        boqQty: 0, 
+        unit: '', 
+        boqRate: 0 
+      }]);
+    }
+  }, [activeSite, boqItems, replace]);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!activeSite) {
+      toast({ variant: 'destructive', title: 'Action Required', description: 'Please select a site before uploading Excel.' });
+      return;
+    }
+
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessing(true);
+    
+    // Simulate Excel parsing logic for required fields
+    setTimeout(() => {
+      const mockParsedData: BOQItem[] = [
+        { 
+          id: `xl-${Date.now()}-1`, 
+          category: 'Earthwork', 
+          subItemOfWork: 'Excavation in soft soil', 
+          boqQty: 1250, 
+          unit: 'm³', 
+          boqRate: 15.50,
+          materialTypes: 'None',
+          equipment: 'JCB, Dumper',
+          source: 'Rented',
+          workforce: 'Helper',
+          site: activeSite
+        },
+        { 
+          id: `xl-${Date.now()}-2`, 
+          category: 'Concrete', 
+          subItemOfWork: 'PCC 1:4:8 Foundation', 
+          boqQty: 450, 
+          unit: 'm³', 
+          boqRate: 110.00,
+          materialTypes: 'Cement, Sand, Aggregate',
+          equipment: 'Mixer',
+          source: 'Owned',
+          workforce: 'Mason, Helper',
+          site: activeSite
+        },
+        { 
+          id: `xl-${Date.now()}-3`, 
+          category: 'Steel', 
+          subItemOfWork: 'Reinforcement FE500', 
+          boqQty: 25, 
+          unit: 'ton', 
+          boqRate: 850.00,
+          materialTypes: 'Rebar',
+          equipment: 'Cutter',
+          source: 'Owned',
+          workforce: 'Fitter',
+          site: activeSite
+        },
+      ];
+
+      replace(mockParsedData);
+      setIsProcessing(false);
+      toast({
+        title: 'Excel BOQ Processed',
+        description: `Successfully loaded ${mockParsedData.length} line items for ${activeSite}. Review and edit below.`,
+      });
+    }, 1200);
+  };
+
+  const onSubmit = (values: BOQFormValues) => {
+    // Merge new items with other site items
+    const otherSitesItems = boqItems.filter(item => item.site !== values.site);
+    const updatedSiteItems = values.items.map(item => ({ ...item, site: values.site }));
+    
+    setBoqItems([...otherSitesItems, ...updatedSiteItems]);
 
     toast({
-      title: 'Report Generation Started!',
-      description: `Generating ${reportDetails} for ${values.reportSiteName}.`,
+      title: 'BOQ Master Updated',
+      description: `Finalized ${values.items.length} items for ${values.site}. These will now appear in Work Done reports.`,
     });
-  }
+  };
 
-  const renderUploadCard = (name: keyof UploadFormValues, title: string, description: string) => (
-    <Card className="shadow-none">
-      <CardHeader>
-        <CardTitle className="text-lg">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <FormField
-          control={uploadForm.control}
-          name={name}
-          render={({ field: { onChange, value, ...rest } }) => (
-            <FormItem>
-              <FormControl>
-                <Input
-                  type="file"
-                  accept=".xlsx, .xls, .csv"
-                  onChange={(e) =>
-                    onChange(e.target.files ? e.target.files[0] : null)
-                  }
-                />
-              </FormControl>
-              {value && <p className="text-sm text-muted-foreground mt-2">Selected: {value.name}</p>}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </CardContent>
-    </Card>
+  const filteredFields = fields.filter(field => 
+    field.subItemOfWork.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    field.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
-        <FileUp /> BOQ Management
-      </h1>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileClock /> Download Work Done Report
-          </CardTitle>
-          <CardDescription>
-            Generate and download a detailed work done report for a specific site and date range.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...reportForm}>
-            <form onSubmit={reportForm.handleSubmit(onReportSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-black font-headline text-primary flex items-center gap-3 uppercase tracking-tighter">
+            <FileSpreadsheet className="h-8 w-8" /> BOQ Master Management
+          </h1>
+          <p className="text-muted-foreground font-medium">Upload, edit, and synchronize site-wise Bill of Quantities</p>
+        </div>
+        {activeSite && (
+          <Badge variant="outline" className="h-10 px-4 text-sm font-black border-primary/20 bg-primary/5 uppercase tracking-widest">
+            Active Site: {activeSite}
+          </Badge>
+        )}
+      </div>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <Card className="border-primary/10 shadow-lg overflow-hidden">
+            <CardHeader className="bg-primary/5 border-b py-4">
+              <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                 <FormField
-                  control={reportForm.control}
-                  name="reportSiteName"
+                  control={form.control}
+                  name="site"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Select Site</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormItem className="w-full md:w-72">
+                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Project Site Context</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a site" />
+                          <SelectTrigger className="h-11 font-bold border-2">
+                            <SelectValue placeholder="Select site to configure BOQ" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="North Site">North Site</SelectItem>
-                          <SelectItem value="South Site">South Site</SelectItem>
-                          <SelectItem value="West Site">West Site</SelectItem>
-                          <SelectItem value="East Site">East Site</SelectItem>
+                          {sites.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={reportForm.control}
-                  name="startDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Start Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                            >
-                              {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={reportForm.control}
-                  name="endDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>End Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                            >
-                              {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
 
-              <div className="flex gap-4">
-                <Button type="submit" disabled={!selectedSiteForReport}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Report (PDF)
-                </Button>
-                 <Button type="submit" disabled={!selectedSiteForReport} variant="outline">
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Report (Excel)
-                </Button>
+                <div className="flex items-center gap-2">
+                  <div className="relative group">
+                    <Button variant="outline" className="h-11 px-6 font-black uppercase tracking-widest border-2 border-dashed hover:border-primary hover:text-primary transition-all" disabled={!activeSite || isProcessing}>
+                      <Upload className="mr-2 h-4 w-4" /> 
+                      {isProcessing ? 'Parsing...' : 'Upload overall BOQ Excel'}
+                    </Button>
+                    <input 
+                      type="file" 
+                      className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed" 
+                      accept=".xlsx, .xls, .csv" 
+                      onChange={handleFileUpload}
+                      disabled={!activeSite || isProcessing}
+                    />
+                  </div>
+                  <Button variant="outline" type="button" className="h-11 font-bold" onClick={() => replace([{ id: Date.now().toString(), category: '', subItemOfWork: '', boqQty: 0, unit: '', boqRate: 0 }])} disabled={!activeSite}>
+                    <RefreshCcw className="mr-2 h-4 w-4" /> Reset
+                  </Button>
+                </div>
               </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-      
-      <Form {...uploadForm}>
-          <form onSubmit={uploadForm.handleSubmit(onUploadSubmit)} className="space-y-8">
-          <Card>
-               <CardHeader>
-                  <CardTitle>BOQ Configuration &amp; Upload</CardTitle>
-                  <CardDescription>
-                  Select a site to upload or update its BOQ. Each site's BOQ is managed separately.
-                  </CardDescription>
-              </CardHeader>
-              <CardContent>
-                  <FormField
-                  control={uploadForm.control}
-                  name="siteName"
-                  render={({ field }) => (
-                      <FormItem className="max-w-md">
-                      <FormLabel>Select Site</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                          <SelectTrigger>
-                              <SelectValue placeholder="Select a site to configure its BOQ" />
-                          </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                          <SelectItem value="North Site">North Site</SelectItem>
-                          <SelectItem value="South Site">South Site</SelectItem>
-                          <SelectItem value="West Site">West Site</SelectItem>
-                          <SelectItem value="East Site">East Site</SelectItem>
-                          </SelectContent>
-                      </Select>
-                      <FormMessage />
-                      </FormItem>
-                  )}
-                  />
+            </CardHeader>
+
+            {activeSite ? (
+              <CardContent className="p-0">
+                <div className="p-4 bg-muted/20 border-b flex items-center justify-between">
+                  <div className="relative w-full max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Search sub-items..." 
+                      className="pl-9 h-9 border-none bg-background shadow-sm"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex items-center gap-4 text-[10px] font-black uppercase text-muted-foreground">
+                    <span>Total Line Items: {fields.length}</span>
+                    <Separator orientation="vertical" className="h-4" />
+                    <span>Estimated Site Value: ${fields.reduce((acc, f) => acc + (Number(f.boqQty) * Number(f.boqRate)), 0).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-muted/50">
+                      <TableRow className="h-10">
+                        <TableHead className="text-[9px] font-black uppercase px-4 w-48">Category</TableHead>
+                        <TableHead className="text-[9px] font-black uppercase w-64">Sub-Item of Work</TableHead>
+                        <TableHead className="text-[9px] font-black uppercase w-24">BOQ Qty</TableHead>
+                        <TableHead className="text-[9px] font-black uppercase w-20">Unit</TableHead>
+                        <TableHead className="text-[9px] font-black uppercase w-32">BOQ Rate ($)</TableHead>
+                        <TableHead className="text-[9px] font-black uppercase">Metadata (Mat/Eq/Lbr)</TableHead>
+                        <TableHead className="w-12"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {fields.map((item, index) => {
+                        // Applying search filter visually
+                        if (searchTerm && !item.subItemOfWork.toLowerCase().includes(searchTerm.toLowerCase()) && !item.category.toLowerCase().includes(searchTerm.toLowerCase())) return null;
+                        
+                        return (
+                          <TableRow key={item.id} className="h-14 hover:bg-muted/10 group transition-colors">
+                            <TableCell className="px-4">
+                              <FormField
+                                control={form.control}
+                                name={`items.${index}.category`}
+                                render={({ field }) => (
+                                  <FormItem><FormControl><Input placeholder="Category" {...field} className="h-8 text-xs font-bold border-none shadow-none focus-visible:ring-1" /></FormControl></FormItem>
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <FormField
+                                control={form.control}
+                                name={`items.${index}.subItemOfWork`}
+                                render={({ field }) => (
+                                  <FormItem><FormControl><Input placeholder="Sub-Item Description" {...field} className="h-8 text-xs border-none shadow-none focus-visible:ring-1" /></FormControl></FormItem>
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <FormField
+                                control={form.control}
+                                name={`items.${index}.boqQty`}
+                                render={({ field }) => (
+                                  <FormItem><FormControl><Input type="number" step="any" {...field} className="h-8 text-xs font-black border-none shadow-none focus-visible:ring-1 text-primary" /></FormControl></FormItem>
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <FormField
+                                control={form.control}
+                                name={`items.${index}.unit`}
+                                render={({ field }) => (
+                                  <FormItem><FormControl><Input placeholder="Unit" {...field} className="h-8 text-xs border-none shadow-none focus-visible:ring-1" /></FormControl></FormItem>
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <FormField
+                                control={form.control}
+                                name={`items.${index}.boqRate`}
+                                render={({ field }) => (
+                                  <FormItem><FormControl><Input type="number" step="any" {...field} className="h-8 text-xs font-black border-none shadow-none focus-visible:ring-1 text-green-600" /></FormControl></FormItem>
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Badge variant="secondary" className="text-[8px] h-4">M: {form.watch(`items.${index}.materialTypes`) || '-'}</Badge>
+                                <Badge variant="secondary" className="text-[8px] h-4">E: {form.watch(`items.${index}.equipment`) || '-'}</Badge>
+                                <Badge variant="secondary" className="text-[8px] h-4">W: {form.watch(`items.${index}.workforce`) || '-'}</Badge>
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-2">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => remove(index)} 
+                                disabled={fields.length <= 1}
+                                className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <Trash className="h-3 w-3" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div className="p-6 bg-muted/10 border-t flex justify-between items-center">
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => append({ id: Date.now().toString(), category: '', subItemOfWork: '', boqQty: 0, unit: '', boqRate: 0 })}
+                    className="font-bold text-primary h-9"
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Manual Line Item
+                  </Button>
+                  <div className="flex gap-3">
+                    <Button variant="outline" type="button" className="h-11 px-8 font-bold" onClick={() => form.reset()}>Discard Changes</Button>
+                    <Button type="submit" size="lg" className="h-11 px-10 font-black uppercase tracking-widest shadow-lg">
+                      <Save className="mr-2 h-5 w-5" /> Finalize Site BOQ Master
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
-          </Card>
-
-            {selectedSiteForUpload && (
-              <Card>
-                  <CardHeader>
-                      <CardTitle>BOQ Excel Uploads for <span className="text-primary">{selectedSiteForUpload}</span></CardTitle>
-                      <CardDescription>Upload the master Excel files for each BOQ component. This will configure all dropdowns and rates for this site.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                      {renderUploadCard('overallBoqFile', 'Overall BOQ Document', 'Upload the complete BOQ including quantity and rate for the site.')}
-                      
-                      <Separator />
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {renderUploadCard('descriptionFile', 'Description &amp; Category', 'Excel for Description of Work and Category Number.')}
-                        {renderUploadCard('itemFile', 'Item &amp; Sub-Item of Work', 'Excel for Item of Work, Item Number, and Sub-Item.')}
-                        {renderUploadCard('materialFile', 'Material Types, Units &amp; Rates', 'Excel for Material Type, Unit, and Rate.')}
-                        {renderUploadCard('equipmentFile', 'Equipment, Source, Units &amp; Rates', 'Excel for Source, Equipment Name, Unit, and Rate.')}
-                        {renderUploadCard('workforceFile', 'Workforce, Skills &amp; Rates', 'Excel for Skill Type, Designation, and Labour Rate.')}
-                      </div>
-                      
-                      <Separator />
-
-                      <Button type="submit" size="lg" disabled={uploadForm.formState.isSubmitting}>
-                          <Upload className="mr-2 h-4 w-4" />
-                          {uploadForm.formState.isSubmitting ? 'Uploading Files...' : 'Upload and Process BOQ Files'}
-                      </Button>
-                  </CardContent>
-              </Card>
+            ) : (
+              <div className="p-32 text-center space-y-4">
+                <div className="bg-primary/10 h-20 w-20 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                  <TableIcon className="h-10 w-10 text-primary opacity-40" />
+                </div>
+                <h3 className="text-xl font-black font-headline uppercase">Select a Site to Begin</h3>
+                <p className="text-muted-foreground text-sm max-w-sm mx-auto">Choose a project site from the dropdown above to manage its master Bill of Quantities or upload a new configuration.</p>
+              </div>
             )}
-          </form>
+          </Card>
+        </form>
       </Form>
+
+      {boqItems.length > 0 && (
+        <Card className="border-dashed">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" /> Active Master Configurations</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2 pt-0 pb-4">
+            {Array.from(new Set(boqItems.map(i => i.site))).map(site => (
+              <Badge key={site} variant="secondary" className="font-bold py-1 px-3">
+                {site} ({boqItems.filter(i => i.site === site).length} items)
+              </Badge>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
