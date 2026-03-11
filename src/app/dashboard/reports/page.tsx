@@ -168,7 +168,6 @@ export default function ReportsPage() {
         break;
 
       case 'boq-analysis':
-        // Simplified analysis data for report
         data = detailedBoqAnalysis.filter(b => filter === 'Organization-wise' || b.site === filter).map(b => {
             const actuals = workDoneReports.filter(w => w.siteName === b.site && w.itemOfWork === b.item);
             const totalActualQty = actuals.reduce((acc, curr) => acc + curr.quantityOfWork, 0);
@@ -192,7 +191,6 @@ export default function ReportsPage() {
         break;
 
       case 'ai-review':
-        // Mocked AI Audit history
         data = [
             { date: new Date().toISOString(), billRef: 'INV-2024-001', isAccurate: 'Yes', summary: 'Matched perfectly with GRN and PO.' },
             { date: new Date(Date.now() - 86400000).toISOString(), billRef: 'INV-2024-002', isAccurate: 'No', summary: 'Qty mismatch found in Cement bags.' },
@@ -253,14 +251,13 @@ export default function ReportsPage() {
     <>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold font-headline">Swanag Audit Reports</h1>
+            <h1 className="text-3xl font-bold font-headline">Audit Reports</h1>
             <Button variant="ghost" size="sm" className="font-bold uppercase tracking-widest text-[10px]" onClick={() => window.history.back()}>
                 <LayoutDashboard className="mr-2 h-4 w-4" /> Return to Dashboard
             </Button>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Category 1: Site Operations */}
             <Card className="border-primary/20 shadow-md">
                 <CardHeader className="bg-primary/5 border-b">
                     <CardTitle className="flex items-center gap-2"><ClipboardList className="text-primary" /> Site & Field Logs</CardTitle>
@@ -279,7 +276,6 @@ export default function ReportsPage() {
                 </CardContent>
             </Card>
 
-            {/* Category 2: Inventory & Logistics */}
             <Card className="border-amber-500/20 shadow-md">
                 <CardHeader className="bg-amber-500/5 border-b">
                     <CardTitle className="flex items-center gap-2"><PackageCheck className="text-amber-600" /> Logistics & Stock</CardTitle>
@@ -298,7 +294,6 @@ export default function ReportsPage() {
                 </CardContent>
             </Card>
 
-            {/* Category 3: Management & AI */}
             <Card className="border-indigo-500/20 shadow-md">
                 <CardHeader className="bg-indigo-500/5 border-b">
                     <CardTitle className="flex items-center gap-2"><FileSpreadsheet className="text-indigo-600" /> Audit & Analysis</CardTitle>
@@ -355,7 +350,7 @@ export default function ReportsPage() {
                                 <PopoverContent className="w-auto p-0" align="end">
                                     <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
                                 </PopoverContent>
-                            </div>
+                            </Popover>
                         </div>
                     </div>
                 </div>
