@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -50,8 +49,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard', icon: Home, label: 'Dashboard', roles: ['director', 'site-manager', 'coordinator', 'godown-manager', 'purchase-department', 'tender-department'] },
   { href: '/dashboard/inventory', icon: Archive, label: 'Inventory', roles: ['director', 'site-manager', 'coordinator', 'godown-manager', 'purchase-department'] },
   { href: '/dashboard/requests', icon: Package, label: 'Material Indents', roles: ['director', 'site-manager', 'coordinator', 'godown-manager', 'purchase-department'] },
-  { href: '/dashboard/materials-issued', icon: Truck, label: 'Materials Issued', roles: ['director', 'site-manager', 'coordinator', 'godown-manager'] },
-  { href: '/dashboard/material-issue', icon: ClipboardType, label: 'Material Issue', roles: ['site-manager', 'godown-manager'] },
+  { href: '/dashboard/material-issue', icon: Truck, label: 'Material Issue', roles: ['director', 'site-manager', 'godown-manager', 'coordinator'] },
   { href: '/dashboard/receipts', icon: PackageCheck, label: 'Goods Received Note', roles: ['director', 'site-manager', 'godown-manager', 'coordinator', 'purchase-department'] },
   { href: '/dashboard/godown-actions', icon: Upload, label: 'Godown Actions', roles: ['godown-manager'] },
   { href: '/dashboard/vehicle-entry', icon: Car, label: 'Vehicle Entry', roles: ['site-manager'] },
