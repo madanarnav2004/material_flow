@@ -1,33 +1,20 @@
 'use client';
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import { FileSpreadsheet, Download, Calendar as CalendarIcon, Filter, TrendingUp, AlertTriangle, ArrowRight, DollarSign } from 'lucide-react';
+import { FileSpreadsheet, Download, Calendar as CalendarIcon, TrendingUp, AlertTriangle, ArrowRight, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { useMaterialContext } from '@/context/material-context';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-
-const filterSchema = z.object({
-  siteName: z.string().optional(),
-  startDate: z.date().optional(),
-  endDate: z.date().optional(),
-});
-
-type FilterValues = z.infer<typeof filterSchema>;
+import { Separator } from '@/components/ui/separator';
 
 export default function BoqAnalysisPage() {
   const { toast } = useToast();
@@ -45,18 +32,26 @@ export default function BoqAnalysisPage() {
       : boqItems.filter(item => item.site === activeSite);
 
     return filteredBoq.map(boq => {
-      // Find matching work done reports
-      const relatedReports = workDoneReports.filter(report => {
-        const itemMatch = report.itemOfWork === boq.subItemOfWork && report.siteName === boq.site;
+      // Aggregate data from nested WorkDoneReports entries
+      let actualQty = 0;
+      let actualCost = 0;
+
+      workDoneReports.forEach(report => {
         const dateMatch = (!startDate || !endDate) ? true : isWithinInterval(new Date(report.reportDate), {
           start: startOfDay(startDate),
           end: endOfDay(endDate)
         });
-        return itemMatch && dateMatch;
+
+        if (dateMatch && (activeSite === 'Organization-wise' || report.siteName === activeSite)) {
+          report.entries.forEach(entry => {
+            if (entry.itemOfWork === boq.subItemOfWork) {
+              actualQty += entry.quantityOfWork;
+              actualCost += entry.totalCost;
+            }
+          });
+        }
       });
 
-      const actualQty = relatedReports.reduce((acc, r) => acc + r.quantityOfWork, 0);
-      const actualCost = relatedReports.reduce((acc, r) => acc + r.totalCost, 0);
       const boqAmount = boq.boqQty * boq.boqRate;
       const progressPercent = Math.min(Math.round((actualQty / boq.boqQty) * 100), 100);
       
@@ -92,9 +87,9 @@ export default function BoqAnalysisPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black font-headline text-primary flex items-center gap-3 uppercase tracking-tighter">
-            <TrendingUp className="h-8 w-8" /> Execution Analysis vs. BOQ
+            <TrendingUp className="h-8 w-8" /> BOQ Execution Analysis
           </h1>
-          <p className="text-muted-foreground font-medium">Real-time tracking of work progress, cost consumption, and budget balance</p>
+          <p className="text-muted-foreground font-medium">Planned Budget vs. Grid-Logged Actuals</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" className="h-11 font-bold border-2" onClick={onDownloadReport}>
@@ -119,7 +114,7 @@ export default function BoqAnalysisPage() {
                 </Select>
               </div>
               <div className="space-y-1 flex-1 lg:w-auto">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground px-1">Execution Window</Label>
+                <Label className="text-[10px] font-black uppercase text-muted-foreground px-1">Analysis Period</Label>
                 <div className="flex items-center gap-2">
                   <Popover>
                     <PopoverTrigger asChild>
@@ -127,7 +122,7 @@ export default function BoqAnalysisPage() {
                         <CalendarIcon className="mr-2 h-3 w-3" /> {startDate ? format(startDate, 'dd MMM') : 'Start'}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0">
                       <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
                     </PopoverContent>
                   </Popover>
@@ -138,7 +133,7 @@ export default function BoqAnalysisPage() {
                         <CalendarIcon className="mr-2 h-3 w-3" /> {endDate ? format(endDate, 'dd MMM') : 'End'}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
+                    <PopoverContent className="w-auto p-0">
                       <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
                     </PopoverContent>
                   </Popover>
@@ -153,17 +148,17 @@ export default function BoqAnalysisPage() {
 
             <div className="flex gap-6 w-full lg:w-auto">
               <div className="text-right">
-                <p className="text-[9px] font-black uppercase text-muted-foreground">Total Budget Value</p>
+                <p className="text-[9px] font-black uppercase text-muted-foreground">BOQ Budget</p>
                 <p className="text-xl font-black text-primary">${totals.boq.toLocaleString()}</p>
               </div>
               <Separator orientation="vertical" className="h-10" />
               <div className="text-right">
-                <p className="text-[9px] font-black uppercase text-muted-foreground">Total Actual Cost</p>
+                <p className="text-[9px] font-black uppercase text-muted-foreground">Actual Logged</p>
                 <p className="text-xl font-black text-indigo-600">${totals.actual.toLocaleString()}</p>
               </div>
               <Separator orientation="vertical" className="h-10" />
               <div className="text-right">
-                <p className="text-[9px] font-black uppercase text-muted-foreground">Org Balance</p>
+                <p className="text-[9px] font-black uppercase text-muted-foreground">Variance</p>
                 <p className={cn("text-xl font-black", totals.balance < 0 ? "text-destructive" : "text-green-600")}>
                   ${totals.balance.toLocaleString()}
                 </p>
@@ -220,8 +215,8 @@ export default function BoqAnalysisPage() {
                     <TableCell colSpan={8} className="h-64 text-center">
                       <div className="space-y-2 opacity-30">
                         <FileSpreadsheet className="h-12 w-12 mx-auto" />
-                        <p className="text-sm font-black uppercase tracking-widest">No BOQ Data Found</p>
-                        <p className="text-xs italic">Upload a Master BOQ or check your site filters.</p>
+                        <p className="text-sm font-black uppercase tracking-widest">No Execution Data Found</p>
+                        <p className="text-xs italic">Reports logged via the **Site Execution Grid** will appear here.</p>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -231,31 +226,6 @@ export default function BoqAnalysisPage() {
           </div>
         </CardContent>
       </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="border-amber-500/20 bg-amber-500/5 shadow-none">
-          <CardContent className="pt-6 flex items-start gap-4">
-            <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0" />
-            <div className="space-y-1">
-              <h4 className="font-black text-sm uppercase tracking-tighter text-amber-900">Audit Alert: Cost Variances</h4>
-              <p className="text-xs text-amber-800/70 leading-relaxed">
-                Items marked in red indicate execution quantities or costs exceeding the defined BOQ budget. Please review the <strong>Daily Work Reports</strong> for resource over-consumption.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-primary/20 bg-primary/5 shadow-none">
-          <CardContent className="pt-6 flex items-start gap-4">
-            <TrendingUp className="h-6 w-6 text-primary shrink-0" />
-            <div className="space-y-1">
-              <h4 className="font-black text-sm uppercase tracking-tighter text-primary-900">Real-Time Data Sync</h4>
-              <p className="text-xs text-primary-800/70 leading-relaxed">
-                Analysis data is derived from confirmed site logs. Use the date filters to analyze weekly or monthly project performance against the Master BOQ.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

@@ -135,12 +135,29 @@ export interface MaterialReceivedBill {
   invoiceNumber?: string;
 }
 
+export interface WorkDoneEntry {
+  id: string;
+  itemOfWork: string;
+  category: string;
+  quantityOfWork: number;
+  unit: string;
+  materialName?: string;
+  materialQty?: number;
+  equipmentSource?: string;
+  equipmentName?: string;
+  equipmentUsage?: number;
+  workerType?: string;
+  workerCount?: number;
+  helperCount?: number;
+  totalCost: number;
+}
+
 export interface WorkDoneReport {
+  id: string;
   siteName: string;
   reportDate: string;
-  itemOfWork: string;
-  quantityOfWork: number;
-  totalCost: number;
+  entries: WorkDoneEntry[];
+  totalReportCost: number;
 }
 
 export interface SiteIssueItem {
@@ -237,7 +254,7 @@ interface MaterialContextType {
 
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
 
-const STORAGE_KEY_VERSION = 'v11-boq-analysis-integration';
+const STORAGE_KEY_VERSION = 'v12-excel-grid-work-reports';
 
 export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [requests, setRequests] = useState<MaterialIndent[]>(() => getFromLocalStorage(`mf-requests-${STORAGE_KEY_VERSION}`, initialIndents));
