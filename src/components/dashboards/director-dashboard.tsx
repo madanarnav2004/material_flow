@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -22,6 +21,7 @@ import { useMaterialContext } from '@/context/material-context';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 export default function DirectorDashboard() {
   const router = useRouter();

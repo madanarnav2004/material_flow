@@ -19,12 +19,13 @@ import { Button } from '@/components/ui/button';
 import { useMaterialContext } from '@/context/material-context';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 export default function SiteManagerDashboard() {
   const router = useRouter();
   const { site } = useUser();
   const { toast } = useToast();
-  const { inventory, requests, issueSlips } = useMaterialContext();
+  const { inventory, requests } = useMaterialContext();
 
   const siteInventory = inventory.filter(i => i.site === site);
   const siteRequests = requests.filter(r => r.requestingSite === site && r.status === 'Pending Director Approval').length;
@@ -40,7 +41,7 @@ export default function SiteManagerDashboard() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold font-headline">{site} Controller</h1>
+        <h1 className="text-3xl font-bold font-headline text-primary">{site} Controller</h1>
         <p className="text-muted-foreground">Site Progress, Material Issue & Inventory</p>
       </div>
 
@@ -76,40 +77,40 @@ export default function SiteManagerDashboard() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
+        <Card className="lg:col-span-2 shadow-lg border-primary/10">
+          <CardHeader className="bg-muted/30 border-b">
             <CardTitle>Site Operational Modules</CardTitle>
             <CardDescription>Manage daily field tasks</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <Button variant="outline" className="h-24 flex-col gap-2 border-2" onClick={() => router.push('/dashboard/material-issue')}>
+          <CardContent className="grid gap-4 sm:grid-cols-2 pt-6">
+            <Button variant="outline" className="h-24 flex-col gap-2 border-2 hover:bg-primary/5" onClick={() => router.push('/dashboard/material-issue')}>
               <FileText className="h-6 w-6 text-primary" />
-              <span>Material Issue Slips</span>
+              <span className="font-bold">Material Issue Slips</span>
             </Button>
-            <Button variant="outline" className="h-24 flex-col gap-2 border-2" onClick={() => router.push('/dashboard/receipts')}>
+            <Button variant="outline" className="h-24 flex-col gap-2 border-2 hover:bg-primary/5" onClick={() => router.push('/dashboard/receipts')}>
               <CheckCircle2 className="h-6 w-6 text-primary" />
-              <span>Goods Received (GRN)</span>
+              <span className="font-bold">Goods Received (GRN)</span>
             </Button>
-            <Button variant="outline" className="h-24 flex-col gap-2 border-2" onClick={() => router.push('/dashboard/inventory')}>
+            <Button variant="outline" className="h-24 flex-col gap-2 border-2 hover:bg-primary/5" onClick={() => router.push('/dashboard/inventory')}>
               <PackageSearch className="h-6 w-6 text-primary" />
-              <span>Live Site Inventory</span>
+              <span className="font-bold">Live Site Inventory</span>
             </Button>
-            <Button variant="outline" className="h-24 flex-col gap-2 border-2" onClick={() => router.push('/dashboard/reports')}>
+            <Button variant="outline" className="h-24 flex-col gap-2 border-2 hover:bg-primary/5" onClick={() => router.push('/dashboard/reports')}>
               <History className="h-6 w-6 text-primary" />
-              <span>Site Audit Logs</span>
+              <span className="font-bold">Site Audit Logs</span>
             </Button>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="shadow-lg border-primary/10">
+          <CardHeader className="bg-muted/30 border-b">
             <CardTitle className="flex items-center gap-2">
               <Download className="h-5 w-5 text-primary" />
               Site Reports
             </CardTitle>
             <CardDescription>Download field snapshots</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <Button variant="secondary" className="w-full justify-between" onClick={() => handleDownloadReport('Daily Stock')}>
               Daily Stock Report <Download className="h-4 w-4" />
             </Button>
@@ -120,11 +121,11 @@ export default function SiteManagerDashboard() {
               Work Done Summary <Download className="h-4 w-4" />
             </Button>
             <div className={cn(
-              "p-4 rounded-lg border flex items-center gap-3",
+              "p-4 rounded-lg border flex items-center gap-3 mt-4",
               lowStock > 0 ? "bg-destructive/10 border-destructive/20 text-destructive" : "bg-green-500/10 border-green-500/20 text-green-600"
             )}>
               {lowStock > 0 ? <AlertTriangle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
-              <span className="text-sm font-bold">{lowStock} Low stock alerts</span>
+              <span className="text-sm font-bold">{lowStock} Low stock alerts active</span>
             </div>
           </CardContent>
         </Card>

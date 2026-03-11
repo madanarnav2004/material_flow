@@ -18,11 +18,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useMaterialContext } from '@/context/material-context';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 export default function GodownManagerDashboard() {
   const router = useRouter();
   const { toast } = useToast();
-  const { inventory, requests, issueSlips } = useMaterialContext();
+  const { inventory, requests } = useMaterialContext();
 
   const godownStock = inventory.filter(i => i.site === 'MAPI Godown');
   const pendingIssue = requests.filter(r => r.status === 'Director Approved').length;
@@ -38,7 +39,7 @@ export default function GodownManagerDashboard() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold font-headline">Godown Management Terminal</h1>
+        <h1 className="text-3xl font-bold font-headline text-primary">Godown Management Terminal</h1>
         <p className="text-muted-foreground">MAPI Godown Central Inventory Control</p>
       </div>
 
@@ -75,40 +76,40 @@ export default function GodownManagerDashboard() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
+        <Card className="lg:col-span-2 shadow-lg border-primary/10">
+          <CardHeader className="bg-muted/30 border-b">
             <CardTitle>Godown Operations</CardTitle>
             <CardDescription>Core warehouse actions</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <Button variant="outline" className="h-24 flex-col gap-2 border-2" onClick={() => router.push('/dashboard/material-issue')}>
+          <CardContent className="grid gap-4 sm:grid-cols-2 pt-6">
+            <Button variant="outline" className="h-24 flex-col gap-2 border-2 hover:bg-primary/5" onClick={() => router.push('/dashboard/material-issue')}>
               <Truck className="h-6 w-6 text-primary" />
-              <span>Dispatch & Transfers</span>
+              <span className="font-bold">Dispatch & Transfers</span>
             </Button>
-            <Button variant="outline" className="h-24 flex-col gap-2 border-2" onClick={() => router.push('/dashboard/inventory')}>
+            <Button variant="outline" className="h-24 flex-col gap-2 border-2 hover:bg-primary/5" onClick={() => router.push('/dashboard/inventory')}>
               <PackageSearch className="h-6 w-6 text-primary" />
-              <span>Inventory Sync (Excel)</span>
+              <span className="font-bold">Inventory Sync (Excel)</span>
             </Button>
-            <Button variant="outline" className="h-24 flex-col gap-2 border-2" onClick={() => router.push('/dashboard/receipts')}>
+            <Button variant="outline" className="h-24 flex-col gap-2 border-2 hover:bg-primary/5" onClick={() => router.push('/dashboard/receipts')}>
               <CheckCircle2 className="h-6 w-6 text-primary" />
-              <span>Verify Receipts (GRN)</span>
+              <span className="font-bold">Verify Receipts (GRN)</span>
             </Button>
-            <Button variant="outline" className="h-24 flex-col gap-2 border-2" onClick={() => router.push('/dashboard/reports')}>
+            <Button variant="outline" className="h-24 flex-col gap-2 border-2 hover:bg-primary/5" onClick={() => router.push('/dashboard/reports')}>
               <Download className="h-6 w-6 text-primary" />
-              <span>Stock Audit Reports</span>
+              <span className="font-bold">Stock Audit Reports</span>
             </Button>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="shadow-lg border-primary/10">
+          <CardHeader className="bg-muted/30 border-b">
             <CardTitle className="flex items-center gap-2">
               <Download className="h-5 w-5 text-primary" />
               Godown Audit
             </CardTitle>
             <CardDescription>Download store snapshots</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <Button variant="secondary" className="w-full justify-between" onClick={() => handleDownloadReport('Stock')}>
               Full Stock Ledger <Download className="h-4 w-4" />
             </Button>
@@ -119,11 +120,11 @@ export default function GodownManagerDashboard() {
               Re-order Alert List <Download className="h-4 w-4" />
             </Button>
             <div className={cn(
-              "p-4 rounded-lg border flex items-center gap-3",
+              "p-4 rounded-lg border flex items-center gap-3 mt-4",
               lowStock > 0 ? "bg-destructive/10 border-destructive/20 text-destructive" : "bg-green-500/10 border-green-500/20 text-green-600"
             )}>
               {lowStock > 0 ? <AlertTriangle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
-              <span className="text-sm font-bold">{lowStock} Low stock items</span>
+              <span className="text-sm font-bold">{lowStock} Low stock items alert</span>
             </div>
           </CardContent>
         </Card>
