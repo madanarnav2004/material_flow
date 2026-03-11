@@ -21,6 +21,8 @@ import { useUser } from '@/hooks/use-user';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockBoqData } from '@/lib/mock-data';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 // Updated Schema to handle Indent fulfillment as well
 const materialIssueItemSchema = z.object({
