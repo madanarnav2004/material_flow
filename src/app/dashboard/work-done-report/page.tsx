@@ -4,8 +4,8 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, PlusCircle, Trash, Download, Calendar as CalendarIcon, DollarSign } from 'lucide-react';
-import { format } from 'date-fns';
+import { Save, PlusCircle, Trash, Download, Calendar as CalendarIcon, DollarSign, AlertCircle } from 'lucide-react';
+import { format, subDays, isSameDay } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/hooks/use-user';
 import { useMaterialContext, type WorkDoneReport } from '@/context/material-context';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const materialSchema = z.object({
   materialName: z.string().min(1, 'Material name is required.'),
@@ -80,14 +81,20 @@ type DownloadFormValues = z.infer<typeof downloadSchema>;
 export default function WorkDoneReportPage() {
   const { toast } = useToast();
   const { site } = useUser();
-  const { setWorkDoneReports } = useMaterialContext();
+  const { setWorkDoneReports, workDoneReports } = useMaterialContext();
   const [submittedReport, setSubmittedReport] = React.useState<SubmittedReport | null>(null);
+
+  const yesterday = subDays(new Date(), 1);
+  const hasYesterdayReport = workDoneReports.some(report => 
+    report.siteName === site && 
+    isSameDay(new Date(report.reportDate), yesterday)
+  );
 
   const form = useForm<WorkDoneFormValues>({
     resolver: zodResolver(workDoneSchema),
     defaultValues: {
       siteName: site || '',
-      reportDate: new Date(),
+      reportDate: !hasYesterdayReport ? yesterday : new Date(),
       itemOfWork: '',
       quantityOfWork: 0,
       materials: [{ materialName: '', quantity: 0, unit: '', rate: 0 }],
@@ -104,7 +111,6 @@ export default function WorkDoneReportPage() {
 
   const siteBoqItems = React.useMemo(() => {
     if (!site) return [];
-    // Use detailedBoqAnalysis as the source of truth for site-specific BOQ
     return detailedBoqAnalysis.filter(item => item.site === site);
   }, [site]);
 
@@ -166,7 +172,7 @@ export default function WorkDoneReportPage() {
     const equipmentCost = values.equipment?.reduce((acc, eq) => acc + (eq.usage * (eq.rate || 0)), 0) || 0;
     const workforceCost = values.workforce?.reduce((acc, wf) => {
       const regularCost = wf.count * wf.hours * (wf.rate || 0);
-      const otCost = wf.count * (wf.otHours || 0) * (wf.otRate || wf.rate || 0); // Fallback to regular rate for OT if OT rate is not provided
+      const otCost = wf.count * (wf.otHours || 0) * (wf.otRate || wf.rate || 0);
       return acc + regularCost + otCost;
     }, 0) || 0;
     const totalCost = materialCost + equipmentCost + workforceCost;
@@ -187,22 +193,38 @@ export default function WorkDoneReportPage() {
 
 
     toast({
-      title: 'Report Submitted & Costs Calculated',
-      description: 'Your Daily Work Done Report has been submitted and analyzed.',
+      title: 'Report Submitted Successfully',
+      description: `Daily report for ${format(values.reportDate, 'PPP')} has been logged.`,
+    });
+    
+    form.reset({
+        ...values,
+        itemOfWork: '',
+        quantityOfWork: 0,
+        materials: [{ materialName: '', quantity: 0, unit: '', rate: 0 }],
+        equipment: [{ source: '', name: '', usage: 0, unit: '', rate: 0 }],
+        workforce: [{ skill: '', designation: '', count: 0, hours: 0, otHours: 0, rate: 0, otRate: 0 }],
     });
   }
 
   function onDownloadSubmit(values: DownloadFormValues) {
-    console.log('Download report for:', values);
     toast({
-      title: 'Report Download Started',
-      description: `Generating report from ${format(values.startDate, 'PPP')} to ${format(values.endDate, 'PPP')}.`,
+      title: 'Report Generation Started',
+      description: `Generating progress report from ${format(values.startDate, 'PPP')} to ${format(values.endDate, 'PPP')}.`,
     });
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold font-headline">Daily Work Done Report</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold font-headline">Daily Work Done Report</h1>
+        {!hasYesterdayReport && (
+            <Alert variant="destructive" className="w-auto py-2 bg-destructive/10 border-destructive shadow-none animate-pulse">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-[10px] font-black uppercase">Yesterday's report missing</AlertDescription>
+            </Alert>
+        )}
+      </div>
       
       <Card>
         <CardHeader>
@@ -292,12 +314,14 @@ export default function WorkDoneReportPage() {
       
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3">
-          <Card>
-            <CardHeader>
-              <CardTitle>Submit Today's Progress</CardTitle>
-              <CardDescription>Fill in the details below to report the work completed today.</CardDescription>
+          <Card className={cn(!hasYesterdayReport && "border-destructive/50 ring-2 ring-destructive/20 shadow-xl")}>
+            <CardHeader className={cn(!hasYesterdayReport && "bg-destructive/5")}>
+              <CardTitle className="flex items-center gap-2">
+                {!hasYesterdayReport ? "Urgent: Complete Yesterday's Entry" : "Submit Today's Progress"}
+              </CardTitle>
+              <CardDescription>Fill in the details below to report the work completed.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                   
@@ -307,9 +331,9 @@ export default function WorkDoneReportPage() {
                       name="siteName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Site Name</FormLabel>
+                          <FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Operating Site</FormLabel>
                           <FormControl>
-                            <Input {...field} readOnly disabled />
+                            <Input {...field} readOnly disabled className="bg-muted font-bold" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -319,11 +343,21 @@ export default function WorkDoneReportPage() {
                       control={form.control}
                       name="reportDate"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Date</FormLabel>
-                           <FormControl>
-                            <Input value={format(field.value, 'PPP')} readOnly disabled />
-                          </FormControl>
+                        <FormItem className="flex flex-col">
+                          <FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Work Execution Date</FormLabel>
+                           <Popover>
+                                <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button variant="outline" className={cn("pl-3 text-left font-bold", !hasYesterdayReport && "border-destructive text-destructive")}>
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {format(field.value, 'PPP')}
+                                        </Button>
+                                    </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                </PopoverContent>
+                           </Popover>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -370,7 +404,7 @@ export default function WorkDoneReportPage() {
                         name="quantityOfWork"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Quantity of Work Done Today</FormLabel>
+                            <FormLabel>Quantity of Work Done</FormLabel>
                             <FormControl><Input type="number" placeholder="e.g., 10" {...field} /></FormControl>
                             <FormMessage />
                             </FormItem>
@@ -675,9 +709,9 @@ export default function WorkDoneReportPage() {
                     </CardContent>
                   </Card>
 
-                  <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
-                    <Save className="mr-2 h-4 w-4" />
-                    {form.formState.isSubmitting ? 'Submitting...' : 'Submit Daily Report & Calculate Cost'}
+                  <Button type="submit" size="lg" className="w-full font-black uppercase tracking-widest py-8 text-lg" disabled={form.formState.isSubmitting}>
+                    <Save className="mr-2 h-6 w-6" />
+                    {form.formState.isSubmitting ? 'Submitting...' : 'Finalize Daily Report & Calculate Cost'}
                   </Button>
                 </form>
               </Form>
@@ -687,38 +721,60 @@ export default function WorkDoneReportPage() {
         
         {submittedReport && (
           <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
+            <Card className="sticky top-24 border-primary/20 shadow-2xl overflow-hidden">
+              <CardHeader className="bg-primary/5 border-b">
                 <CardTitle className="flex items-center gap-2"><DollarSign /> Cost Analysis Summary</CardTitle>
                 <CardDescription>
                   Cost breakdown for the work done on {format(submittedReport.reportDate, 'PPP')}.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2 rounded-lg border p-4">
-                  <h3 className="font-semibold">Work Item</h3>
-                  <p>{submittedReport.itemOfWork} - {submittedReport.quantityOfWork} units</p>
+              <CardContent className="space-y-6 pt-6">
+                <div className="space-y-2 rounded-xl border p-4 bg-muted/20">
+                  <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Verified Work Item</h3>
+                  <p className="text-lg font-black">{submittedReport.itemOfWork}</p>
+                  <Badge variant="outline" className="font-bold">{submittedReport.quantityOfWork} Progress Units</Badge>
                 </div>
-                <div className="space-y-2 rounded-lg border p-4">
-                  <h3 className="font-semibold">Cost Breakdown</h3>
-                  <div className="flex justify-between text-sm">
-                    <span>Material Cost</span>
-                    <span>${submittedReport.costs.materialCost.toFixed(2)}</span>
+                
+                <div className="space-y-4">
+                  <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Resource Cost Breakdown</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center text-sm p-3 rounded-lg border bg-background">
+                        <div className="flex flex-col">
+                            <span className="font-bold">Material Cost</span>
+                            <span className="text-[10px] text-muted-foreground">Consumption Audit</span>
+                        </div>
+                        <span className="font-black text-lg">${submittedReport.costs.materialCost.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm p-3 rounded-lg border bg-background">
+                        <div className="flex flex-col">
+                            <span className="font-bold">Equipment Cost</span>
+                            <span className="text-[10px] text-muted-foreground">Hours & Fuel Allocation</span>
+                        </div>
+                        <span className="font-black text-lg">${submittedReport.costs.equipmentCost.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm p-3 rounded-lg border bg-background">
+                        <div className="flex flex-col">
+                            <span className="font-bold">Workforce Cost</span>
+                            <span className="text-[10px] text-muted-foreground">Regular & OT Payroll</span>
+                        </div>
+                        <span className="font-black text-lg">${submittedReport.costs.workforceCost.toLocaleString()}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Equipment Cost</span>
-                    <span>${submittedReport.costs.equipmentCost.toFixed(2)}</span>
-                  </div>
-                   <div className="flex justify-between text-sm">
-                    <span>Workforce Cost</span>
-                    <span>${submittedReport.costs.workforceCost.toFixed(2)}</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between font-bold text-lg">
-                    <span>Total Cost</span>
-                    <span>${submittedReport.costs.totalCost.toFixed(2)}</span>
+                  
+                  <div className="pt-4 border-t-2 border-primary/10">
+                    <div className="flex justify-between items-end">
+                        <div>
+                            <p className="text-[10px] font-black uppercase text-primary tracking-widest">Total Estimated Cost</p>
+                            <p className="text-muted-foreground text-[9px] italic">Based on fixed project rates</p>
+                        </div>
+                        <span className="text-4xl font-black text-primary font-headline">${submittedReport.costs.totalCost.toLocaleString()}</span>
+                    </div>
                   </div>
                 </div>
+                
+                <Button variant="outline" className="w-full font-bold uppercase text-[10px] tracking-widest h-12" onClick={() => setSubmittedReport(null)}>
+                    Dismiss Review
+                </Button>
               </CardContent>
             </Card>
           </div>

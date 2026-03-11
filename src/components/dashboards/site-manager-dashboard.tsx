@@ -12,6 +12,8 @@ import {
   PackageSearch,
   CheckCircle2,
   History,
+  AlertCircle,
+  ArrowRight,
 } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,16 +22,39 @@ import { useMaterialContext } from '@/context/material-context';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { isSameDay, subDays, startOfDay } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function SiteManagerDashboard() {
   const router = useRouter();
   const { site } = useUser();
   const { toast } = useToast();
-  const { inventory, requests } = useMaterialContext();
+  const { inventory, requests, workDoneReports } = useMaterialContext();
+  const [isPastEightAM, setIsPastEightAM] = React.useState(false);
+
+  // Check timing for notification
+  React.useEffect(() => {
+    const checkTime = () => {
+      const now = new Date();
+      setIsPastEightAM(now.getHours() >= 8);
+    };
+    checkTime();
+    const interval = setInterval(checkTime, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, []);
 
   const siteInventory = inventory.filter(i => i.site === site);
   const siteRequests = requests.filter(r => r.requestingSite === site && r.status === 'Pending Director Approval').length;
   const lowStock = siteInventory.filter(i => i.quantity <= i.minQty).length;
+
+  // Notification Logic: Check if yesterday's report is missing
+  const yesterday = subDays(new Date(), 1);
+  const hasYesterdayReport = workDoneReports.some(report => 
+    report.siteName === site && 
+    isSameDay(new Date(report.reportDate), yesterday)
+  );
+
+  const showMissingReportAlert = isPastEightAM && !hasYesterdayReport;
 
   const handleDownloadReport = (type: string) => {
     toast({
@@ -44,6 +69,27 @@ export default function SiteManagerDashboard() {
         <h1 className="text-3xl font-bold font-headline text-primary">{site} Controller</h1>
         <p className="text-muted-foreground">Site Progress, Material Issue & Inventory</p>
       </div>
+
+      {showMissingReportAlert && (
+        <Alert variant="destructive" className="border-2 border-destructive bg-destructive/5 animate-pulse shadow-xl py-6">
+          <AlertCircle className="h-8 w-8" />
+          <div className="ml-4 flex-1">
+            <AlertTitle className="text-xl font-black uppercase tracking-tight mb-1">
+              Action Required: Missing Progress Report
+            </AlertTitle>
+            <AlertDescription className="text-base font-medium opacity-90">
+              Yesterday's Daily Work Done Report has not been submitted. Please update it immediately to maintain site audit compliance.
+            </AlertDescription>
+          </div>
+          <Button 
+            size="lg" 
+            className="ml-4 font-black uppercase tracking-widest bg-destructive hover:bg-destructive/90 text-white"
+            onClick={() => router.push('/dashboard/work-done-report')}
+          >
+            Update Now <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
+        </Alert>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -72,6 +118,7 @@ export default function SiteManagerDashboard() {
           value="Submit Report"
           icon={ClipboardCheck}
           description="Daily site progress report"
+          className={showMissingReportAlert ? "border-destructive/50 bg-destructive/5" : ""}
           onClick={() => router.push('/dashboard/work-done-report')}
         />
       </div>
