@@ -77,6 +77,15 @@ export interface InventoryItem {
   maxQty: number;
 }
 
+export interface InventoryUploadRecord {
+  id: string;
+  filename: string;
+  uploadedBy: string;
+  timestamp: string;
+  site: string;
+  itemsCount: number;
+}
+
 export type ReceiptStatus = 'Accepted' | 'Mismatch' | 'Completed';
 
 export interface MaterialReceivedBill {
@@ -190,11 +199,13 @@ interface MaterialContextType {
   setSiteIssues: React.Dispatch<React.SetStateAction<SiteIssueVoucher[]>>;
   issueSlips: MaterialIssueSlip[];
   setIssueSlips: React.Dispatch<React.SetStateAction<MaterialIssueSlip[]>>;
+  inventoryUploads: InventoryUploadRecord[];
+  setInventoryUploads: React.Dispatch<React.SetStateAction<InventoryUploadRecord[]>>;
 }
 
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
 
-const STORAGE_KEY_VERSION = 'v8-issue-slips';
+const STORAGE_KEY_VERSION = 'v9-inventory-upload';
 
 export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [requests, setRequests] = useState<MaterialIndent[]>(() => getFromLocalStorage(`materialflow-requests-${STORAGE_KEY_VERSION}`, initialIndents));
@@ -204,6 +215,7 @@ export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [workDoneReports, setWorkDoneReports] = useState<WorkDoneReport[]>(() => getFromLocalStorage(`materialflow-work-done-reports-${STORAGE_KEY_VERSION}`, []));
   const [siteIssues, setSiteIssues] = useState<SiteIssueVoucher[]>(() => getFromLocalStorage(`materialflow-site-issues-${STORAGE_KEY_VERSION}`, []));
   const [issueSlips, setIssueSlips] = useState<MaterialIssueSlip[]>(() => getFromLocalStorage(`materialflow-issue-slips-${STORAGE_KEY_VERSION}`, []));
+  const [inventoryUploads, setInventoryUploads] = useState<InventoryUploadRecord[]>(() => getFromLocalStorage(`materialflow-inv-uploads-${STORAGE_KEY_VERSION}`, []));
 
   useEffect(() => { setInLocalStorage(`materialflow-requests-${STORAGE_KEY_VERSION}`, requests) }, [requests]);
   useEffect(() => { setInLocalStorage(`materialflow-issued-${STORAGE_KEY_VERSION}`, issuedMaterials) }, [issuedMaterials]);
@@ -212,10 +224,11 @@ export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => { setInLocalStorage(`materialflow-work-done-reports-${STORAGE_KEY_VERSION}`, workDoneReports) }, [workDoneReports]);
   useEffect(() => { setInLocalStorage(`materialflow-site-issues-${STORAGE_KEY_VERSION}`, siteIssues) }, [siteIssues]);
   useEffect(() => { setInLocalStorage(`materialflow-issue-slips-${STORAGE_KEY_VERSION}`, issueSlips) }, [issueSlips]);
+  useEffect(() => { setInLocalStorage(`materialflow-inv-uploads-${STORAGE_KEY_VERSION}`, inventoryUploads) }, [inventoryUploads]);
 
 
   return (
-    <MaterialContext.Provider value={{ requests, setRequests, issuedMaterials, setIssuedMaterials, inventory, setInventory, receipts, setReceipts, workDoneReports, setWorkDoneReports, siteIssues, setSiteIssues, issueSlips, setIssueSlips }}>
+    <MaterialContext.Provider value={{ requests, setRequests, issuedMaterials, setIssuedMaterials, inventory, setInventory, receipts, setReceipts, workDoneReports, setWorkDoneReports, siteIssues, setSiteIssues, issueSlips, setIssueSlips, inventoryUploads, setInventoryUploads }}>
       {children}
     </MaterialContext.Provider>
   );
