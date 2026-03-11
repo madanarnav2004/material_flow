@@ -49,7 +49,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard', icon: Home, label: 'Dashboard', roles: ['director', 'site-manager', 'coordinator', 'godown-manager', 'purchase-department', 'tender-department'] },
   { href: '/dashboard/inventory', icon: Archive, label: 'Inventory', roles: ['director', 'site-manager', 'coordinator', 'godown-manager', 'purchase-department'] },
   { href: '/dashboard/requests', icon: Package, label: 'Material Indents', roles: ['director', 'site-manager', 'coordinator', 'godown-manager', 'purchase-department'] },
-  { href: '/dashboard/material-issue', icon: Truck, label: 'Material Issue', roles: ['director', 'site-manager', 'godown-manager', 'coordinator'] },
+  { href: '/dashboard/material-issue', icon: FileText, label: 'Material Issue Slips', roles: ['director', 'site-manager', 'godown-manager', 'coordinator'] },
   { href: '/dashboard/receipts', icon: PackageCheck, label: 'Goods Received Note', roles: ['director', 'site-manager', 'godown-manager', 'coordinator', 'purchase-department'] },
   { href: '/dashboard/godown-actions', icon: Upload, label: 'Godown Actions', roles: ['godown-manager'] },
   { href: '/dashboard/vehicle-entry', icon: Car, label: 'Vehicle Entry', roles: ['site-manager'] },

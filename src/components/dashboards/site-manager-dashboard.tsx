@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -9,6 +8,8 @@ import {
   History,
   Eye,
   Download,
+  FileText,
+  ClipboardList
 } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import {
@@ -31,7 +32,7 @@ import { recentSiteActivity } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -45,7 +46,7 @@ import { mockBoqData } from '@/lib/mock-data';
 export default function SiteManagerDashboard() {
   const { toast } = useToast();
   const router = useRouter();
-  const { requests, inventory, issuedMaterials, receipts: pastReceipts } = useMaterialContext();
+  const { requests, inventory, issuedMaterials, receipts: pastReceipts, issueSlips } = useMaterialContext();
   const { site } = useUser();
   const [lastGeneratedBill, setLastGeneratedBill] = React.useState<MaterialIndentBill | null>(null);
   const [activityFilter, setActivityFilter] = React.useState('All');
@@ -53,9 +54,10 @@ export default function SiteManagerDashboard() {
 
   const siteName = site || "Current Site"; 
 
-  const siteRequests = React.useMemo(() => {
-    return requests.filter(req => req.site === siteName);
-  }, [requests, siteName]);
+  // MIS Stats
+  const confirmedSlips = issueSlips.filter(s => s.siteName === siteName && s.status === 'Issued');
+  const dailyIssuedCount = confirmedSlips.filter(s => isSameDay(new Date(s.date), new Date())).length;
+  const totalIssuedQty = confirmedSlips.reduce((acc, s) => acc + s.quantity, 0);
 
   const sitePendingRequests = React.useMemo(() => {
       return requests.filter(req => req.site === siteName && (req.status === 'Pending Director Approval' || req.status === 'Director Approved' || req.status === 'PO Generated'));
@@ -68,15 +70,8 @@ export default function SiteManagerDashboard() {
 
   const filteredSiteActivity = React.useMemo(() => {
     let activities = recentSiteActivity.filter(act => act.site === siteName);
-
-    if (activityFilter !== 'All') {
-        activities = activities.filter(act => act.type === activityFilter);
-    }
-    
-    if (otherSiteFilter !== 'All') {
-        activities = activities.filter(act => act.from === otherSiteFilter || act.to === otherSiteFilter);
-    }
-
+    if (activityFilter !== 'All') activities = activities.filter(act => act.type === activityFilter);
+    if (otherSiteFilter !== 'All') activities = activities.filter(act => act.from === otherSiteFilter || act.to === otherSiteFilter);
     return activities;
   }, [recentSiteActivity, siteName, activityFilter, otherSiteFilter]);
 
@@ -92,30 +87,19 @@ export default function SiteManagerDashboard() {
   const pendingGrns = React.useMemo(() => {
     if (!site) return [];
     const receivedIssueIds = new Set(pastReceipts.map(r => r.issuedId));
-    return issuedMaterials.filter(
-        im => im.receivingSite === site && !receivedIssueIds.has(im.issuedId)
-    );
+    return issuedMaterials.filter(im => im.receivingSite === site && !receivedIssueIds.has(im.issuedId));
   }, [issuedMaterials, pastReceipts, site]);
-
-  const pendingGrnCount = pendingGrns.length;
 
   const handleLogReceipt = (issuedId: string) => {
     router.push(`/dashboard/receipts?issuedId=${issuedId}`);
   };
 
-
   const handleViewBill = (reqId: string) => {
     const request = requests.find(r => r.id === reqId);
     if (request) {
       const returnDate = request.requiredPeriod ? new Date(request.requiredPeriod.to) : new Date(request.returnDate);
-      const fromDate = request.requiredPeriod ? new Date(request.requiredPeriod.from) : new Date(returnDate.getTime() - 10 * 24 * 60 * 60 * 1000);
       const requestDate = request.requestDate ? new Date(request.requestDate) : new Date(returnDate.getTime() - 11 * 24 * 60 * 60 * 1000);
-      const idParts = request.id.split('-');
-      const datePart = idParts.length > 2 ? idParts[2] : format(requestDate, 'yyyyMMdd');
-      const countPart = idParts.length > 3 ? idParts[3] : request.id.slice(-3);
-      const siteCode = idParts.length > 1 ? idParts[1] : 'SITE';
       const materialInfo = mockBoqData.materials.find(m => m.type.toLowerCase() === request.material.toLowerCase()) || {rate: 0};
-
 
       const bill: MaterialIndentBill = {
         requestId: request.id,
@@ -123,10 +107,10 @@ export default function SiteManagerDashboard() {
         requesterName: request.requesterName || 'Sample Requester',
         requestingSite: request.site,
         materials: request.materials || [{ materialName: request.material, quantity: request.quantity, unit: 'unit', rate: materialInfo.rate }],
-        requiredPeriod: { from: fromDate, to: returnDate },
+        requiredPeriod: { from: new Date(request.requiredPeriod?.from || requestDate), to: returnDate },
         remarks: request.remarks || `This is a sample bill for request ${request.id}`,
-        issuedId: `ISS-${siteCode}-${datePart}-${countPart}`,
-        shiftingDate: new Date(returnDate.getTime() - 9 * 24 * 60 * 60 * 1000),
+        issuedId: `ISS-${request.id.substring(4)}`,
+        shiftingDate: new Date(),
         requester: { name: request.requesterName || 'Sample Requester' },
         totalValue: request.materials ? request.materials.reduce((acc, m) => acc + m.quantity * (m.rate || 0), 0) : request.quantity * materialInfo.rate,
         issuingSite: request.issuingSite || 'Pending Assignment',
@@ -136,238 +120,101 @@ export default function SiteManagerDashboard() {
   };
 
   const handleDownloadExcel = (reportName: string) => {
-    toast({
-      title: "Download Started",
-      description: `Your ${reportName} for ${siteName} is being generated.`,
-    });
+    toast({ title: "Download Started", description: `Your ${reportName} for ${siteName} is being generated.` });
   };
-
-  const handleDownloadReport = () => {
-    toast({
-        title: "Download Started",
-        description: `Your ${activityFilter} report for ${siteName} (filtered by ${otherSiteFilter}) is being generated.`,
-    });
-    // In a real app, you would generate a file based on `filteredSiteActivity`
-    console.log(`Downloading ${activityFilter} report for ${siteName}`, filteredSiteActivity);
-  };
-
 
   return (
     <>
       <h1 className="text-3xl font-bold font-headline">{siteName} Dashboard</h1>
       <div className="grid gap-6">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+           <StatCard
+              title="Daily Materials Issued"
+              value={`${dailyIssuedCount} Slips`}
+              icon={ClipboardList}
+              description={`Total ${totalIssuedQty} units confirmed today`}
+              onClick={() => router.push('/dashboard/material-issue')}
+            />
+
            <Dialog>
             <DialogTrigger asChild>
                <div className="cursor-pointer">
                   <StatCard
-                    title="Available Materials"
-                    value={`${currentSiteStock.length} items`}
+                    title="Site Stock"
+                    value={`${currentSiteStock.length} Items`}
                     icon={PackageSearch}
-                    description="Total distinct materials on site"
+                    description="Live verified inventory"
                   />
                </div>
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
-                <DialogTitle>Current Stock at {siteName}</DialogTitle>
-                <DialogDescription>Live inventory of materials available at your site.</DialogDescription>
+                <DialogTitle>Stock Audit: {siteName}</DialogTitle>
+                <DialogDescription>Live inventory of materials currently held at this project site.</DialogDescription>
               </DialogHeader>
               <div className="max-h-[60vh] overflow-y-auto">
                  {currentSiteStock.length > 0 ? (
                   <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Material</TableHead>
-                        <TableHead>Available Quantity</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                    <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Qty</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                     <TableBody>
-                      {currentSiteStock.map((material) => {
-                         const status = material.quantity <= material.minQty ? 'Low Stock' : 'In Stock';
-                         return (
+                      {currentSiteStock.map((material) => (
                           <TableRow key={material.id}>
-                              <TableCell className="font-medium">
-                              {material.material}
-                              </TableCell>
-                              <TableCell>{material.quantity} {material.unit}</TableCell>
-                              <TableCell>
-                              <Badge
-                                  variant={status === 'In Stock' ? 'default' : 'destructive'}
-                                  className={status === 'Low Stock' ? '' : 'bg-green-600/80'}
-                              >
-                                  {status}
-                              </Badge>
-                              </TableCell>
+                              <TableCell className="font-bold text-xs">{material.material}</TableCell>
+                              <TableCell className="text-xs font-black">{material.quantity} {material.unit}</TableCell>
+                              <TableCell><Badge variant={material.quantity <= material.minQty ? 'destructive' : 'outline'} className="text-[9px] uppercase">{material.quantity <= material.minQty ? 'Low Stock' : 'Stable'}</Badge></TableCell>
                           </TableRow>
-                         )
-                      })}
+                      ))}
                     </TableBody>
                   </Table>
                 ) : (
-                  <p className="text-center text-muted-foreground p-8">No stock data available for this site.</p>
+                  <p className="text-center text-muted-foreground p-8 italic text-xs">No stock data found for this site.</p>
                 )}
               </div>
               <DialogFooter>
-                <Button onClick={() => handleDownloadExcel('Available Materials Report')}>
-                  <Download className="mr-2 h-4 w-4" /> Download Report
-                </Button>
+                <Button onClick={() => handleDownloadExcel('Site Stock Report')}><Download className="mr-2 h-4 w-4" /> Download Audit</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
 
-           <Dialog>
-            <DialogTrigger asChild>
-              <div className="cursor-pointer">
-                <StatCard
-                  title="Pending Indents"
-                  value={sitePendingRequests.length.toString()}
-                  icon={Package}
-                  description="Awaiting approval or issue"
-                />
-              </div>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl">
-              <DialogHeader>
-                  <DialogTitle>Pending Indents for {siteName}</DialogTitle>
-                  <DialogDescription>Material indents awaiting action for this site.</DialogDescription>
-              </DialogHeader>
-              <div className="max-h-[60vh] overflow-y-auto">
-                  {sitePendingRequests.length > 0 ? (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Material</TableHead>
-                                <TableHead>Quantity</TableHead>
-                                <TableHead>Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {sitePendingRequests.map(req => (
-                                <TableRow key={req.id}>
-                                    <TableCell className="font-medium">{req.material}</TableCell>
-                                    <TableCell>{req.quantity}</TableCell>
-                                    <TableCell>
-                                        <Badge 
-                                            variant={
-                                                req.status === 'Director Rejected' || req.status === 'Purchase Rejected' ? 'destructive' :
-                                                'default'
-                                            }
-                                            className={cn(
-                                                req.status === 'Pending Director Approval' && 'bg-yellow-500',
-                                                req.status === 'Director Approved' && 'bg-blue-500',
-                                                req.status === 'PO Generated' && 'bg-purple-500',
-                                                req.status !== 'Completed' && 'text-white'
-                                            )}
-                                        >
-                                            {req.status}
-                                        </Badge>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                  ): (
-                    <p className="text-center text-muted-foreground p-8">No pending indents from this site.</p>
-                  )}
-              </div>
-            </DialogContent>
-          </Dialog>
+          <StatCard
+            title="Pending Indents"
+            value={sitePendingRequests.length.toString()}
+            icon={Package}
+            description="Awaiting director authorization"
+          />
 
           <Dialog>
             <DialogTrigger asChild>
               <div className="cursor-pointer">
                 <StatCard
-                  title="Pending GRNs"
-                  value={pendingGrnCount.toString()}
-                  icon={PackageCheck}
-                  description="Materials in transit to your site"
-                />
-              </div>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Pending Goods Received Notes (GRNs)</DialogTitle>
-                <DialogDescription>These materials are currently in transit to your site.</DialogDescription>
-              </DialogHeader>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Material</TableHead>
-                    <TableHead>Qty</TableHead>
-                    <TableHead>From</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pendingGrns.length > 0 ? (
-                    pendingGrns.map(grn => (
-                      <TableRow key={grn.issuedId}>
-                        <TableCell>{grn.materialName}</TableCell>
-                        <TableCell>{grn.issuedQuantity}</TableCell>
-                        <TableCell>{grn.issuingSite}</TableCell>
-                        <TableCell className="text-right">
-                          <Button size="sm" onClick={() => handleLogReceipt(grn.issuedId)}>
-                            Log Receipt
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground">
-                        No pending GRNs.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog>
-            <DialogTrigger asChild>
-              <div className="cursor-pointer">
-                <StatCard
-                  title="Low Stock"
-                  value={`${lowStockCount} material(s)`}
+                  title="Low Stock Alerts"
+                  value={`${lowStockCount} Items`}
                   icon={AlertTriangle}
                   className="text-destructive border-destructive/50"
-                  description="Needs immediate re-ordering"
+                  description="Immediate re-order required"
                 />
               </div>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Low Stock on Site</DialogTitle>
-                <DialogDescription>These materials have fallen below the minimum threshold at {siteName}.</DialogDescription>
+                <DialogTitle>Critical Shortages: {siteName}</DialogTitle>
+                <DialogDescription>These materials are below safety thresholds and require immediate indenting.</DialogDescription>
               </DialogHeader>
                {lowStockSite.length > 0 ? (
                   <Table>
-                      <TableHeader>
-                          <TableRow>
-                              <TableHead>Material</TableHead>
-                              <TableHead>Available Quantity</TableHead>
-                          </TableRow>
-                      </TableHeader>
+                      <TableHeader><TableRow><TableHead>Material</TableHead><TableHead className="text-right">Available</TableHead></TableRow></TableHeader>
                       <TableBody>
                           {lowStockSite.map(item => (
                               <TableRow key={item.id} className="text-destructive">
-                                  <TableCell className="font-medium">{item.material}</TableCell>
-                                  <TableCell className="font-bold">{`${item.quantity} ${item.unit}`}</TableCell>
+                                  <TableCell className="font-bold text-xs">{item.material}</TableCell>
+                                  <TableCell className="text-right font-black text-xs underline">{item.quantity} {item.unit}</TableCell>
                               </TableRow>
                           ))}
                       </TableBody>
                 </Table>
               ) : (
-                  <p className="text-center text-muted-foreground p-8">No low stock materials on this site.</p>
+                  <p className="text-center text-muted-foreground p-8 text-xs italic">Safety levels are currently stable.</p>
               )}
-               <DialogFooter>
-                <Button onClick={() => handleDownloadExcel('Low Stock Report')}>
-                  <Download className="mr-2 h-4 w-4" /> Download Report
-                </Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
@@ -375,296 +222,65 @@ export default function SiteManagerDashboard() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
             <div className="lg:col-span-3 space-y-6">
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Pending Indents for {siteName}</CardTitle>
-                        <CardDescription>Material indents from your site awaiting action.</CardDescription>
+                    <CardHeader className="border-b">
+                        <CardTitle className="text-base flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary"/> Recent Issue Slips (MIS)</CardTitle>
+                        <CardDescription className="text-[10px] uppercase tracking-widest">Live log of materials issued to engineers at this site.</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      {sitePendingRequests.length > 0 ? (
+                    <CardContent className="p-0">
+                      {confirmedSlips.length > 0 ? (
                         <Table>
-                              <TableHeader>
-                                  <TableRow>
-                                      <TableHead>Material</TableHead>
-                                      <TableHead>Quantity</TableHead>
-                                      <TableHead>Status</TableHead>
-                                  </TableRow>
-                              </TableHeader>
+                              <TableHeader className="bg-muted/30"><TableRow><TableHead className="text-[9px] h-8 px-4">Slip #</TableHead><TableHead className="text-[9px] h-8">Material</TableHead><TableHead className="text-[9px] h-8">Qty</TableHead><TableHead className="text-[9px] h-8">Requester</TableHead><TableHead className="text-right text-[9px] h-8 pr-4">Date</TableHead></TableRow></TableHeader>
                               <TableBody>
-                                  {sitePendingRequests.map(req => (
-                                      <TableRow key={req.id}>
-                                          <TableCell className="font-medium">{req.material}</TableCell>
-                                          <TableCell>{req.quantity}</TableCell>
-                                          <TableCell>
-                                            <Badge 
-                                                variant={
-                                                    req.status === 'Director Rejected' || req.status === 'Purchase Rejected' ? 'destructive' :
-                                                    'default'
-                                                }
-                                                className={cn(
-                                                    req.status === 'Pending Director Approval' && 'bg-yellow-500',
-                                                    req.status === 'Director Approved' && 'bg-blue-500',
-                                                    req.status === 'PO Generated' && 'bg-purple-500',
-                                                    req.status !== 'Completed' && 'text-white'
-                                                )}
-                                            >
-                                                {req.status}
-                                            </Badge>
-                                          </TableCell>
+                                  {confirmedSlips.slice(0, 5).map(slip => (
+                                      <TableRow key={slip.slipNumber}>
+                                          <TableCell className="font-black text-[10px] px-4">{slip.slipNumber}</TableCell>
+                                          <TableCell className="text-xs font-bold">{slip.materialName}</TableCell>
+                                          <TableCell className="text-xs font-black text-primary">{slip.quantity} {slip.unit}</TableCell>
+                                          <TableCell className="text-xs opacity-70">{slip.requestedBy}</TableCell>
+                                          <TableCell className="text-right text-xs text-muted-foreground pr-4">{format(new Date(slip.date), 'dd MMM')}</TableCell>
                                       </TableRow>
                                   ))}
                               </TableBody>
                         </Table>
                       ) : (
-                        <p className="text-center text-muted-foreground p-8">No pending indents from this site.</p>
+                        <p className="text-center text-muted-foreground p-12 text-xs italic">No confirmed issue slips recorded yet.</p>
                       )}
                     </CardContent>
                 </Card>
             </div>
             {lastGeneratedBill && (
               <div className="lg:col-span-2">
-                <Card>
-                  <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        Material Indent Bill
-                      </CardTitle>
-                      <CardDescription>
-                        This is the generated bill for the selected indent.
-                      </CardDescription>
+                <Card className="border-primary/20">
+                  <CardHeader className="bg-primary/5 rounded-t-lg">
+                      <CardTitle className="flex items-center gap-2 text-sm"><FileText className="h-4 w-4 text-primary" /> Material Indent Bill</CardTitle>
+                      <CardDescription className="text-[10px] font-bold uppercase tracking-widest">ID: {lastGeneratedBill.requestId}</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2 rounded-lg border p-4">
-                      <h3 className="font-semibold">Indent Information</h3>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <p><strong>Indent ID:</strong> {lastGeneratedBill.requestId}</p>
-                        <p><strong>Indent Date:</strong> {format(lastGeneratedBill.requestDate, 'PPP')}</p>
-                        <p><strong>Requesting Site:</strong> {lastGeneratedBill.requestingSite}</p>
+                  <CardContent className="space-y-4 pt-6">
+                    <div className="space-y-2 rounded-lg border p-4 bg-muted/10 text-xs">
+                      <div className="grid grid-cols-2 gap-2">
+                        <p><strong>Date:</strong> {format(lastGeneratedBill.requestDate, 'PPP')}</p>
+                        <p><strong>Site:</strong> {lastGeneratedBill.requestingSite}</p>
                         <p><strong>Requester:</strong> {lastGeneratedBill.requester?.name}</p>
                       </div>
                     </div>
-                     <div className="space-y-2 rounded-lg border p-4">
-                      <h3 className="font-semibold">Issue Information</h3>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <p><strong>Issuing Site:</strong> {lastGeneratedBill.issuingSite}</p>
-                        <p><strong>Issued ID:</strong> {lastGeneratedBill.issuedId}</p>
-                      </div>
-                    </div>
                     <div className="space-y-2">
-                      <h3 className="font-semibold">Material Details</h3>
+                      <h3 className="font-bold text-[10px] uppercase text-muted-foreground">Material Details</h3>
                       <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Material</TableHead>
-                            <TableHead>Qty</TableHead>
-                            <TableHead>Rate</TableHead>
-                            <TableHead className="text-right">Total</TableHead>
-                          </TableRow>
-                        </TableHeader>
+                        <TableHeader><TableRow><TableHead className="text-[9px] h-7">Item</TableHead><TableHead className="text-[9px] h-7 text-right">Value</TableHead></TableRow></TableHeader>
                         <TableBody>
                           {lastGeneratedBill.materials.map((m, i) => (
-                            <TableRow key={i}>
-                              <TableCell>{m.materialName}</TableCell>
-                              <TableCell>{m.quantity}</TableCell>
-                              <TableCell>${(m.rate || 0).toFixed(2)}</TableCell>
-                              <TableCell className="text-right">${(m.quantity * (m.rate || 0)).toFixed(2)}</TableCell>
-                            </TableRow>
+                            <TableRow key={i} className="h-8"><TableCell className="text-xs">{m.materialName} ({m.quantity} {m.unit})</TableCell><TableCell className="text-right text-xs font-black">${(m.quantity * (m.rate || 0)).toFixed(2)}</TableCell></TableRow>
                           ))}
                         </TableBody>
                       </Table>
                       <Separator />
-                      <div className="flex justify-end font-bold text-lg">
-                          Total Value: ${lastGeneratedBill.totalValue.toFixed(2)}
-                      </div>
+                      <div className="flex justify-between font-black text-primary text-lg px-2"><span>Total</span><span>${lastGeneratedBill.totalValue.toFixed(2)}</span></div>
                     </div>
                   </CardContent>
                 </Card>
               </div>
             )}
         </div>
-
-        <Dialog>
-          <DialogTrigger asChild>
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-              <CardHeader>
-                  <CardTitle>Material Indent Return Reminders</CardTitle>
-                  <CardDescription>Materials due for return or with extended dates for this site.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                  {siteRequests.length > 0 ? (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Material</TableHead>
-                                <TableHead>Quantity</TableHead>
-                                <TableHead>Return Date</TableHead>
-                                <TableHead>Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {siteRequests.slice(0, 3).map(req => (
-                                <TableRow key={req.id}>
-                                    <TableCell className="font-medium">{req.material}</TableCell>
-                                    <TableCell>{req.quantity}</TableCell>
-                                    <TableCell>{req.returnDate}</TableCell>
-                                    <TableCell>
-                                        <Badge 
-                                            variant={
-                                                req.status === 'Director Rejected' || req.status === 'Purchase Rejected' ? 'destructive' :
-                                                req.status === 'Completed' ? 'outline' :
-                                                'default'
-                                            }
-                                            className={cn(
-                                                req.status === 'Pending Director Approval' && 'bg-yellow-500',
-                                                req.status === 'Director Approved' && 'bg-blue-500',
-                                                req.status === 'Issued' && 'bg-green-600',
-                                                req.status === 'PO Generated' && 'bg-purple-500',
-                                                req.status === 'Partially Issued' && 'bg-orange-500',
-                                                req.status !== 'Completed' && 'text-white'
-                                            )}
-                                        >
-                                            {req.status}
-                                        </Badge>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                  ) : (
-                    <p className="text-center text-muted-foreground p-8">No return reminders for this site.</p>
-                  )}
-              </CardContent>
-            </Card>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>All Material Indent Return Reminders for {siteName}</DialogTitle>
-              <DialogDescription>Materials due for return or with extended dates for this site.</DialogDescription>
-            </DialogHeader>
-            <div className="max-h-[60vh] overflow-y-auto">
-              {siteRequests.length > 0 ? (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Material</TableHead>
-                            <TableHead>Issuing Site</TableHead>
-                            <TableHead>Return Date</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {siteRequests.map(req => (
-                            <TableRow key={req.id}>
-                                <TableCell className="font-medium">{req.material}</TableCell>
-                                <TableCell>{req.issuingSite || 'Pending'}</TableCell>
-                                <TableCell>{req.returnDate}</TableCell>
-                                <TableCell>
-                                    <Badge 
-                                        variant={
-                                            req.status === 'Director Rejected' || req.status === 'Purchase Rejected' ? 'destructive' :
-                                            req.status === 'Completed' ? 'outline' :
-                                            'default'
-                                        }
-                                        className={cn(
-                                            req.status === 'Pending Director Approval' && 'bg-yellow-500',
-                                            req.status === 'Director Approved' && 'bg-blue-500',
-                                            req.status === 'Issued' && 'bg-green-600',
-                                            req.status === 'PO Generated' && 'bg-purple-500',
-                                            req.status === 'Partially Issued' && 'bg-orange-500',
-                                            req.status !== 'Completed' && 'text-white'
-                                        )}
-                                    >
-                                        {req.status}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell className="text-right space-x-2">
-                                  <Button variant="outline" size="sm" onClick={() => handleViewBill(req.id)}>
-                                      <Eye className="mr-2 h-4 w-4" />
-                                      View Bill
-                                  </Button>
-                              </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-              ) : (
-                <p className="text-center text-muted-foreground p-8">No return reminders for this site.</p>
-              )}
-            </div>
-            <DialogFooter>
-              <Button onClick={() => handleDownloadExcel('Return Reminders Report')}>
-                <Download className="mr-2 h-4 w-4" />
-                Download Excel
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        
-          <Card>
-            <CardHeader>
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                    <div>
-                        <CardTitle className="flex items-center gap-2"><History /> Recent Site Activity</CardTitle>
-                        <CardDescription>A log of recent material movements involving your site.</CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Select value={activityFilter} onValueChange={setActivityFilter}>
-                            <SelectTrigger className="w-full sm:w-[180px]">
-                                <SelectValue placeholder="Filter by type..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="All">All Activities</SelectItem>
-                                <SelectItem value="GRN">GRN</SelectItem>
-                                <SelectItem value="Indent">Indent</SelectItem>
-                                <SelectItem value="Material Transfer">Material Transfer</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select value={otherSiteFilter} onValueChange={setOtherSiteFilter}>
-                          <SelectTrigger className="w-full sm:w-[180px]">
-                              <SelectValue placeholder="Filter by site..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                              {allSitesForFilter.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <Button variant="outline" onClick={handleDownloadReport}>
-                            <Download className="mr-2 h-4 w-4" /> Download
-                        </Button>
-                    </div>
-                </div>
-            </CardHeader>
-          <CardContent>
-            {filteredSiteActivity.length > 0 ? (
-                <Table>
-                <TableHeader>
-                    <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Details</TableHead>
-                    <TableHead>From/To</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {filteredSiteActivity.map(activity => (
-                    <TableRow key={activity.id}>
-                        <TableCell className="font-medium">{activity.type}</TableCell>
-                        <TableCell>{activity.details}</TableCell>
-                        <TableCell>{activity.to || activity.from}</TableCell>
-                        <TableCell>
-                        <Badge variant={activity.status === 'Completed' ? 'default' : activity.status === 'In Transit' ? 'destructive' : 'secondary'} className={cn(activity.status === 'Completed' && 'bg-green-600/80')}>
-                            {activity.status}
-                        </Badge>
-                        </TableCell>
-                        <TableCell>{activity.date}</TableCell>
-                    </TableRow>
-                    ))}
-                </TableBody>
-                </Table>
-            ) : (
-                <p className="text-center text-muted-foreground p-8">No activity for the selected filter.</p>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </>
   );

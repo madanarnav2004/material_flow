@@ -130,6 +130,22 @@ export interface SiteIssueVoucher {
   materials: SiteIssueItem[];
 }
 
+export type MISStatus = 'Generated' | 'Issued';
+
+export interface MaterialIssueSlip {
+  slipNumber: string;
+  siteName: string;
+  date: string;
+  materialName: string;
+  quantity: number;
+  unit: string;
+  isReturnable: boolean;
+  requestedBy: string;
+  issuedBy: string;
+  remarks?: string;
+  status: MISStatus;
+}
+
 function getFromLocalStorage<T>(key: string, defaultValue: T): T {
     if (typeof window === 'undefined') {
         return defaultValue;
@@ -172,11 +188,13 @@ interface MaterialContextType {
   setWorkDoneReports: React.Dispatch<React.SetStateAction<WorkDoneReport[]>>;
   siteIssues: SiteIssueVoucher[];
   setSiteIssues: React.Dispatch<React.SetStateAction<SiteIssueVoucher[]>>;
+  issueSlips: MaterialIssueSlip[];
+  setIssueSlips: React.Dispatch<React.SetStateAction<MaterialIssueSlip[]>>;
 }
 
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
 
-const STORAGE_KEY_VERSION = 'v7-returnable-tracking';
+const STORAGE_KEY_VERSION = 'v8-issue-slips';
 
 export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [requests, setRequests] = useState<MaterialIndent[]>(() => getFromLocalStorage(`materialflow-requests-${STORAGE_KEY_VERSION}`, initialIndents));
@@ -185,6 +203,7 @@ export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [receipts, setReceipts] = useState<MaterialReceivedBill[]>(() => getFromLocalStorage(`materialflow-receipts-${STORAGE_KEY_VERSION}`, []));
   const [workDoneReports, setWorkDoneReports] = useState<WorkDoneReport[]>(() => getFromLocalStorage(`materialflow-work-done-reports-${STORAGE_KEY_VERSION}`, []));
   const [siteIssues, setSiteIssues] = useState<SiteIssueVoucher[]>(() => getFromLocalStorage(`materialflow-site-issues-${STORAGE_KEY_VERSION}`, []));
+  const [issueSlips, setIssueSlips] = useState<MaterialIssueSlip[]>(() => getFromLocalStorage(`materialflow-issue-slips-${STORAGE_KEY_VERSION}`, []));
 
   useEffect(() => { setInLocalStorage(`materialflow-requests-${STORAGE_KEY_VERSION}`, requests) }, [requests]);
   useEffect(() => { setInLocalStorage(`materialflow-issued-${STORAGE_KEY_VERSION}`, issuedMaterials) }, [issuedMaterials]);
@@ -192,10 +211,11 @@ export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => { setInLocalStorage(`materialflow-receipts-${STORAGE_KEY_VERSION}`, receipts) }, [receipts]);
   useEffect(() => { setInLocalStorage(`materialflow-work-done-reports-${STORAGE_KEY_VERSION}`, workDoneReports) }, [workDoneReports]);
   useEffect(() => { setInLocalStorage(`materialflow-site-issues-${STORAGE_KEY_VERSION}`, siteIssues) }, [siteIssues]);
+  useEffect(() => { setInLocalStorage(`materialflow-issue-slips-${STORAGE_KEY_VERSION}`, issueSlips) }, [issueSlips]);
 
 
   return (
-    <MaterialContext.Provider value={{ requests, setRequests, issuedMaterials, setIssuedMaterials, inventory, setInventory, receipts, setReceipts, workDoneReports, setWorkDoneReports, siteIssues, setSiteIssues }}>
+    <MaterialContext.Provider value={{ requests, setRequests, issuedMaterials, setIssuedMaterials, inventory, setInventory, receipts, setReceipts, workDoneReports, setWorkDoneReports, siteIssues, setSiteIssues, issueSlips, setIssueSlips }}>
       {children}
     </MaterialContext.Provider>
   );
