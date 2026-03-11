@@ -123,8 +123,10 @@ export interface SiteIssueVoucher {
   voucherId: string;
   siteName: string;
   issueDate: string;
-  issuedTo: string;
-  buildingName: string;
+  issuedTo: string; // Engineer/Contractor
+  buildingName: string; // Site Location
+  issueType: 'Local' | 'Shifting';
+  receivingSite?: string;
   materials: SiteIssueItem[];
 }
 
@@ -174,7 +176,7 @@ interface MaterialContextType {
 
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
 
-const STORAGE_KEY_VERSION = 'v6-verified-audit-workflow';
+const STORAGE_KEY_VERSION = 'v7-returnable-tracking';
 
 export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [requests, setRequests] = useState<MaterialIndent[]>(() => getFromLocalStorage(`materialflow-requests-${STORAGE_KEY_VERSION}`, initialIndents));

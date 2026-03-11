@@ -1,10 +1,9 @@
-
 'use client';
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet, ChevronDown } from "lucide-react";
+import { Download, FileSpreadsheet, ChevronDown, PackageCheck, AlertCircle } from "lucide-react";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +16,7 @@ import { useMaterialContext } from '@/context/material-context';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 const reportTypes = [
   {
@@ -42,6 +42,14 @@ const reportTypes = [
     variants: ["Site-wise", "Organization-wise"],
     headers: ['GRN ID', 'Indent ID', 'Material', 'Received Qty', 'Receiving Site', 'Status'],
     dataKeys: ['receivedBillId', 'requestId', 'materialName', 'receivedQuantity', 'receivingSite', 'status'],
+  },
+  {
+    id: "returnable-material",
+    title: "Returnable Material Report",
+    description: "Audit list of issued materials (assets) that must be returned to site stock.",
+    variants: ["Site-wise", "Organization-wise"],
+    headers: ['Voucher ID', 'Material', 'Qty', 'Issued To', 'Location', 'Date'],
+    dataKeys: ['voucherId', 'materials', 'materials', 'issuedTo', 'buildingName', 'issueDate'],
   },
   {
     id: "indent-register",
@@ -109,6 +117,14 @@ export default function ReportsPage() {
             : receipts.filter(r => r.receivingSite === filter);
         break;
       
+      case 'returnable-material':
+        data = siteIssues.filter(issue => {
+            const siteMatch = filter === 'Organization-wise' || issue.siteName === filter;
+            const hasReturnable = issue.materials.some(m => m.returnable);
+            return siteMatch && hasReturnable;
+        });
+        break;
+
       case 'daily-issue-report':
         data = siteIssues.filter(issue => {
             const issueDate = new Date(issue.issueDate);
@@ -132,15 +148,19 @@ export default function ReportsPage() {
   };
   
   const handleDownload = () => {
-    // In a real app, this would trigger a file download (e.g., CSV generation)
     console.log("Downloading report:", reportTitle, reportData);
     setDialogOpen(false);
   }
 
-  const renderCellData = (row: any, key: string) => {
+  const renderCellData = (row: any, key: string, index: number) => {
     const cellData = row[key];
 
     if (key === 'materials' && Array.isArray(cellData)) {
+      // Logic for Returnable Material Report headers mapping
+      if (reportTitle.includes('Returnable Material')) {
+          if (index === 1) return cellData.filter(m => m.returnable).map(m => m.materialName).join(', ');
+          if (index === 2) return cellData.filter(m => m.returnable).map(m => `${m.quantity} ${m.unit}`).join(', ');
+      }
       return (
         <ul className="list-disc pl-4">
           {cellData.map((mat, i) => <li key={i}>{mat.quantity} {mat.unit} of {mat.materialName}</li>)}
@@ -159,90 +179,99 @@ export default function ReportsPage() {
   return (
     <>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold font-headline">Generate Reports</h1>
+        <h1 className="text-3xl font-bold font-headline">Swanag Audit Reports</h1>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Standard Reports</CardTitle>
-            <CardDescription>Generate detailed reports for audit and analysis. Click to preview the data.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {reportTypes.map((report) => (
-              <Card key={report.id} className="shadow-none">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                      <FileSpreadsheet className="h-5 w-5 text-primary" />
-                      {report.title}
-                  </CardTitle>
-                  <CardDescription>{report.description}</CardDescription>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="border-primary/20 shadow-md">
+                <CardHeader className="bg-primary/5 border-b">
+                    <CardTitle className="flex items-center gap-2">
+                        <PackageCheck className="text-primary" /> Material & Inventory
+                    </CardTitle>
+                    <CardDescription>Track organizational stock and verified receipts.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-wrap gap-4">
-                  {report.variants.length > 0 ? (
-                    report.variants.map((variant) => {
-                      if (variant === 'Site-wise' || variant === 'Store-wise') {
-                        return (
-                          <DropdownMenu key={variant}>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline">
-                                <Download className="mr-2 h-4 w-4" />
-                                Preview {variant}
-                                <ChevronDown className="ml-2 h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              <DropdownMenuLabel>Select a Location</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              {(variant === 'Site-wise' ? sitesList : ['MAPI Godown']).map((site) => (
-                                <DropdownMenuItem key={site} onClick={() => handleGenerateReport(report.id, site)}>
-                                  {site}
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        );
-                      }
-                      return (
-                        <Button key={variant} variant="outline" onClick={() => handleGenerateReport(report.id, variant)}>
-                          <Download className="mr-2 h-4 w-4" />
-                          Preview {variant}
-                        </Button>
-                      );
-                    })
-                  ) : (
-                    <Button onClick={() => handleGenerateReport(report.id, 'All')}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Preview Report
-                    </Button>
-                  )}
+                <CardContent className="pt-6 space-y-4">
+                    {reportTypes.slice(0, 3).map(report => (
+                        <div key={report.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <div>
+                                <p className="font-bold text-sm">{report.title}</p>
+                                <p className="text-xs text-muted-foreground">{report.description}</p>
+                            </div>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild><Button size="sm" variant="outline"><Download className="h-3 w-3 mr-1"/> Download</Button></DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    {report.variants.map(v => (
+                                        <DropdownMenuItem key={v} onClick={() => handleGenerateReport(report.id, v)}>{v}</DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    ))}
                 </CardContent>
-              </Card>
-            ))}
-          </CardContent>
-        </Card>
+            </Card>
+
+            <Card className="border-amber-500/20 shadow-md">
+                <CardHeader className="bg-amber-500/5 border-b">
+                    <CardTitle className="flex items-center gap-2">
+                        <AlertCircle className="text-amber-600" /> Asset & Site Issue
+                    </CardTitle>
+                    <CardDescription>Track issued materials, assets, and local consumption.</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-4">
+                    {reportTypes.slice(3).map(report => (
+                        <div key={report.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <div>
+                                <p className="font-bold text-sm">{report.title}</p>
+                                <p className="text-xs text-muted-foreground">{report.description}</p>
+                            </div>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild><Button size="sm" variant="outline"><Download className="h-3 w-3 mr-1"/> Download</Button></DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    {report.variants.map(v => {
+                                        if (v === 'Site-wise') {
+                                            return (
+                                                <React.Fragment key={v}>
+                                                    <DropdownMenuLabel className="text-[10px] uppercase font-bold text-muted-foreground">Select Site</DropdownMenuLabel>
+                                                    {sitesList.map(site => (
+                                                        <DropdownMenuItem key={site} onClick={() => handleGenerateReport(report.id, site)}>{site}</DropdownMenuItem>
+                                                    ))}
+                                                </React.Fragment>
+                                            )
+                                        }
+                                        return <DropdownMenuItem key={v} onClick={() => handleGenerateReport(report.id, v)}>{v}</DropdownMenuItem>
+                                    })}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+        </div>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-5xl">
           <DialogHeader>
-            <DialogTitle>{reportTitle}</DialogTitle>
+            <DialogTitle className="text-2xl font-headline flex items-center gap-2">
+                <FileSpreadsheet className="text-primary" /> {reportTitle}
+            </DialogTitle>
             <DialogDescription>
-              This is a preview of the report data. The actual download would be in Excel format.
+              Audit-verified physical record data for the selected report scope.
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto">
+          <div className="max-h-[60vh] overflow-y-auto border rounded-xl shadow-inner">
             {reportData.length > 0 ? (
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/50 sticky top-0 z-10 shadow-sm">
                   <TableRow>
-                    {reportHeaders.map(header => <TableHead key={header}>{header}</TableHead>)}
+                    {reportHeaders.map(header => <TableHead key={header} className="text-[10px] uppercase font-black tracking-widest h-10">{header}</TableHead>)}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reportData.map((row, index) => (
-                    <TableRow key={index}>
-                      {reportKeys.map((key) => (
-                        <TableCell key={key}>
-                          {renderCellData(row, key)}
+                  {reportData.map((row, i) => (
+                    <TableRow key={i} className="hover:bg-primary/5 transition-colors h-12">
+                      {reportKeys.map((key, kIndex) => (
+                        <TableCell key={key} className="text-xs">
+                          {renderCellData(row, key, kIndex)}
                         </TableCell>
                       ))}
                     </TableRow>
@@ -250,12 +279,15 @@ export default function ReportsPage() {
                 </TableBody>
               </Table>
             ) : (
-              <p className="text-center text-muted-foreground p-8">No data available for this report.</p>
+              <div className="p-24 text-center space-y-2">
+                  <PackageCheck className="h-12 w-12 mx-auto opacity-10" />
+                  <p className="text-muted-foreground text-sm italic">No data records found matching the current report criteria.</p>
+              </div>
             )}
           </div>
-          <DialogFooter>
-             <Button variant="outline" onClick={() => setDialogOpen(false)}>Close</Button>
-             <Button onClick={handleDownload}><Download className="mr-2 h-4 w-4" /> Download</Button>
+          <DialogFooter className="bg-muted/30 p-4 border-t rounded-b-lg">
+             <Button variant="outline" onClick={() => setDialogOpen(false)}>Close Review</Button>
+             <Button onClick={handleDownload} className="font-bold"><Download className="mr-2 h-4 w-4" /> Download Official XLSX</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
