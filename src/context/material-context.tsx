@@ -139,6 +139,7 @@ export interface MaterialReceivedBill {
 
 export interface WorkDoneEntry {
   id: string;
+  descriptionOfWork: string;
   categoryNo: string;
   itemNo: string;
   itemOfWork: string;
@@ -152,7 +153,11 @@ export interface WorkDoneEntry {
   equipmentUsage?: number;
   workerType?: string;
   workerCount?: number;
+  workerHours?: number;
+  workerOT?: number;
   helperCount?: number;
+  helperHours?: number;
+  helperOT?: number;
   totalCost: number;
 }
 
@@ -258,7 +263,7 @@ interface MaterialContextType {
 
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
 
-const STORAGE_KEY_VERSION = 'v15-end-to-end-workflow-audit';
+const STORAGE_KEY_VERSION = 'v16-work-report-workflow-audit';
 
 export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [requests, setRequests] = useState<MaterialIndent[]>(() => getFromLocalStorage(`mf-requests-${STORAGE_KEY_VERSION}`, initialIndents));
