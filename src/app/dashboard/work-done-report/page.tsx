@@ -4,13 +4,24 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, PlusCircle, Trash, Download, Calendar as CalendarIcon, DollarSign, AlertCircle, RefreshCcw } from 'lucide-react';
+import { 
+  Save, 
+  PlusCircle, 
+  Trash, 
+  Download, 
+  Calendar as CalendarIcon, 
+  DollarSign, 
+  AlertCircle, 
+  RefreshCcw,
+  TrendingUp
+} from 'lucide-react';
 import { format, subDays, isSameDay } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
