@@ -148,6 +148,7 @@ export interface WorkDoneEntry {
   unit: string;
   materialName?: string;
   materialQty?: number;
+  materialUnit?: string;
   equipmentSource?: 'Owned' | 'Rented';
   equipmentName?: string;
   equipmentUsage?: number;
@@ -263,7 +264,7 @@ interface MaterialContextType {
 
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
 
-const STORAGE_KEY_VERSION = 'v16-work-report-workflow-audit';
+const STORAGE_KEY_VERSION = 'v17-work-report-detailed-audit';
 
 export const MaterialProvider = ({ children }: { children: ReactNode }) => {
   const [requests, setRequests] = useState<MaterialIndent[]>(() => getFromLocalStorage(`mf-requests-${STORAGE_KEY_VERSION}`, initialIndents));

@@ -12,9 +12,6 @@ import {
   AlertCircle, 
   Table as TableIcon,
   TrendingUp,
-  Package,
-  Wrench,
-  Users
 } from 'lucide-react';
 import { format, subDays, isSameDay } from 'date-fns';
 
@@ -39,12 +36,13 @@ const entrySchema = z.object({
   descriptionOfWork: z.string().min(1, 'Required'),
   categoryNo: z.string(),
   itemNo: z.string(),
-  itemOfWork: z.string(),
+  itemOfWork: z.string().min(1, 'Required'),
   subItemOfWork: z.string().min(1, 'Sub-item is required'),
   quantityOfWork: z.coerce.number().min(0.1, 'Qty > 0'),
   unit: z.string(),
   materialName: z.string().optional(),
   materialQty: z.coerce.number().optional(),
+  materialUnit: z.string().optional(),
   equipmentSource: z.enum(['Owned', 'Rented']).optional(),
   equipmentName: z.string().optional(),
   equipmentUsage: z.coerce.number().optional(),
@@ -111,7 +109,7 @@ export default function WorkDoneReportPage() {
     return boqItems.filter(item => item.site === site);
   }, [boqItems, site]);
 
-  const uniqueWorkItems = React.useMemo(() => {
+  const uniqueDescriptions = React.useMemo(() => {
     return Array.from(new Set(activeBoqItems.map(i => i.itemOfWork)));
   }, [activeBoqItems]);
 
@@ -119,18 +117,26 @@ export default function WorkDoneReportPage() {
     const matchingBoq = activeBoqItems.find(i => i.itemOfWork === val);
     if (matchingBoq) {
       form.setValue(`entries.${index}.descriptionOfWork`, val);
-      form.setValue(`entries.${index}.itemOfWork`, val);
       form.setValue(`entries.${index}.categoryNo`, matchingBoq.categoryNo);
+      // Reset dependent fields
+      form.setValue(`entries.${index}.itemOfWork`, '');
+      form.setValue(`entries.${index}.itemNo`, '');
+      form.setValue(`entries.${index}.subItemOfWork`, '');
+      form.setValue(`entries.${index}.unit`, '');
+    }
+  };
+
+  const handleItemOfWorkChange = (val: string, index: number) => {
+    const matchingBoq = activeBoqItems.find(i => i.itemOfWork === form.watch(`entries.${index}.descriptionOfWork`));
+    if (matchingBoq) {
+      form.setValue(`entries.${index}.itemOfWork`, val);
       form.setValue(`entries.${index}.itemNo`, matchingBoq.itemNo);
       
-      // Auto-select the first sub-item if only one exists
-      const subs = activeBoqItems.filter(i => i.itemOfWork === val);
+      // Auto-select the first sub-item if only one exists for this flow
+      const subs = activeBoqItems.filter(i => i.itemOfWork === form.watch(`entries.${index}.descriptionOfWork`));
       if (subs.length === 1) {
         form.setValue(`entries.${index}.subItemOfWork`, subs[0].subItemOfWork);
         form.setValue(`entries.${index}.unit`, subs[0].unit);
-      } else {
-        form.setValue(`entries.${index}.subItemOfWork`, '');
-        form.setValue(`entries.${index}.unit`, '');
       }
     }
   };
@@ -147,6 +153,7 @@ export default function WorkDoneReportPage() {
     const mat = materialsRate.find(m => m.name === val);
     if (mat) {
       form.setValue(`entries.${index}.materialName`, val);
+      form.setValue(`entries.${index}.materialUnit`, mat.unit);
     }
   };
 
@@ -233,7 +240,7 @@ export default function WorkDoneReportPage() {
                 )}/>
                 <Separator orientation="vertical" className="h-10" />
                 <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                  Select Description first to auto-fill Category and Item No. Enter labor hours for each task.
+                  Fill line items row-by-row. Press Enter on Helper OT to add a new row.
                 </div>
               </div>
             </CardHeader>
@@ -244,12 +251,13 @@ export default function WorkDoneReportPage() {
                     <TableRow className="h-10">
                       <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[220px]">Description Of Work</TableHead>
                       <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[90px]">Category No</TableHead>
-                      <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[90px]">Item No</TableHead>
                       <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[180px]">Item of work</TableHead>
+                      <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[90px]">Item No</TableHead>
                       <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[200px]">Sub Item of work</TableHead>
                       <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[100px]">Qty Done</TableHead>
                       <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[80px]">Unit</TableHead>
                       <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[120px]">Material</TableHead>
+                      <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[80px]">Mat Unit</TableHead>
                       <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[80px]">Mat Qty</TableHead>
                       <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[120px]">Equipment</TableHead>
                       <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[120px]">Worker Type</TableHead>
@@ -270,17 +278,26 @@ export default function WorkDoneReportPage() {
                             <SelectTrigger className="h-12 border-none rounded-none shadow-none focus:ring-0 px-4 text-xs font-bold truncate">
                               <SelectValue placeholder="Select Description" />
                             </SelectTrigger>
-                            <SelectContent>{uniqueWorkItems.map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
+                            <SelectContent>{uniqueDescriptions.map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
                           </Select>
                         </TableCell>
                         <TableCell className="p-0 border-r bg-muted/5">
                           <Input readOnly disabled {...form.register(`entries.${index}.categoryNo`)} className="h-12 border-none rounded-none shadow-none text-center text-[10px] font-black opacity-60 bg-transparent" />
                         </TableCell>
-                        <TableCell className="p-0 border-r bg-muted/5">
-                          <Input readOnly disabled {...form.register(`entries.${index}.itemNo`)} className="h-12 border-none rounded-none shadow-none text-center text-[10px] font-black opacity-60 bg-transparent" />
+                        <TableCell className="p-0 border-r">
+                          <Select onValueChange={(val) => handleItemOfWorkChange(val, index)} value={form.watch(`entries.${index}.itemOfWork`)}>
+                            <SelectTrigger className="h-12 border-none rounded-none shadow-none focus:ring-0 px-4 text-xs font-bold truncate">
+                              <SelectValue placeholder="Select Item" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {activeBoqItems.filter(i => i.itemOfWork === form.watch(`entries.${index}.descriptionOfWork`)).map(item => (
+                                <SelectItem key={item.id} value={item.itemOfWork}>{item.itemOfWork}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                         <TableCell className="p-0 border-r bg-muted/5">
-                          <Input readOnly disabled {...form.register(`entries.${index}.itemOfWork`)} className="h-12 border-none rounded-none shadow-none px-4 text-[10px] font-bold opacity-60 bg-transparent truncate" />
+                          <Input readOnly disabled {...form.register(`entries.${index}.itemNo`)} className="h-12 border-none rounded-none shadow-none text-center text-[10px] font-black opacity-60 bg-transparent" />
                         </TableCell>
                         <TableCell className="p-0 border-r">
                           <Select onValueChange={(val) => handleSubItemChange(val, index)} value={form.watch(`entries.${index}.subItemOfWork`)}>
@@ -305,6 +322,9 @@ export default function WorkDoneReportPage() {
                             <SelectTrigger className="h-12 border-none rounded-none px-4 text-xs truncate"><SelectValue placeholder="Material" /></SelectTrigger>
                             <SelectContent>{materialsRate.map(m => <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>)}</SelectContent>
                           </Select>
+                        </TableCell>
+                        <TableCell className="p-0 border-r bg-muted/5">
+                          <Input readOnly disabled {...form.register(`entries.${index}.materialUnit`)} className="h-12 border-none rounded-none shadow-none text-center text-[10px] font-bold opacity-40 bg-transparent" />
                         </TableCell>
                         <TableCell className="p-0 border-r">
                           <Input type="number" step="any" {...form.register(`entries.${index}.materialQty`)} className="h-12 border-none text-xs text-center" />
@@ -376,7 +396,7 @@ export default function WorkDoneReportPage() {
             <TrendingUp className="h-6 w-6 text-primary shrink-0" />
             <div className="space-y-1">
               <h4 className="font-black text-sm uppercase tracking-tighter text-primary-900">BOQ Constraint Enabled</h4>
-              <p className="text-xs text-primary-800/70 leading-relaxed">Selecting a Description automatically populates Category, Item No, and filters Sub-Items, preventing cross-mapping errors.</p>
+              <p className="text-xs text-primary-800/70 leading-relaxed">Selecting a Description filters Item of Work and Sub-Items, preventing cross-mapping errors. Material units auto-fill from the pricing ledger.</p>
             </div>
           </CardContent>
         </Card>
