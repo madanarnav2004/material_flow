@@ -13,27 +13,27 @@ import {
   Package,
   Building2,
   ArrowUpRight,
+  ClipboardList,
+  Receipt,
+  Car,
 } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useMaterialContext } from '@/context/material-context';
-import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 export default function DirectorDashboard() {
   const router = useRouter();
-  const { toast } = useToast();
   const { inventory, requests } = useMaterialContext();
-  const [selectedSite, setSelectedSite] = React.useState<string>('All Sites');
+  const [selectedSite, setSelectedSite] = React.useState<string>('Organization-wise');
 
-  const filteredInventory = selectedSite === 'All Sites' 
+  const filteredInventory = selectedSite === 'Organization-wise' 
     ? inventory 
     : inventory.filter(i => i.site === selectedSite);
 
-  const filteredRequests = selectedSite === 'All Sites'
+  const filteredRequests = selectedSite === 'Organization-wise'
     ? requests
     : requests.filter(r => r.requestingSite === selectedSite);
 
@@ -42,21 +42,30 @@ export default function DirectorDashboard() {
 
   const sitesList = Array.from(new Set(inventory.map(i => i.site)));
 
+  const modules = [
+    { id: 'material-stock', title: 'Inventory Ledger', icon: PackageSearch, color: 'text-blue-600', desc: 'Real-time stock across sites' },
+    { id: 'indent-register', title: 'Material Indents', icon: Package, color: 'text-amber-600', desc: 'Authorized requests & status' },
+    { id: 'mis-register', title: 'Issue Slips (MIS)', icon: ClipboardList, color: 'text-green-600', desc: 'On-site material distribution' },
+    { id: 'material-shifting', title: 'Bill Checking (GRN)', icon: Receipt, color: 'text-purple-600', desc: 'Audit verified receipts' },
+    { id: 'returnable-material', title: 'Returnable Assets', icon: RefreshCw, color: 'text-orange-600', desc: 'Track tools & machinery' },
+    { id: 'vehicle-usage', title: 'Vehicle Entries', icon: Car, color: 'text-rose-600', desc: 'Logistics & fuel tracking' },
+  ];
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-black font-headline uppercase tracking-tight text-primary">Executive Hub</h1>
-          <p className="text-muted-foreground">Organizational Control & Audit Center</p>
+          <h1 className="text-3xl font-black font-headline uppercase tracking-tight text-primary">Executive Oversight</h1>
+          <p className="text-muted-foreground">Swanag Infrastructures Organizational Control</p>
         </div>
         <div className="flex items-center gap-3 bg-card p-2 rounded-xl border shadow-sm">
           <Building2 className="h-4 w-4 text-muted-foreground ml-2" />
           <Select value={selectedSite} onValueChange={setSelectedSite}>
-            <SelectTrigger className="w-[200px] border-none focus:ring-0 shadow-none font-bold">
-              <SelectValue placeholder="Select Project" />
+            <SelectTrigger className="w-[220px] border-none focus:ring-0 shadow-none font-bold">
+              <SelectValue placeholder="Select Scope" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="All Sites">All Sites Combined</SelectItem>
+              <SelectItem value="Organization-wise">All Sites Combined</SelectItem>
               {sitesList.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -68,8 +77,8 @@ export default function DirectorDashboard() {
           title="Pending Approvals"
           value={pendingApprovals.toString()}
           icon={CheckCircle2}
-          description="Awaiting your authorization"
-          className={pendingApprovals > 0 ? "border-amber-500 bg-amber-500/5" : ""}
+          description="Requires authorization"
+          className={pendingApprovals > 0 ? "border-amber-500 bg-amber-500/5 shadow-amber-100" : ""}
           onClick={() => router.push('/dashboard/requests')}
         />
         <StatCard
@@ -77,99 +86,68 @@ export default function DirectorDashboard() {
           value={lowStockCount.toString()}
           icon={AlertTriangle}
           description="Critical items below threshold"
-          className={lowStockCount > 0 ? "border-destructive/50 bg-destructive/5" : ""}
+          className={lowStockCount > 0 ? "border-destructive/50 bg-destructive/5 shadow-destructive/10" : ""}
           onClick={() => router.push('/dashboard/inventory')}
         />
         <StatCard
-          title="Active Materials"
-          value={filteredInventory.length.toString()}
-          icon={PackageSearch}
-          description={`Tracked in ${selectedSite}`}
-          onClick={() => router.push('/dashboard/inventory')}
+          title="Active Tenders"
+          value="12"
+          icon={FileSpreadsheet}
+          description="Project estimations"
+          onClick={() => router.push('/dashboard/tender-tools')}
         />
         <StatCard
-          title="Detailed Audit"
+          title="Consolidated Audit"
           value="Reports"
           icon={AreaChart}
-          description="Access full data exports"
+          description="Full data accessibility"
           onClick={() => router.push('/dashboard/reports')}
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2 border-primary/10 shadow-lg overflow-hidden">
-          <CardHeader className="bg-primary/5 border-b">
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle className="text-xl">Operational Oversight</CardTitle>
-                <CardDescription>Main audit and management modules</CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/reports')}>
-                Detailed Downloads <ArrowUpRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2 pt-6">
-            <Button variant="outline" className="h-32 flex-col gap-3 border-2 hover:border-primary hover:bg-primary/5 transition-all group" onClick={() => router.push('/dashboard/boq-analysis')}>
-              <FileSpreadsheet className="h-8 w-8 text-primary group-hover:scale-110 transition-transform" />
-              <div className="text-center">
-                <p className="font-bold">BOQ Analysis</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Planned vs Actual</p>
-              </div>
-            </Button>
-            <Button variant="outline" className="h-32 flex-col gap-3 border-2 hover:border-primary hover:bg-primary/5 transition-all group" onClick={() => router.push('/dashboard/inventory')}>
-              <Package className="h-8 w-8 text-primary group-hover:scale-110 transition-transform" />
-              <div className="text-center">
-                <p className="font-bold">Live Inventory</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Multi-Site Ledger</p>
-              </div>
-            </Button>
-            <Button variant="outline" className="h-32 flex-col gap-3 border-2 hover:border-primary hover:bg-primary/5 transition-all group" onClick={() => router.push('/dashboard/user-management')}>
-              <Users className="h-8 w-8 text-primary group-hover:scale-110 transition-transform" />
-              <div className="text-center">
-                <p className="font-bold">Team Access</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Roles & Permissions</p>
-              </div>
-            </Button>
-            <Button variant="outline" className="h-32 flex-col gap-3 border-2 hover:border-primary hover:bg-primary/5 transition-all group" onClick={() => router.push('/dashboard/reports')}>
-              <Download className="h-8 w-8 text-primary group-hover:scale-110 transition-transform" />
-              <div className="text-center">
-                <p className="font-bold">Download Reports</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Consolidated Exports</p>
-              </div>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          <Card className="shadow-md">
-            <CardHeader className="pb-3 border-b">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <AreaChart className="h-5 w-5 text-primary" /> Quick Downloads
-              </CardTitle>
-              <CardDescription>Instant summary exports for {selectedSite}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 pt-4">
-              <Button variant="secondary" className="w-full justify-between h-11" onClick={() => router.push('/dashboard/reports')}>
-                Site-wise Stock Report <Download className="h-4 w-4 opacity-50" />
-              </Button>
-              <Button variant="secondary" className="w-full justify-between h-11" onClick={() => router.push('/dashboard/reports')}>
-                Material Issue Register <Download className="h-4 w-4 opacity-50" />
-              </Button>
-              <Button variant="secondary" className="w-full justify-between h-11" onClick={() => router.push('/dashboard/reports')}>
-                Progress vs BOQ <Download className="h-4 w-4 opacity-50" />
-              </Button>
-              <div className={cn(
-                "p-4 rounded-lg border mt-4 flex items-center gap-3",
-                lowStockCount > 0 ? "bg-destructive/10 border-destructive/20 text-destructive" : "bg-green-500/10 border-green-500/20 text-green-600"
-              )}>
-                {lowStockCount > 0 ? <AlertTriangle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
-                <span className="text-xs font-bold">{lowStockCount} Critical stock alerts active</span>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold font-headline flex items-center gap-2">
+          <Building2 className="h-5 w-5 text-primary"/> Project Modules for {selectedSite}
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {modules.map((m) => (
+            <Card key={m.id} className="hover:shadow-lg transition-all cursor-pointer group border-primary/10 overflow-hidden" onClick={() => router.push(`/dashboard/reports?module=${m.id}&site=${selectedSite}`)}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-muted/20">
+                <CardTitle className="text-base font-bold">{m.title}</CardTitle>
+                <m.icon className={cn("h-5 w-5", m.color)} />
+              </CardHeader>
+              <CardContent className="pt-4">
+                <p className="text-xs text-muted-foreground mb-4">{m.desc}</p>
+                <Button variant="ghost" size="sm" className="w-full justify-between font-bold text-[10px] uppercase tracking-widest text-primary group-hover:bg-primary/5">
+                  Open Audit Page <ArrowUpRight className="h-3 w-3" />
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     </div>
   );
+}
+
+function RefreshCw(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+      <path d="M3 21v-5h5" />
+    </svg>
+  )
 }

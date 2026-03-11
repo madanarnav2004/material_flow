@@ -1,9 +1,10 @@
 'use client';
 
 import * as React from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileSpreadsheet, ChevronDown, PackageCheck, AlertCircle, ClipboardList } from "lucide-react";
+import { Download, FileSpreadsheet, ChevronDown, PackageCheck, ClipboardList, Calendar as CalendarIcon, Filter, LayoutDashboard } from "lucide-react";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +18,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
 
 const reportTypes = [
   {
@@ -45,50 +50,80 @@ const reportTypes = [
   },
   {
     id: "material-shifting",
-    title: "Material Shifting Report",
-    description: "Tracks material movement between sites and overall organizational shifts.",
+    title: "Goods Received Note (GRN) Ledger",
+    description: "Tracks material receipt, E-Way bills, and transport verification details.",
     variants: ["Site-wise", "Organization-wise"],
-    headers: ['GRN ID', 'Material', 'Received Qty', 'Issuing Site', 'Receiving Site', 'Status'],
-    dataKeys: ['receivedBillId', 'materialName', 'receivedQuantity', 'issuingSite', 'receivingSite', 'status'],
+    headers: ['GRN ID', 'Material', 'Qty Received', 'Issuing Site', 'E-Way Bill', 'Status'],
+    dataKeys: ['receivedBillId', 'materialName', 'receivedQuantity', 'issuingSite', 'eWayBillNumber', 'status'],
   },
   {
     id: "indent-register",
     title: "Material Indent Register",
-    description: "A complete log of all material indents.",
+    description: "A complete log of all material indents and procurement requests.",
     variants: ["Site-wise", "Organization-wise"],
-    headers: ['Indent ID', 'Material', 'Qty', 'Site', 'Status', 'Return Date'],
-    dataKeys: ['id', 'material', 'quantity', 'site', 'status', 'returnDate'],
+    headers: ['Indent ID', 'Materials', 'Qty', 'Site', 'Status', 'Request Date'],
+    dataKeys: ['id', 'materialsDisplay', 'totalQty', 'requestingSite', 'status', 'requestDate'],
   },
 ];
 
 export default function ReportsPage() {
   const { requests, inventory, receipts, issueSlips } = useMaterialContext();
+  const searchParams = useSearchParams();
+  
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [reportTitle, setReportTitle] = React.useState('');
   const [reportData, setReportData] = React.useState<any[]>([]);
   const [reportHeaders, setReportHeaders] = React.useState<string[]>([]);
   const [reportKeys, setReportKeys] = React.useState<string[]>([]);
   
+  const [startDate, setStartDate] = React.useState<Date | undefined>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [endDate, setEndDate] = React.useState<Date | undefined>(new Date());
+  const [selectedReportId, setSelectedReportId] = React.useState<string | null>(null);
+  const [selectedFilter, setSelectedFilter] = React.useState<string | null>(null);
+
   const sitesList = React.useMemo(() => Array.from(new Set(inventory.map(i => i.site))), [inventory]);
+
+  // Handle direct navigation from dashboard cards
+  React.useEffect(() => {
+    const moduleId = searchParams.get('module');
+    const site = searchParams.get('site');
+    if (moduleId) {
+        handleGenerateReport(moduleId, site || 'Organization-wise');
+    }
+  }, [searchParams]);
 
   const handleGenerateReport = (reportId: string, filter?: string) => {
     const reportInfo = reportTypes.find(r => r.id === reportId);
     if (!reportInfo) return;
 
+    setSelectedReportId(reportId);
+    setSelectedFilter(filter || 'Organization-wise');
     setReportTitle(filter ? `${reportInfo.title} (${filter})` : reportInfo.title);
     setReportHeaders(reportInfo.headers);
     setReportKeys(reportInfo.dataKeys);
-    let data: any[] = [];
+    
+    refreshData(reportId, filter || 'Organization-wise');
+    setDialogOpen(true);
+  };
 
-    switch (reportInfo.id) {
+  const refreshData = (reportId: string, filter: string) => {
+    let data: any[] = [];
+    const dateRange = (dateStr: string) => {
+        if (!startDate || !endDate) return true;
+        const d = new Date(dateStr);
+        return isWithinInterval(d, { start: startOfDay(startDate), end: endOfDay(endDate) });
+    };
+
+    switch (reportId) {
       case 'mis-register':
-        data = filter === 'Organization-wise' || filter === 'All'
-          ? issueSlips
-          : issueSlips.filter(s => s.siteName === filter);
+        data = issueSlips.filter(s => {
+            const siteMatch = filter === 'Organization-wise' || s.siteName === filter;
+            return siteMatch && dateRange(s.date);
+        });
         break;
       
       case 'material-stock':
-         data = filter === 'Organization-wise' || filter === 'All'
+         data = filter === 'Organization-wise'
             ? inventory
             : inventory.filter(i => i.site === filter || (filter === "Store-wise" && i.site === "MAPI Godown"));
          break;
@@ -96,49 +131,61 @@ export default function ReportsPage() {
       case 'returnable-material':
         data = issueSlips.filter(slip => {
             const siteMatch = filter === 'Organization-wise' || slip.siteName === filter;
-            return siteMatch && slip.isReturnable;
+            return siteMatch && slip.isReturnable && dateRange(slip.date);
         });
         break;
 
       case 'material-shifting':
-        data = filter === 'Organization-wise' || filter === 'All'
-            ? receipts.filter(r => r.status === 'Accepted')
-            : receipts.filter(r => r.receivingSite === filter && r.status === 'Accepted');
+        data = receipts.filter(r => {
+            const siteMatch = filter === 'Organization-wise' || r.receivingSite === filter;
+            return siteMatch && dateRange(r.receivedDate);
+        });
         break;
 
       case 'indent-register':
-        data = filter === 'Organization-wise' || filter === 'All'
-          ? requests 
-          : requests.filter(r => r.site === filter);
+        data = requests.filter(r => {
+            const siteMatch = filter === 'Organization-wise' || r.requestingSite === filter;
+            return siteMatch && dateRange(r.requestDate);
+        }).map(r => ({
+            ...r,
+            materialsDisplay: r.materials.map(m => m.materialName).join(', '),
+            totalQty: r.materials.reduce((acc, m) => acc + m.quantity, 0)
+        }));
         break;
-      
-      default:
-        setReportData([]);
-        setReportHeaders([]);
-        setDialogOpen(false);
-        return;
     }
 
     setReportData(data);
-    setDialogOpen(true);
   };
+
+  React.useEffect(() => {
+    if (selectedReportId && selectedFilter) {
+        refreshData(selectedReportId, selectedFilter);
+    }
+  }, [startDate, endDate]);
   
   const handleDownload = () => {
     console.log("Downloading report:", reportTitle, reportData);
+    // In a real app, this would trigger an XLSX export
     setDialogOpen(false);
   }
 
   const renderCellData = (row: any, key: string) => {
     const cellData = row[key];
-    if (key === 'date' || key === 'returnDate') return format(new Date(cellData), 'dd MMM yyyy');
+    if (key === 'date' || key === 'receivedDate' || key === 'requestDate') return format(new Date(cellData), 'dd MMM yyyy');
     if (key === 'status') return <Badge variant="outline" className="text-[9px] h-4 uppercase">{cellData}</Badge>;
+    if (key === 'eWayBillNumber') return cellData || <span className="text-[10px] opacity-40">N/A</span>;
     return cellData;
   }
 
   return (
     <>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold font-headline">Swanag Audit Reports</h1>
+        <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold font-headline">Swanag Audit Reports</h1>
+            <Button variant="ghost" size="sm" className="font-bold uppercase tracking-widest text-[10px]" onClick={() => window.history.back()}>
+                <LayoutDashboard className="mr-2 h-4 w-4" /> Return to Dashboard
+            </Button>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="border-primary/20 shadow-md">
@@ -156,17 +203,11 @@ export default function ReportsPage() {
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild><Button size="sm" variant="outline"><Download className="h-3 w-3 mr-1"/> Download</Button></DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    {report.variants.map(v => {
-                                        if (v === 'Site-wise') {
-                                            return (
-                                                <React.Fragment key={v}>
-                                                    <DropdownMenuLabel className="text-[10px] uppercase font-bold text-muted-foreground">Select Site</DropdownMenuLabel>
-                                                    {sitesList.map(site => <DropdownMenuItem key={site} onClick={() => handleGenerateReport(report.id, site)}>{site}</DropdownMenuItem>)}
-                                                </React.Fragment>
-                                            )
-                                        }
-                                        return <DropdownMenuItem key={v} onClick={() => handleGenerateReport(report.id, v)}>{v}</DropdownMenuItem>
-                                    })}
+                                    <DropdownMenuLabel className="text-[10px] uppercase font-bold text-muted-foreground">Select Scope</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => handleGenerateReport(report.id, 'Organization-wise')}>Organization-wise</DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuLabel className="text-[10px] uppercase font-bold text-muted-foreground">Individual Sites</DropdownMenuLabel>
+                                    {sitesList.map(site => <DropdownMenuItem key={site} onClick={() => handleGenerateReport(report.id, site)}>{site}</DropdownMenuItem>)}
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
@@ -189,17 +230,11 @@ export default function ReportsPage() {
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild><Button size="sm" variant="outline"><Download className="h-3 w-3 mr-1"/> Download</Button></DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    {report.variants.map(v => {
-                                        if (v === 'Site-wise') {
-                                            return (
-                                                <React.Fragment key={v}>
-                                                    <DropdownMenuLabel className="text-[10px] uppercase font-bold text-muted-foreground">Select Site</DropdownMenuLabel>
-                                                    {sitesList.map(site => <DropdownMenuItem key={site} onClick={() => handleGenerateReport(report.id, site)}>{site}</DropdownMenuItem>)}
-                                                </React.Fragment>
-                                            )
-                                        }
-                                        return <DropdownMenuItem key={v} onClick={() => handleGenerateReport(report.id, v)}>{v}</DropdownMenuItem>
-                                    })}
+                                    <DropdownMenuLabel className="text-[10px] uppercase font-bold text-muted-foreground">Select Scope</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => handleGenerateReport(report.id, 'Organization-wise')}>Organization-wise</DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuLabel className="text-[10px] uppercase font-bold text-muted-foreground">Individual Sites</DropdownMenuLabel>
+                                    {sitesList.map(site => <DropdownMenuItem key={site} onClick={() => handleGenerateReport(report.id, site)}>{site}</DropdownMenuItem>)}
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
@@ -210,14 +245,49 @@ export default function ReportsPage() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-5xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-headline flex items-center gap-2">
-                <FileSpreadsheet className="text-primary" /> {reportTitle}
-            </DialogTitle>
-            <DialogDescription>Verified record data for the selected audit scope.</DialogDescription>
+        <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-6 border-b shrink-0">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <DialogTitle className="text-2xl font-headline flex items-center gap-2">
+                        <FileSpreadsheet className="text-primary" /> {reportTitle}
+                    </DialogTitle>
+                    <DialogDescription>Verified record data for the selected audit scope.</DialogDescription>
+                </div>
+                <div className="flex items-center gap-3 bg-muted/50 p-2 rounded-xl border">
+                    <div className="flex flex-col">
+                        <Label className="text-[8px] uppercase font-black px-1 opacity-50">Date Range Filter</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" size="sm" className="h-8 text-[10px] font-bold">
+                                        <CalendarIcon className="mr-2 h-3 w-3" />
+                                        {startDate ? format(startDate, 'dd MMM') : 'Start'}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
+                                </PopoverContent>
+                            </Popover>
+                            <span className="text-muted-foreground">→</span>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" size="sm" className="h-8 text-[10px] font-bold">
+                                        <CalendarIcon className="mr-2 h-3 w-3" />
+                                        {endDate ? format(endDate, 'dd MMM') : 'End'}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="end">
+                                    <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                    </div>
+                </div>
+            </div>
           </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto border rounded-xl shadow-inner">
+          
+          <div className="flex-1 overflow-y-auto border-b">
             {reportData.length > 0 ? (
               <Table>
                 <TableHeader className="bg-muted/50 sticky top-0 z-10 shadow-sm">
@@ -236,13 +306,19 @@ export default function ReportsPage() {
             ) : (
               <div className="p-24 text-center space-y-2">
                   <PackageCheck className="h-12 w-12 mx-auto opacity-10" />
-                  <p className="text-muted-foreground text-sm italic">No records found matching the current report criteria.</p>
+                  <p className="text-muted-foreground text-sm italic">No records found matching the current filters.</p>
               </div>
             )}
           </div>
-          <DialogFooter className="bg-muted/30 p-4 border-t rounded-b-lg">
-             <Button variant="outline" onClick={() => setDialogOpen(false)}>Close Review</Button>
-             <Button onClick={handleDownload} className="font-bold"><Download className="mr-2 h-4 w-4" /> Export XLSX</Button>
+          
+          <DialogFooter className="bg-muted/30 p-4 shrink-0 flex justify-between items-center sm:justify-between">
+             <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">
+                Showing {reportData.length} entries for current criteria
+             </div>
+             <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setDialogOpen(false)}>Close Review</Button>
+                <Button onClick={handleDownload} className="font-bold"><Download className="mr-2 h-4 w-4" /> Export XLSX</Button>
+             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
