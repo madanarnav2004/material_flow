@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { useMaterialContext, type MasterRateItem } from '@/context/material-context';
 
 // --- SCHEMAS ---
 
@@ -49,19 +49,19 @@ interface RateCategoryProps {
   title: string;
   description: string;
   icon: React.ReactNode;
-  categoryKey: string;
+  categoryKey: 'material' | 'equipment' | 'worker' | 'helper';
+  initialData: MasterRateItem[];
 }
 
-function RateCategoryManager({ title, description, icon, categoryKey }: RateCategoryProps) {
+function RateCategoryManager({ title, description, icon, categoryKey, initialData }: RateCategoryProps) {
   const { toast } = useToast();
+  const { setMaterialsRate, setEquipmentRate, setWorkersRate, setHelpersRate } = useMaterialContext();
   const [isProcessing, setIsProcessing] = React.useState(false);
 
   const form = useForm<CategoryRatesValues>({
     resolver: zodResolver(categoryRatesSchema),
     defaultValues: {
-      items: [
-        { id: `initial-${Date.now()}`, name: '', unit: '', rate: 0 }
-      ],
+      items: initialData.length > 0 ? initialData : [{ id: `initial-${Date.now()}`, name: '', unit: '', rate: 0 }],
     },
   });
 
@@ -69,6 +69,13 @@ function RateCategoryManager({ title, description, icon, categoryKey }: RateCate
     control: form.control,
     name: 'items',
   });
+
+  // Keep form in sync if context initial data changes (e.g. first load)
+  React.useEffect(() => {
+    if (initialData.length > 0) {
+      replace(initialData);
+    }
+  }, [initialData, replace]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -78,11 +85,11 @@ function RateCategoryManager({ title, description, icon, categoryKey }: RateCate
     
     // Simulate Excel parsing delay
     setTimeout(() => {
-      // Mock parsed data from Excel
+      // Mock parsed data from Excel based on category
       const mockParsedData = [
-        { id: `xl-${Date.now()}-1`, name: `${title} Item A`, unit: 'Unit', rate: 150 },
-        { id: `xl-${Date.now()}-2`, name: `${title} Item B`, unit: 'Unit', rate: 275 },
-        { id: `xl-${Date.now()}-3`, name: `${title} Item C`, unit: 'Unit', rate: 420 },
+        { id: `xl-${Date.now()}-1`, name: `${title} Master A`, unit: categoryKey === 'material' ? 'bag' : 'day', rate: 150 },
+        { id: `xl-${Date.now()}-2`, name: `${title} Master B`, unit: categoryKey === 'material' ? 'ton' : 'hr', rate: 275 },
+        { id: `xl-${Date.now()}-3`, name: `${title} Master C`, unit: categoryKey === 'material' ? 'cu.m.' : 'day', rate: 420 },
       ];
 
       replace(mockParsedData);
@@ -120,10 +127,16 @@ function RateCategoryManager({ title, description, icon, categoryKey }: RateCate
   };
 
   const onSubmit = (values: CategoryRatesValues) => {
-    console.log(`Saving ${categoryKey} rates:`, values);
+    console.log(`Saving ${categoryKey} rates to context:`, values);
+    
+    if (categoryKey === 'material') setMaterialsRate(values.items);
+    else if (categoryKey === 'equipment') setEquipmentRate(values.items);
+    else if (categoryKey === 'worker') setWorkersRate(values.items);
+    else if (categoryKey === 'helper') setHelpersRate(values.items);
+
     toast({
-      title: 'Rates Finalized',
-      description: `All ${values.items.length} ${title.toLowerCase()} rates have been updated in the project master.`,
+      title: 'Rates Finalized & Sync Enabled',
+      description: `All ${values.items.length} ${title.toLowerCase()} rates are now live across all Site Daily Work Reports.`,
     });
   };
 
@@ -249,7 +262,7 @@ function RateCategoryManager({ title, description, icon, categoryKey }: RateCate
                   Clear Table
                 </Button>
                 <Button type="submit" size="lg" className="px-8 font-black uppercase tracking-widest">
-                  <Save className="mr-2 h-5 w-5" /> Save {title} Rates
+                  <Save className="mr-2 h-5 w-5" /> Save {title} Master
                 </Button>
               </div>
             </div>
@@ -263,13 +276,15 @@ function RateCategoryManager({ title, description, icon, categoryKey }: RateCate
 // --- MAIN PAGE ---
 
 export default function RateFixingPage() {
+  const { materialsRate, equipmentRate, workersRate, helpersRate } = useMaterialContext();
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-black font-headline text-primary flex items-center gap-2">
-          <DollarSign className="h-8 w-8" /> Rate Fixing Module
+          <DollarSign className="h-8 w-8" /> Pricing Master & Rate Fixing
         </h1>
-        <p className="text-muted-foreground">Establish standard project costs via Excel bulk upload or manual ledger entry.</p>
+        <p className="text-muted-foreground">Standardize project costs for Materials, Equipment, and Workforce across all sites.</p>
       </div>
 
       <Tabs defaultValue="material" className="w-full">
@@ -291,36 +306,40 @@ export default function RateFixingPage() {
         <TabsContent value="material" className="mt-0 outline-none">
           <RateCategoryManager 
             title="Material" 
-            description="Manage purchase rates for raw materials, consumables, and assets."
+            description="Manage purchase rates. Linked to Site Material Dropdowns."
             icon={<Package className="h-6 w-6 text-blue-600" />}
             categoryKey="material"
+            initialData={materialsRate}
           />
         </TabsContent>
 
         <TabsContent value="equipment" className="mt-0 outline-none">
           <RateCategoryManager 
             title="Equipment" 
-            description="Fix hourly and daily hire rates for machinery, vehicles, and tools."
+            description="Hourly hire rates. Auto-populates Site Equipment Selectors."
             icon={<Wrench className="h-6 w-6 text-amber-600" />}
             categoryKey="equipment"
+            initialData={equipmentRate}
           />
         </TabsContent>
 
         <TabsContent value="worker" className="mt-0 outline-none">
           <RateCategoryManager 
             title="Skilled Worker" 
-            description="Define standard payroll and OT rates for specialized tradesmen and operators."
+            description="Trade payroll rates. Standardizes designation select lists."
             icon={<Users className="h-6 w-6 text-green-600" />}
             categoryKey="worker"
+            initialData={workersRate}
           />
         </TabsContent>
 
         <TabsContent value="helper" className="mt-0 outline-none">
           <RateCategoryManager 
             title="Helper" 
-            description="Manage basic labor and unskilled workforce daily/hourly rates."
+            description="Basic labor daily rates. Updates labor cost analysis."
             icon={<UserPlus className="h-6 w-6 text-purple-600" />}
             categoryKey="helper"
+            initialData={helpersRate}
           />
         </TabsContent>
       </Tabs>
@@ -328,12 +347,12 @@ export default function RateFixingPage() {
       <div className="p-6 rounded-2xl bg-muted/30 border-2 border-dashed flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="space-y-1">
           <h4 className="font-bold flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-primary" /> Audit Compliance Tip
+            <CheckCircle2 className="h-5 w-5 text-primary" /> Auto-Sync Active
           </h4>
-          <p className="text-sm text-muted-foreground">Always export your manual entries periodically to maintain an offline master copy of your fixed rates.</p>
+          <p className="text-sm text-muted-foreground">Changes saved here are instantly reflected in the 'Daily Work Done' dropdowns for all Site Managers.</p>
         </div>
         <Badge variant="outline" className="uppercase tracking-widest text-[10px] font-black px-4 py-2 border-primary/20">
-          Global Pricing Master Active
+          Organization Master Live
         </Badge>
       </div>
     </div>

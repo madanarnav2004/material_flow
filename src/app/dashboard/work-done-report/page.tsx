@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { detailedBoqAnalysis, mockBoqData } from '@/lib/mock-data';
+import { detailedBoqAnalysis } from '@/lib/mock-data';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
@@ -24,7 +24,7 @@ import { useMaterialContext, type WorkDoneReport } from '@/context/material-cont
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const materialSchema = z.object({
-  materialName: z.string().min(1, 'Material name is required.'),
+  materialName: z.string().min(1, 'Material selection required.'),
   quantity: z.coerce.number().min(0.1, 'Quantity is required.'),
   unit: z.string().min(1, 'Unit is required.'),
   rate: z.coerce.number().optional(),
@@ -32,20 +32,20 @@ const materialSchema = z.object({
 
 const equipmentSchema = z.object({
   source: z.string().min(1, 'Source is required.'),
-  name: z.string().min(1, 'Equipment name is required.'),
+  name: z.string().min(1, 'Equipment selection required.'),
   usage: z.coerce.number().min(0.1, 'Usage is required.'),
   unit: z.string(),
   rate: z.coerce.number().min(0, 'Rate must be a positive number.').optional(),
 });
 
 const workforceSchema = z.object({
-  skill: z.string().min(1, 'Skill is required.'),
-  designation: z.string().min(1, 'Designation is required.'),
+  skill: z.enum(['Skilled Worker', 'Helper'], { required_error: 'Skill required.' }),
+  designation: z.string().min(1, 'Designation required.'),
   count: z.coerce.number().min(1, 'Count is required.'),
   hours: z.coerce.number().min(0.1, 'Hours are required'),
-  otHours: z.coerce.number().min(0, 'OT hours must be a non-negative number.').optional(),
-  rate: z.coerce.number().min(0, 'Rate must be a positive number.').optional(),
-  otRate: z.coerce.number().min(0, 'OT rate must be a positive number.').optional(),
+  otHours: z.coerce.number().min(0, 'OT hours required.').default(0),
+  rate: z.coerce.number().min(0, 'Rate required.').optional(),
+  otRate: z.coerce.number().min(0, 'OT rate required.').optional(),
 });
 
 const workDoneSchema = z.object({
@@ -81,7 +81,7 @@ type DownloadFormValues = z.infer<typeof downloadSchema>;
 export default function WorkDoneReportPage() {
   const { toast } = useToast();
   const { site } = useUser();
-  const { setWorkDoneReports, workDoneReports } = useMaterialContext();
+  const { setWorkDoneReports, workDoneReports, materialsRate, equipmentRate, workersRate, helpersRate } = useMaterialContext();
   const [submittedReport, setSubmittedReport] = React.useState<SubmittedReport | null>(null);
 
   const yesterday = subDays(new Date(), 1);
@@ -98,8 +98,8 @@ export default function WorkDoneReportPage() {
       itemOfWork: '',
       quantityOfWork: 0,
       materials: [{ materialName: '', quantity: 0, unit: '', rate: 0 }],
-      equipment: [{ source: '', name: '', usage: 0, unit: '', rate: 0 }],
-      workforce: [{ skill: '', designation: '', count: 0, hours: 0, otHours: 0, rate: 0, otRate: 0 }],
+      equipment: [{ source: 'Owned', name: '', usage: 0, unit: '', rate: 0 }],
+      workforce: [{ skill: 'Skilled Worker', designation: '', count: 0, hours: 0, otHours: 0, rate: 0, otRate: 0 }],
     },
   });
 
@@ -136,34 +136,35 @@ export default function WorkDoneReportPage() {
     form.setValue('itemOfWork', value);
   };
 
-  const selectedEquipmentSource = form.watch('equipment');
-  const availableEquipment = (index: number) => {
-    const source = selectedEquipmentSource?.[index]?.source;
-    if (!source) return [];
-    return mockBoqData.equipment.filter(e => e.source.toLowerCase() === source.toLowerCase());
-  }
-  
-  const handleEquipmentSourceChange = (value: string, index: number) => {
-    form.setValue(`equipment.${index}.source`, value);
-    form.setValue(`equipment.${index}.name`, '');
-    form.setValue(`equipment.${index}.unit`, '');
-    form.setValue(`equipment.${index}.rate`, 0);
-  };
-  
-  const handleEquipmentNameChange = (value: string, index: number) => {
-    form.setValue(`equipment.${index}.name`, value);
-    const selectedEquipment = mockBoqData.equipment.find(e => e.name === value);
-    form.setValue(`equipment.${index}.unit`, selectedEquipment?.unit || '');
-    if (selectedEquipment) {
-        form.setValue(`equipment.${index}.rate`, selectedEquipment.rate);
+  // --- AUTO-FILL HANDLERS ---
+
+  const handleMaterialSelect = (value: string, index: number) => {
+    const selected = materialsRate.find(m => m.name === value);
+    if (selected) {
+      form.setValue(`materials.${index}.materialName`, value);
+      form.setValue(`materials.${index}.unit`, selected.unit);
+      form.setValue(`materials.${index}.rate`, selected.rate);
     }
   };
 
-  const handleWorkforceDesignationChange = (value: string, index: number) => {
-    form.setValue(`workforce.${index}.designation`, value);
-    const selectedWorkforce = mockBoqData.workforce.find(w => w.designation === value);
-    if (selectedWorkforce) {
-        form.setValue(`workforce.${index}.rate`, selectedWorkforce.rate);
+  const handleEquipmentSelect = (value: string, index: number) => {
+    const selected = equipmentRate.find(e => e.name === value);
+    if (selected) {
+      form.setValue(`equipment.${index}.name`, value);
+      form.setValue(`equipment.${index}.unit`, selected.unit);
+      form.setValue(`equipment.${index}.rate`, selected.rate);
+    }
+  };
+
+  const handleWorkforceSelect = (value: string, index: number) => {
+    const skill = form.watch(`workforce.${index}.skill`);
+    const rateList = skill === 'Skilled Worker' ? workersRate : helpersRate;
+    const selected = rateList.find(w => w.name === value);
+    
+    if (selected) {
+      form.setValue(`workforce.${index}.designation`, value);
+      form.setValue(`workforce.${index}.rate`, selected.rate);
+      form.setValue(`workforce.${index}.otRate`, selected.rate * 1.5); // Default OT 1.5x
     }
   };
 
@@ -194,7 +195,7 @@ export default function WorkDoneReportPage() {
 
     toast({
       title: 'Report Submitted Successfully',
-      description: `Daily report for ${format(values.reportDate, 'PPP')} has been logged.`,
+      description: `Daily report for ${format(values.reportDate, 'PPP')} has been logged and costs calculated.`,
     });
     
     form.reset({
@@ -202,8 +203,8 @@ export default function WorkDoneReportPage() {
         itemOfWork: '',
         quantityOfWork: 0,
         materials: [{ materialName: '', quantity: 0, unit: '', rate: 0 }],
-        equipment: [{ source: '', name: '', usage: 0, unit: '', rate: 0 }],
-        workforce: [{ skill: '', designation: '', count: 0, hours: 0, otHours: 0, rate: 0, otRate: 0 }],
+        equipment: [{ source: 'Owned', name: '', usage: 0, unit: '', rate: 0 }],
+        workforce: [{ skill: 'Skilled Worker', designation: '', count: 0, hours: 0, otHours: 0, rate: 0, otRate: 0 }],
     });
   }
 
@@ -317,9 +318,9 @@ export default function WorkDoneReportPage() {
           <Card className={cn(!hasYesterdayReport && "border-destructive/50 ring-2 ring-destructive/20 shadow-xl")}>
             <CardHeader className={cn(!hasYesterdayReport && "bg-destructive/5")}>
               <CardTitle className="flex items-center gap-2">
-                {!hasYesterdayReport ? "Urgent: Complete Yesterday's Entry" : "Submit Today's Progress"}
+                {!hasYesterdayReport ? "Urgent: Complete Overdue Entry" : "Submit Daily Progress"}
               </CardTitle>
-              <CardDescription>Fill in the details below to report the work completed.</CardDescription>
+              <CardDescription>Select master-coded resources to ensure consistent cost tracking.</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <Form {...form}>
@@ -367,16 +368,16 @@ export default function WorkDoneReportPage() {
                   <Separator />
 
                   <div className="space-y-4 rounded-lg border p-4">
-                    <h3 className="text-lg font-medium">Work Details</h3>
+                    <h3 className="text-lg font-medium">Execution Scope</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <FormField
                         control={form.control}
                         name="itemOfWork"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Item of Work</FormLabel>
+                            <FormLabel>Item of Work (BOQ Linked)</FormLabel>
                             <Select onValueChange={handleItemChange} value={field.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Select work item for your site" /></SelectTrigger></FormControl>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Select work item" /></SelectTrigger></FormControl>
                               <SelectContent>
                                 {siteBoqItems.map(item => (
                                   <SelectItem key={item.item} value={item.item}>{item.item}</SelectItem>
@@ -392,8 +393,8 @@ export default function WorkDoneReportPage() {
                           name="subItemOfWork"
                           render={({ field }) => (
                               <FormItem>
-                              <FormLabel>Sub Item of Work (Optional)</FormLabel>
-                              <FormControl><Input placeholder="e.g., Waterproofing" {...field} /></FormControl>
+                              <FormLabel>Task Detail (Sub-Item)</FormLabel>
+                              <FormControl><Input placeholder="e.g., Waterproofing Layer 1" {...field} /></FormControl>
                               <FormMessage />
                               </FormItem>
                           )}
@@ -404,8 +405,8 @@ export default function WorkDoneReportPage() {
                         name="quantityOfWork"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Quantity of Work Done</FormLabel>
-                            <FormControl><Input type="number" placeholder="e.g., 10" {...field} /></FormControl>
+                            <FormLabel>Actual Quantity Done</FormLabel>
+                            <FormControl><Input type="number" step="any" placeholder="0.00" {...field} /></FormControl>
                             <FormMessage />
                             </FormItem>
                         )}
@@ -413,19 +414,18 @@ export default function WorkDoneReportPage() {
                   </div>
 
                   {/* Material Consumption */}
-                  <Card>
-                    <CardHeader>
-                        <CardTitle>Material Consumption</CardTitle>
+                  <Card className="border-blue-100">
+                    <CardHeader className="bg-blue-50/50 py-3">
+                        <CardTitle className="text-sm font-bold text-blue-800">Resource: Material Consumption</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-4">
                         <div className="rounded-md border">
                         <Table>
                             <TableHeader>
                             <TableRow>
-                                <TableHead className="w-2/5">Material Name</TableHead>
-                                <TableHead>Quantity</TableHead>
+                                <TableHead className="w-2/5">Material (Master Selection)</TableHead>
+                                <TableHead>Qty</TableHead>
                                 <TableHead>Unit</TableHead>
-                                <TableHead>Rate</TableHead>
                                 <TableHead className="w-12"></TableHead>
                             </TableRow>
                             </TableHeader>
@@ -438,9 +438,12 @@ export default function WorkDoneReportPage() {
                                     name={`materials.${index}.materialName`}
                                     render={({ field }) => (
                                         <FormItem>
-                                          <FormControl>
-                                            <Input placeholder="Material Name" {...field} />
-                                          </FormControl>
+                                          <Select onValueChange={(val) => handleMaterialSelect(val, index)} value={field.value}>
+                                            <FormControl><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick material" /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                              {materialsRate.map(m => <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>)}
+                                            </SelectContent>
+                                          </Select>
                                           <FormMessage />
                                         </FormItem>
                                     )}
@@ -451,7 +454,7 @@ export default function WorkDoneReportPage() {
                                     control={form.control}
                                     name={`materials.${index}.quantity`}
                                     render={({ field }) => (
-                                        <FormItem><FormControl><Input type="number" placeholder="e.g., 50" {...field} /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormControl><Input type="number" step="any" className="h-8 text-xs" {...field} /></FormControl><FormMessage /></FormItem>
                                     )}
                                     />
                                 </TableCell>
@@ -460,21 +463,12 @@ export default function WorkDoneReportPage() {
                                     control={form.control}
                                     name={`materials.${index}.unit`}
                                     render={({ field }) => (
-                                        <FormItem><FormControl><Input placeholder="Unit" {...field} /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormControl><Input readOnly disabled className="h-8 text-xs bg-muted" {...field} /></FormControl><FormMessage /></FormItem>
                                     )}
                                     />
                                 </TableCell>
-                                 <TableCell>
-                                  <FormField
-                                    control={form.control}
-                                    name={`materials.${index}.rate`}
-                                    render={({ field }) => (
-                                        <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} /></FormControl><FormMessage /></FormItem>
-                                    )}
-                                  />
-                                </TableCell>
                                 <TableCell>
-                                    <Button variant="ghost" size="icon" onClick={() => removeMaterial(index)} disabled={materialFields.length <= 1}>
+                                    <Button variant="ghost" size="icon" onClick={() => removeMaterial(index)} disabled={materialFields.length <= 1} className="h-8 w-8 text-destructive">
                                     <Trash className="h-4 w-4" />
                                     </Button>
                                 </TableCell>
@@ -483,25 +477,24 @@ export default function WorkDoneReportPage() {
                             </TableBody>
                         </Table>
                         </div>
-                        <Button type="button" variant="outline" size="sm" onClick={() => appendMaterial({ materialName: '', quantity: 0, unit: '', rate: 0 })} className="mt-4">
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Material
+                        <Button type="button" variant="outline" size="sm" onClick={() => appendMaterial({ materialName: '', quantity: 0, unit: '', rate: 0 })} className="mt-4 h-8 text-[10px] uppercase font-bold">
+                            <PlusCircle className="mr-2 h-3 w-3" /> Add Material Item
                         </Button>
                     </CardContent>
                   </Card>
 
                   {/* Equipment Usage */}
-                  <Card>
-                    <CardHeader><CardTitle>Equipment &amp; Vehicle Usage</CardTitle></CardHeader>
-                    <CardContent>
+                  <Card className="border-amber-100">
+                    <CardHeader className="bg-amber-50/50 py-3"><CardTitle className="text-sm font-bold text-amber-800">Resource: Equipment & Machinery</CardTitle></CardHeader>
+                    <CardContent className="pt-4">
                         <div className="rounded-md border">
                             <Table>
                                 <TableHeader>
                                 <TableRow>
-                                    <TableHead>Source</TableHead>
-                                    <TableHead>Equipment/Vehicle</TableHead>
-                                    <TableHead>Usage (Hrs)</TableHead>
+                                    <TableHead className="w-24">Type</TableHead>
+                                    <TableHead>Machine (Master)</TableHead>
+                                    <TableHead className="w-20">Hrs</TableHead>
                                     <TableHead>Unit</TableHead>
-                                    <TableHead>Rate/hr ($)</TableHead>
                                     <TableHead className="w-12"></TableHead>
                                 </TableRow>
                                 </TableHeader>
@@ -514,13 +507,9 @@ export default function WorkDoneReportPage() {
                                             name={`equipment.${index}.source`}
                                             render={({ field }) => (
                                                 <FormItem>
-                                                <Select onValueChange={(value) => handleEquipmentSourceChange(value, index)} defaultValue={field.value}>
-                                                    <FormControl><SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger></FormControl>
-                                                    <SelectContent>
-                                                        {[...new Set(mockBoqData.equipment.map(e => e.source))].map(source => (
-                                                            <SelectItem key={source} value={source}>{source}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl><SelectTrigger className="h-8 text-[10px]"><SelectValue /></SelectTrigger></FormControl>
+                                                    <SelectContent><SelectItem value="Owned">Owned</SelectItem><SelectItem value="Rented">Rented</SelectItem></SelectContent>
                                                 </Select>
                                                 <FormMessage />
                                                 </FormItem>
@@ -533,12 +522,10 @@ export default function WorkDoneReportPage() {
                                             name={`equipment.${index}.name`}
                                             render={({ field }) => (
                                                 <FormItem>
-                                                <Select onValueChange={(value) => handleEquipmentNameChange(value, index)} value={field.value}>
-                                                    <FormControl><SelectTrigger><SelectValue placeholder="Select equipment" /></SelectTrigger></FormControl>
+                                                <Select onValueChange={(val) => handleEquipmentSelect(val, index)} value={field.value}>
+                                                    <FormControl><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick machine" /></SelectTrigger></FormControl>
                                                     <SelectContent>
-                                                        {availableEquipment(index).map(eq => (
-                                                            <SelectItem key={eq.name} value={eq.name}>{eq.name}</SelectItem>
-                                                        ))}
+                                                        {equipmentRate.map(eq => <SelectItem key={eq.id} value={eq.name}>{eq.name}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
                                                 <FormMessage />
@@ -551,7 +538,7 @@ export default function WorkDoneReportPage() {
                                             control={form.control}
                                             name={`equipment.${index}.usage`}
                                             render={({ field }) => (
-                                                <FormItem><FormControl><Input type="number" placeholder="e.g., 8" {...field} /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormControl><Input type="number" step="any" className="h-8 text-xs" {...field} /></FormControl><FormMessage /></FormItem>
                                             )}
                                         />
                                     </TableCell>
@@ -560,21 +547,12 @@ export default function WorkDoneReportPage() {
                                             control={form.control}
                                             name={`equipment.${index}.unit`}
                                             render={({ field }) => (
-                                                <FormItem><FormControl><Input readOnly disabled {...field} /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormControl><Input readOnly disabled className="h-8 text-xs bg-muted" {...field} /></FormControl><FormMessage /></FormItem>
                                             )}
                                         />
                                     </TableCell>
                                     <TableCell>
-                                      <FormField
-                                        control={form.control}
-                                        name={`equipment.${index}.rate`}
-                                        render={({ field }) => (
-                                            <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
-                                        )}
-                                      />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Button variant="ghost" size="icon" onClick={() => removeEquipment(index)} disabled={equipmentFields.length <= 1}>
+                                        <Button variant="ghost" size="icon" onClick={() => removeEquipment(index)} disabled={equipmentFields.length <= 1} className="h-8 w-8 text-destructive">
                                         <Trash className="h-4 w-4" />
                                         </Button>
                                     </TableCell>
@@ -583,27 +561,25 @@ export default function WorkDoneReportPage() {
                                 </TableBody>
                             </Table>
                         </div>
-                        <Button type="button" variant="outline" size="sm" onClick={() => appendEquipment({ source: '', name: '', usage: 0, unit: '', rate: 0 })} className="mt-4">
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Equipment
+                        <Button type="button" variant="outline" size="sm" onClick={() => appendEquipment({ source: 'Owned', name: '', usage: 0, unit: '', rate: 0 })} className="mt-4 h-8 text-[10px] uppercase font-bold">
+                            <PlusCircle className="mr-2 h-3 w-3" /> Add Machinery Row
                         </Button>
                     </CardContent>
                   </Card>
 
                   {/* Workforce Details */}
-                  <Card>
-                    <CardHeader><CardTitle>Workforce Details</CardTitle></CardHeader>
-                    <CardContent>
+                  <Card className="border-indigo-100">
+                    <CardHeader className="bg-indigo-50/50 py-3"><CardTitle className="text-sm font-bold text-indigo-800">Resource: Workforce & Labor</CardTitle></CardHeader>
+                    <CardContent className="pt-4">
                        <div className="rounded-md border">
                             <Table>
                                 <TableHeader>
                                 <TableRow>
-                                    <TableHead>Skill Type</TableHead>
-                                    <TableHead>Designation</TableHead>
-                                    <TableHead>Worker Count</TableHead>
-                                    <TableHead>Hours</TableHead>
-                                    <TableHead>OT Hours</TableHead>
-                                    <TableHead>Rate/hr ($)</TableHead>
-                                    <TableHead>OT Rate/hr ($)</TableHead>
+                                    <TableHead className="w-28">Skill Type</TableHead>
+                                    <TableHead>Designation (Master)</TableHead>
+                                    <TableHead className="w-16">Qty</TableHead>
+                                    <TableHead className="w-16">Hrs</TableHead>
+                                    <TableHead className="w-16">OT</TableHead>
                                     <TableHead className="w-12"></TableHead>
                                 </TableRow>
                                 </TableHeader>
@@ -616,12 +592,11 @@ export default function WorkDoneReportPage() {
                                             name={`workforce.${index}.skill`}
                                             render={({ field }) => (
                                                 <FormItem>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                    <FormControl><SelectTrigger><SelectValue placeholder="Select skill" /></SelectTrigger></FormControl>
+                                                <Select onValueChange={(val) => { field.onChange(val); form.setValue(`workforce.${index}.designation`, ''); }} value={field.value}>
+                                                    <FormControl><SelectTrigger className="h-8 text-[10px]"><SelectValue /></SelectTrigger></FormControl>
                                                     <SelectContent>
-                                                       {[...new Set(mockBoqData.workforce.map(w => w.skill))].map(skill => (
-                                                            <SelectItem key={skill} value={skill}>{skill}</SelectItem>
-                                                       ))}
+                                                       <SelectItem value="Skilled Worker">Skilled</SelectItem>
+                                                       <SelectItem value="Helper">Helper</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                                 <FormMessage />
@@ -635,11 +610,11 @@ export default function WorkDoneReportPage() {
                                             name={`workforce.${index}.designation`}
                                             render={({ field }) => (
                                                 <FormItem>
-                                                <Select onValueChange={(value) => handleWorkforceDesignationChange(value, index)} defaultValue={field.value}>
-                                                    <FormControl><SelectTrigger><SelectValue placeholder="Select designation" /></SelectTrigger></FormControl>
+                                                <Select onValueChange={(value) => handleWorkforceSelect(value, index)} value={field.value}>
+                                                    <FormControl><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
                                                     <SelectContent>
-                                                        {[...new Set(mockBoqData.workforce.map(w => w.designation))].map(des => (
-                                                            <SelectItem key={des} value={des}>{des}</SelectItem>
+                                                        {(form.watch(`workforce.${index}.skill`) === 'Skilled Worker' ? workersRate : helpersRate).map(w => (
+                                                            <SelectItem key={w.id} value={w.name}>{w.name}</SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
@@ -648,53 +623,11 @@ export default function WorkDoneReportPage() {
                                             )}
                                         />
                                     </TableCell>
+                                    <TableCell><FormField control={form.control} name={`workforce.${index}.count`} render={({ field }) => (<FormItem><FormControl><Input type="number" className="h-8 text-xs" {...field} /></FormControl></FormItem>)} /></TableCell>
+                                    <TableCell><FormField control={form.control} name={`workforce.${index}.hours`} render={({ field }) => (<FormItem><FormControl><Input type="number" className="h-8 text-xs" {...field} /></FormControl></FormItem>)} /></TableCell>
+                                    <TableCell><FormField control={form.control} name={`workforce.${index}.otHours`} render={({ field }) => (<FormItem><FormControl><Input type="number" className="h-8 text-xs" {...field} /></FormControl></FormItem>)} /></TableCell>
                                     <TableCell>
-                                        <FormField
-                                            control={form.control}
-                                            name={`workforce.${index}.count`}
-                                            render={({ field }) => (
-                                                <FormItem><FormControl><Input type="number" placeholder="e.g., 10" {...field} /></FormControl><FormMessage /></FormItem>
-                                            )}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <FormField
-                                            control={form.control}
-                                            name={`workforce.${index}.hours`}
-                                            render={({ field }) => (
-                                                <FormItem><FormControl><Input type="number" placeholder="e.g., 8" {...field} /></FormControl><FormMessage /></FormItem>
-                                            )}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <FormField
-                                            control={form.control}
-                                            name={`workforce.${index}.otHours`}
-                                            render={({ field }) => (
-                                                <FormItem><FormControl><Input type="number" placeholder="e.g., 2" {...field} /></FormControl><FormMessage /></FormItem>
-                                            )}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <FormField
-                                            control={form.control}
-                                            name={`workforce.${index}.rate`}
-                                            render={({ field }) => (
-                                                <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
-                                            )}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <FormField
-                                            control={form.control}
-                                            name={`workforce.${index}.otRate`}
-                                            render={({ field }) => (
-                                                <FormItem><FormControl><Input type="number" placeholder="OT Rate" {...field} /></FormControl><FormMessage /></FormItem>
-                                            )}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Button variant="ghost" size="icon" onClick={() => removeWorkforce(index)} disabled={workforceFields.length <= 1}>
+                                        <Button variant="ghost" size="icon" onClick={() => removeWorkforce(index)} disabled={workforceFields.length <= 1} className="h-8 w-8 text-destructive">
                                         <Trash className="h-4 w-4" />
                                         </Button>
                                     </TableCell>
@@ -703,15 +636,15 @@ export default function WorkDoneReportPage() {
                                 </TableBody>
                             </Table>
                         </div>
-                        <Button type="button" variant="outline" size="sm" onClick={() => appendWorkforce({ skill: '', designation: '', count: 0, hours: 0, otHours: 0, rate: 0, otRate: 0 })} className="mt-4">
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Workforce
+                        <Button type="button" variant="outline" size="sm" onClick={() => appendWorkforce({ skill: 'Skilled Worker', designation: '', count: 0, hours: 0, otHours: 0, rate: 0, otRate: 0 })} className="mt-4 h-8 text-[10px] uppercase font-bold">
+                            <PlusCircle className="mr-2 h-3 w-3" /> Add Labor Row
                         </Button>
                     </CardContent>
                   </Card>
 
                   <Button type="submit" size="lg" className="w-full font-black uppercase tracking-widest py-8 text-lg" disabled={form.formState.isSubmitting}>
                     <Save className="mr-2 h-6 w-6" />
-                    {form.formState.isSubmitting ? 'Submitting...' : 'Finalize Daily Report & Calculate Cost'}
+                    Finalize Report & Calculate Cost
                   </Button>
                 </form>
               </Form>
@@ -723,39 +656,39 @@ export default function WorkDoneReportPage() {
           <div className="lg:col-span-2">
             <Card className="sticky top-24 border-primary/20 shadow-2xl overflow-hidden">
               <CardHeader className="bg-primary/5 border-b">
-                <CardTitle className="flex items-center gap-2"><DollarSign /> Cost Analysis Summary</CardTitle>
+                <CardTitle className="flex items-center gap-2"><DollarSign /> Cost Audit Summary</CardTitle>
                 <CardDescription>
-                  Cost breakdown for the work done on {format(submittedReport.reportDate, 'PPP')}.
+                  Verified breakdown for {format(submittedReport.reportDate, 'PPP')}.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6 pt-6">
                 <div className="space-y-2 rounded-xl border p-4 bg-muted/20">
-                  <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Verified Work Item</h3>
+                  <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Executed Work Item</h3>
                   <p className="text-lg font-black">{submittedReport.itemOfWork}</p>
                   <Badge variant="outline" className="font-bold">{submittedReport.quantityOfWork} Progress Units</Badge>
                 </div>
                 
                 <div className="space-y-4">
-                  <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Resource Cost Breakdown</h3>
+                  <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Master-Rate Costings</h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center text-sm p-3 rounded-lg border bg-background">
                         <div className="flex flex-col">
                             <span className="font-bold">Material Cost</span>
-                            <span className="text-[10px] text-muted-foreground">Consumption Audit</span>
+                            <span className="text-[10px] text-muted-foreground">Auto-Calculated Consumption</span>
                         </div>
                         <span className="font-black text-lg">${submittedReport.costs.materialCost.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm p-3 rounded-lg border bg-background">
                         <div className="flex flex-col">
                             <span className="font-bold">Equipment Cost</span>
-                            <span className="text-[10px] text-muted-foreground">Hours & Fuel Allocation</span>
+                            <span className="text-[10px] text-muted-foreground">Master-Rate Machine Hours</span>
                         </div>
                         <span className="font-black text-lg">${submittedReport.costs.equipmentCost.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm p-3 rounded-lg border bg-background">
                         <div className="flex flex-col">
                             <span className="font-bold">Workforce Cost</span>
-                            <span className="text-[10px] text-muted-foreground">Regular & OT Payroll</span>
+                            <span className="text-[10px] text-muted-foreground">Verified Payroll & OT</span>
                         </div>
                         <span className="font-black text-lg">${submittedReport.costs.workforceCost.toLocaleString()}</span>
                     </div>
@@ -765,7 +698,7 @@ export default function WorkDoneReportPage() {
                     <div className="flex justify-between items-end">
                         <div>
                             <p className="text-[10px] font-black uppercase text-primary tracking-widest">Total Estimated Cost</p>
-                            <p className="text-muted-foreground text-[9px] italic">Based on fixed project rates</p>
+                            <p className="text-muted-foreground text-[9px] italic">Based on authorized fixed rates</p>
                         </div>
                         <span className="text-4xl font-black text-primary font-headline">${submittedReport.costs.totalCost.toLocaleString()}</span>
                     </div>
@@ -773,7 +706,7 @@ export default function WorkDoneReportPage() {
                 </div>
                 
                 <Button variant="outline" className="w-full font-bold uppercase text-[10px] tracking-widest h-12" onClick={() => setSubmittedReport(null)}>
-                    Dismiss Review
+                    Close Review
                 </Button>
               </CardContent>
             </Card>

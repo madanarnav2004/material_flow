@@ -4,7 +4,11 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { 
     initialIndents, 
     issuedMaterialsForReceipt as initialIssuedMaterials,
-    liveInventory as initialInventory
+    liveInventory as initialInventory,
+    initialMaterialsRate,
+    initialEquipmentRate,
+    initialWorkersRate,
+    initialHelpersRate
 } from '@/lib/mock-data';
 
 export type IndentStatus = 
@@ -62,6 +66,13 @@ export interface IssuedMaterial {
     vehicleNumber?: string;
     dispatchDetails?: string;
     driverName?: string;
+}
+
+export interface MasterRateItem {
+  id: string;
+  name: string;
+  unit: string;
+  rate: number;
 }
 
 export interface InventoryItem {
@@ -201,34 +212,64 @@ interface MaterialContextType {
   setIssueSlips: React.Dispatch<React.SetStateAction<MaterialIssueSlip[]>>;
   inventoryUploads: InventoryUploadRecord[];
   setInventoryUploads: React.Dispatch<React.SetStateAction<InventoryUploadRecord[]>>;
+  materialsRate: MasterRateItem[];
+  setMaterialsRate: React.Dispatch<React.SetStateAction<MasterRateItem[]>>;
+  equipmentRate: MasterRateItem[];
+  setEquipmentRate: React.Dispatch<React.SetStateAction<MasterRateItem[]>>;
+  workersRate: MasterRateItem[];
+  setWorkersRate: React.Dispatch<React.SetStateAction<MasterRateItem[]>>;
+  helpersRate: MasterRateItem[];
+  setHelpersRate: React.Dispatch<React.SetStateAction<MasterRateItem[]>>;
 }
 
 const MaterialContext = createContext<MaterialContextType | undefined>(undefined);
 
-const STORAGE_KEY_VERSION = 'v9-inventory-upload';
+const STORAGE_KEY_VERSION = 'v10-rates-integration';
 
 export const MaterialProvider = ({ children }: { children: ReactNode }) => {
-  const [requests, setRequests] = useState<MaterialIndent[]>(() => getFromLocalStorage(`materialflow-requests-${STORAGE_KEY_VERSION}`, initialIndents));
-  const [issuedMaterials, setIssuedMaterials] = useState<IssuedMaterial[]>(() => getFromLocalStorage(`materialflow-issued-${STORAGE_KEY_VERSION}`, initialIssuedMaterials));
-  const [inventory, setInventory] = useState<InventoryItem[]>(() => getFromLocalStorage(`materialflow-inventory-${STORAGE_KEY_VERSION}`, initialInventory));
-  const [receipts, setReceipts] = useState<MaterialReceivedBill[]>(() => getFromLocalStorage(`materialflow-receipts-${STORAGE_KEY_VERSION}`, []));
-  const [workDoneReports, setWorkDoneReports] = useState<WorkDoneReport[]>(() => getFromLocalStorage(`materialflow-work-done-reports-${STORAGE_KEY_VERSION}`, []));
-  const [siteIssues, setSiteIssues] = useState<SiteIssueVoucher[]>(() => getFromLocalStorage(`materialflow-site-issues-${STORAGE_KEY_VERSION}`, []));
-  const [issueSlips, setIssueSlips] = useState<MaterialIssueSlip[]>(() => getFromLocalStorage(`materialflow-issue-slips-${STORAGE_KEY_VERSION}`, []));
-  const [inventoryUploads, setInventoryUploads] = useState<InventoryUploadRecord[]>(() => getFromLocalStorage(`materialflow-inv-uploads-${STORAGE_KEY_VERSION}`, []));
+  const [requests, setRequests] = useState<MaterialIndent[]>(() => getFromLocalStorage(`mf-requests-${STORAGE_KEY_VERSION}`, initialIndents));
+  const [issuedMaterials, setIssuedMaterials] = useState<IssuedMaterial[]>(() => getFromLocalStorage(`mf-issued-${STORAGE_KEY_VERSION}`, initialIssuedMaterials));
+  const [inventory, setInventory] = useState<InventoryItem[]>(() => getFromLocalStorage(`mf-inventory-${STORAGE_KEY_VERSION}`, initialInventory));
+  const [receipts, setReceipts] = useState<MaterialReceivedBill[]>(() => getFromLocalStorage(`mf-receipts-${STORAGE_KEY_VERSION}`, []));
+  const [workDoneReports, setWorkDoneReports] = useState<WorkDoneReport[]>(() => getFromLocalStorage(`mf-work-done-reports-${STORAGE_KEY_VERSION}`, []));
+  const [siteIssues, setSiteIssues] = useState<SiteIssueVoucher[]>(() => getFromLocalStorage(`mf-site-issues-${STORAGE_KEY_VERSION}`, []));
+  const [issueSlips, setIssueSlips] = useState<MaterialIssueSlip[]>(() => getFromLocalStorage(`mf-issue-slips-${STORAGE_KEY_VERSION}`, []));
+  const [inventoryUploads, setInventoryUploads] = useState<InventoryUploadRecord[]>(() => getFromLocalStorage(`mf-inv-uploads-${STORAGE_KEY_VERSION}`, []));
+  
+  const [materialsRate, setMaterialsRate] = useState<MasterRateItem[]>(() => getFromLocalStorage(`mf-mat-rates-${STORAGE_KEY_VERSION}`, initialMaterialsRate));
+  const [equipmentRate, setEquipmentRate] = useState<MasterRateItem[]>(() => getFromLocalStorage(`mf-eq-rates-${STORAGE_KEY_VERSION}`, initialEquipmentRate));
+  const [workersRate, setWorkersRate] = useState<MasterRateItem[]>(() => getFromLocalStorage(`mf-worker-rates-${STORAGE_KEY_VERSION}`, initialWorkersRate));
+  const [helpersRate, setHelpersRate] = useState<MasterRateItem[]>(() => getFromLocalStorage(`mf-helper-rates-${STORAGE_KEY_VERSION}`, initialHelpersRate));
 
-  useEffect(() => { setInLocalStorage(`materialflow-requests-${STORAGE_KEY_VERSION}`, requests) }, [requests]);
-  useEffect(() => { setInLocalStorage(`materialflow-issued-${STORAGE_KEY_VERSION}`, issuedMaterials) }, [issuedMaterials]);
-  useEffect(() => { setInLocalStorage(`materialflow-inventory-${STORAGE_KEY_VERSION}`, inventory) }, [inventory]);
-  useEffect(() => { setInLocalStorage(`materialflow-receipts-${STORAGE_KEY_VERSION}`, receipts) }, [receipts]);
-  useEffect(() => { setInLocalStorage(`materialflow-work-done-reports-${STORAGE_KEY_VERSION}`, workDoneReports) }, [workDoneReports]);
-  useEffect(() => { setInLocalStorage(`materialflow-site-issues-${STORAGE_KEY_VERSION}`, siteIssues) }, [siteIssues]);
-  useEffect(() => { setInLocalStorage(`materialflow-issue-slips-${STORAGE_KEY_VERSION}`, issueSlips) }, [issueSlips]);
-  useEffect(() => { setInLocalStorage(`materialflow-inv-uploads-${STORAGE_KEY_VERSION}`, inventoryUploads) }, [inventoryUploads]);
+  useEffect(() => { setInLocalStorage(`mf-requests-${STORAGE_KEY_VERSION}`, requests) }, [requests]);
+  useEffect(() => { setInLocalStorage(`mf-issued-${STORAGE_KEY_VERSION}`, issuedMaterials) }, [issuedMaterials]);
+  useEffect(() => { setInLocalStorage(`mf-inventory-${STORAGE_KEY_VERSION}`, inventory) }, [inventory]);
+  useEffect(() => { setInLocalStorage(`mf-receipts-${STORAGE_KEY_VERSION}`, receipts) }, [receipts]);
+  useEffect(() => { setInLocalStorage(`mf-work-done-reports-${STORAGE_KEY_VERSION}`, workDoneReports) }, [workDoneReports]);
+  useEffect(() => { setInLocalStorage(`mf-site-issues-${STORAGE_KEY_VERSION}`, siteIssues) }, [siteIssues]);
+  useEffect(() => { setInLocalStorage(`mf-issue-slips-${STORAGE_KEY_VERSION}`, issueSlips) }, [issueSlips]);
+  useEffect(() => { setInLocalStorage(`mf-inv-uploads-${STORAGE_KEY_VERSION}`, inventoryUploads) }, [inventoryUploads]);
+  useEffect(() => { setInLocalStorage(`mf-mat-rates-${STORAGE_KEY_VERSION}`, materialsRate) }, [materialsRate]);
+  useEffect(() => { setInLocalStorage(`mf-eq-rates-${STORAGE_KEY_VERSION}`, equipmentRate) }, [equipmentRate]);
+  useEffect(() => { setInLocalStorage(`mf-worker-rates-${STORAGE_KEY_VERSION}`, workersRate) }, [workersRate]);
+  useEffect(() => { setInLocalStorage(`mf-helper-rates-${STORAGE_KEY_VERSION}`, helpersRate) }, [helpersRate]);
 
 
   return (
-    <MaterialContext.Provider value={{ requests, setRequests, issuedMaterials, setIssuedMaterials, inventory, setInventory, receipts, setReceipts, workDoneReports, setWorkDoneReports, siteIssues, setSiteIssues, issueSlips, setIssueSlips, inventoryUploads, setInventoryUploads }}>
+    <MaterialContext.Provider value={{ 
+      requests, setRequests, 
+      issuedMaterials, setIssuedMaterials, 
+      inventory, setInventory, 
+      receipts, setReceipts, 
+      workDoneReports, setWorkDoneReports, 
+      siteIssues, setSiteIssues, 
+      issueSlips, setIssueSlips, 
+      inventoryUploads, setInventoryUploads,
+      materialsRate, setMaterialsRate,
+      equipmentRate, setEquipmentRate,
+      workersRate, setWorkersRate,
+      helpersRate, setHelpersRate
+    }}>
       {children}
     </MaterialContext.Provider>
   );
