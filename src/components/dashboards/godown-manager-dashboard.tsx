@@ -40,7 +40,7 @@ export default function GodownManagerDashboard() {
     <div className="space-y-8">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold font-headline text-primary">Godown Management Terminal</h1>
-        <p className="text-muted-foreground">MAPI Godown Central Inventory Control</p>
+        <p className="text-muted-foreground">Central Inventory Control</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">

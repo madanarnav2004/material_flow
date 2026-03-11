@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CalendarIcon, PlusCircle, Trash, ClipboardList, Download, ArrowRightLeft, UserCheck, FileText, PackageCheck, AlertTriangle, CheckCircle2, History } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Trash, ClipboardList, Download, ArrowRightLeft, UserCheck, FileText, PackageCheck, AlertTriangle, CheckCircle2, History, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -180,7 +180,6 @@ export default function MaterialIssuePage() {
         toast({ title: 'Slip Generated', description: `Material Issue Slip ${slipNumber} is ready for signing.` });
         form.reset({ ...values, materialName: '', quantity: 0, remarks: '', requestedBy: '' });
     } else {
-        // Shifting and Indent logic remains similar but updated for context
         const voucherId = `${values.issueMode === 'Indent' ? 'IND' : 'SHIFT'}-${format(new Date(), 'yyyyMMdd-HHmm')}`;
         const newVoucher: SiteIssueVoucher = {
             voucherId,
@@ -195,7 +194,6 @@ export default function MaterialIssuePage() {
         
         setSiteIssues(prev => [newVoucher, ...prev]);
         
-        // Deduct inventory immediately for shifting/indent as they are usually pre-authorized
         setInventory(prev => {
             const next = [...prev];
             values.materials?.forEach(m => {
@@ -211,7 +209,6 @@ export default function MaterialIssuePage() {
   }
 
   const handleConfirmIssue = (slip: MaterialIssueSlip) => {
-    // Check stock one last time before deduction
     const stock = inventory.find(i => i.site === slip.siteName && i.material === slip.materialName);
     if (!stock || stock.quantity < slip.quantity) {
         toast({ variant: 'destructive', title: 'Error', description: 'Stock levels changed. Insufficient material to issue.' });
@@ -271,7 +268,7 @@ export default function MaterialIssuePage() {
                         <CardDescription>
                             {issueMode === 'MIS' ? 'Create a slip for physical approval before stock deduction.' : 
                              issueMode === 'Indent' ? 'Dispatch materials linked to an authorized site indent.' : 
-                             'Move stock between Swanag hubs or central store.'}
+                             'Move stock between project hubs or central store.'}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-6">
@@ -346,7 +343,6 @@ export default function MaterialIssuePage() {
                                                 <FormMessage />
                                             </FormItem>
                                         )}/>
-                                        {/* Multi-item table for shifting */}
                                         <div className="space-y-4">
                                             <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Shifting Line Items</Label>
                                             <div className="rounded-xl border overflow-hidden">
@@ -442,7 +438,7 @@ export default function MaterialIssuePage() {
                         <CardHeader className="flex flex-row items-start justify-between bg-primary/5 p-6 border-b">
                             <div>
                                 <CardTitle className="flex items-center gap-2 text-primary"><FileText className="h-5 w-5" /> Material Issue Slip</CardTitle>
-                                <CardDescription className="uppercase tracking-[0.2em] text-[10px] font-black opacity-60">Swanag Site Audit Document</CardDescription>
+                                <CardDescription className="uppercase tracking-[0.2em] text-[10px] font-black opacity-60">Audit Document</CardDescription>
                             </div>
                             <Button variant="outline" size="sm" className="h-8 font-bold text-[10px] uppercase" onClick={() => handleDownload(activeSlip.slipNumber)}>
                                 <Download className="mr-1 h-3 w-3" /> EXPORT PDF
@@ -450,7 +446,7 @@ export default function MaterialIssuePage() {
                         </CardHeader>
                         <CardContent ref={voucherContentRef} className="space-y-8 p-8 bg-background text-sm">
                             <div className="header space-y-1">
-                                <h2 className="text-2xl font-black font-headline text-primary tracking-tighter">SWANAG INFRASTRUCTURES</h2>
+                                <h2 className="text-2xl font-black font-headline text-primary tracking-tighter uppercase">MaterialFlow Projects</h2>
                                 <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Material Issue Certificate</p>
                             </div>
 

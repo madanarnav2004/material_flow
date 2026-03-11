@@ -45,7 +45,7 @@ export default function CoordinatorDashboard() {
 
   const missingSites = React.useMemo(() => {
     return sitesList.filter(siteName => {
-      if (siteName === 'MAPI Godown' || siteName === 'Global') return false;
+      if (siteName === 'MAPI Godown' || siteName === 'Global' || siteName === 'All') return false;
       const hasReport = workDoneReports.some(report => 
         report.siteName === siteName && 
         isSameDay(new Date(report.reportDate), yesterday)
@@ -73,7 +73,7 @@ export default function CoordinatorDashboard() {
             </AlertTitle>
             <AlertDescription className="text-base font-medium opacity-90">
               The following sites have not updated their progress for yesterday: <span className="font-black underline">{missingSites.join(', ')}</span>. 
-              Coordinate with Site Incharges to resolve these audit gaps.
+              Coordinate with Site Managers to resolve these audit gaps.
             </AlertDescription>
           </div>
           <Button 

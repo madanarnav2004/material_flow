@@ -18,7 +18,7 @@ const fontSourceCodePro = Source_Code_Pro({
 
 export const metadata: Metadata = {
   title: 'MaterialFlow',
-  description: 'Supply chain management for construction materials.',
+  description: 'Supply chain management for construction projects.',
 };
 
 export default function RootLayout({

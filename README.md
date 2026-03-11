@@ -1,4 +1,4 @@
-# MaterialFlow - Swanag Infrastructures
+# MaterialFlow - Logistics Hub
 
 A modern supply chain and logistics management system for construction materials, featuring role-based dashboards, BOQ analysis, and AI-powered bill auditing.
 

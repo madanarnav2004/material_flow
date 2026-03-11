@@ -51,7 +51,7 @@ export default function DirectorDashboard() {
 
   const missingSites = React.useMemo(() => {
     return sitesList.filter(siteName => {
-      if (siteName === 'MAPI Godown' || siteName === 'Global') return false;
+      if (siteName === 'MAPI Godown' || siteName === 'Global' || siteName === 'All') return false;
       const hasReport = workDoneReports.some(report => 
         report.siteName === siteName && 
         isSameDay(new Date(report.reportDate), yesterday)
@@ -91,7 +91,7 @@ export default function DirectorDashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-3xl font-black font-headline uppercase tracking-tight text-primary">Executive Oversight</h1>
-          <p className="text-muted-foreground">Swanag Infrastructures Organizational Control</p>
+          <p className="text-muted-foreground">MaterialFlow Organizational Control</p>
         </div>
         <div className="flex items-center gap-3 bg-card p-2 rounded-xl border shadow-sm">
           <Building2 className="h-4 w-4 text-muted-foreground ml-2" />
@@ -101,7 +101,7 @@ export default function DirectorDashboard() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="Organization-wise">All Sites Combined</SelectItem>
-              {sitesList.map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
+              {sitesList.filter(s => s !== 'Global' && s !== 'All').map(site => <SelectItem key={site} value={site}>{site}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
