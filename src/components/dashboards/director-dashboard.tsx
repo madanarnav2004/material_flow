@@ -18,6 +18,8 @@ import {
   BrainCircuit,
   RefreshCw,
   AlertTriangle,
+  AlertCircle,
+  ArrowRight,
 } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,11 +27,40 @@ import { Button } from '@/components/ui/button';
 import { useMaterialContext } from '@/context/material-context';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { isSameDay, subDays } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function DirectorDashboard() {
   const router = useRouter();
-  const { inventory, requests } = useMaterialContext();
+  const { inventory, requests, workDoneReports } = useMaterialContext();
   const [selectedSite, setSelectedSite] = React.useState<string>('Organization-wise');
+  const [isPastEightAM, setIsPastEightAM] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkTime = () => {
+      const now = new Date();
+      setIsPastEightAM(now.getHours() >= 8);
+    };
+    checkTime();
+    const interval = setInterval(checkTime, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const sitesList = Array.from(new Set(inventory.map(i => i.site)));
+  const yesterday = subDays(new Date(), 1);
+
+  const missingSites = React.useMemo(() => {
+    return sitesList.filter(siteName => {
+      if (siteName === 'MAPI Godown' || siteName === 'Global') return false;
+      const hasReport = workDoneReports.some(report => 
+        report.siteName === siteName && 
+        isSameDay(new Date(report.reportDate), yesterday)
+      );
+      return !hasReport;
+    });
+  }, [sitesList, workDoneReports, yesterday]);
+
+  const showMissingAlert = isPastEightAM && missingSites.length > 0;
 
   const filteredInventory = selectedSite === 'Organization-wise' 
     ? inventory 
@@ -41,8 +72,6 @@ export default function DirectorDashboard() {
 
   const pendingApprovals = filteredRequests.filter(r => r.status === 'Pending Director Approval').length;
   const lowStockCount = filteredInventory.filter(item => item.quantity <= item.minQty).length;
-
-  const sitesList = Array.from(new Set(inventory.map(i => i.site)));
 
   const modules = [
     { id: 'material-stock', title: 'Inventory Ledger', icon: PackageSearch, color: 'text-blue-600', desc: 'Real-time stock across sites' },
@@ -77,6 +106,28 @@ export default function DirectorDashboard() {
           </Select>
         </div>
       </div>
+
+      {showMissingAlert && (
+        <Alert variant="destructive" className="border-2 border-destructive bg-destructive/5 animate-pulse shadow-xl py-6">
+          <AlertCircle className="h-8 w-8" />
+          <div className="ml-4 flex-1">
+            <AlertTitle className="text-xl font-black uppercase tracking-tight mb-1">
+              Audit Alert: Overdue Site Reports
+            </AlertTitle>
+            <AlertDescription className="text-base font-medium opacity-90">
+              Yesterday's Daily Work Done Report is missing for the following sites: <span className="font-black underline">{missingSites.join(', ')}</span>. 
+              Site Managers must update these logs immediately.
+            </AlertDescription>
+          </div>
+          <Button 
+            size="lg" 
+            className="ml-4 font-black uppercase tracking-widest bg-destructive hover:bg-destructive/90 text-white"
+            onClick={() => router.push('/dashboard/work-done-report')}
+          >
+            Review Reports <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
+        </Alert>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard

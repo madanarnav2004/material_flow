@@ -15,16 +15,46 @@ import {
   ClipboardCheck,
   BrainCircuit,
   LayoutDashboard,
+  AlertCircle,
+  ArrowRight,
 } from 'lucide-react';
 import StatCard from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useMaterialContext } from '@/context/material-context';
+import { isSameDay, subDays } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function CoordinatorDashboard() {
   const router = useRouter();
-  const { requests, inventory } = useMaterialContext();
+  const { requests, inventory, workDoneReports } = useMaterialContext();
+  const [isPastEightAM, setIsPastEightAM] = React.useState(false);
 
+  React.useEffect(() => {
+    const checkTime = () => {
+      const now = new Date();
+      setIsPastEightAM(now.getHours() >= 8);
+    };
+    checkTime();
+    const interval = setInterval(checkTime, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const sitesList = Array.from(new Set(inventory.map(i => i.site)));
+  const yesterday = subDays(new Date(), 1);
+
+  const missingSites = React.useMemo(() => {
+    return sitesList.filter(siteName => {
+      if (siteName === 'MAPI Godown' || siteName === 'Global') return false;
+      const hasReport = workDoneReports.some(report => 
+        report.siteName === siteName && 
+        isSameDay(new Date(report.reportDate), yesterday)
+      );
+      return !hasReport;
+    });
+  }, [sitesList, workDoneReports, yesterday]);
+
+  const showMissingAlert = isPastEightAM && missingSites.length > 0;
   const toProcess = requests.filter(r => r.status === 'Director Approved').length;
 
   return (
@@ -33,6 +63,28 @@ export default function CoordinatorDashboard() {
         <h1 className="text-3xl font-black font-headline text-primary">Project Operations Hub</h1>
         <p className="text-muted-foreground">Manage logistics, BOQs, and organization-wide synchronization</p>
       </div>
+
+      {showMissingAlert && (
+        <Alert variant="destructive" className="border-2 border-destructive bg-destructive/5 animate-pulse shadow-xl py-6">
+          <AlertCircle className="h-8 w-8" />
+          <div className="ml-4 flex-1">
+            <AlertTitle className="text-xl font-black uppercase tracking-tight mb-1">
+              Operational Delay: Sites Missing Daily Reports
+            </AlertTitle>
+            <AlertDescription className="text-base font-medium opacity-90">
+              The following sites have not updated their progress for yesterday: <span className="font-black underline">{missingSites.join(', ')}</span>. 
+              Coordinate with Site Incharges to resolve these audit gaps.
+            </AlertDescription>
+          </div>
+          <Button 
+            size="lg" 
+            className="ml-4 font-black uppercase tracking-widest bg-destructive hover:bg-destructive/90 text-white"
+            onClick={() => router.push('/dashboard/work-done-report')}
+          >
+            Review Hub <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
+        </Alert>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
