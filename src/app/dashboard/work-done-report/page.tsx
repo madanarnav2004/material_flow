@@ -127,25 +127,30 @@ export default function WorkDoneReportPage() {
   };
 
   const handleItemOfWorkChange = (val: string, index: number) => {
-    const matchingBoq = activeBoqItems.find(i => i.itemOfWork === form.watch(`entries.${index}.descriptionOfWork`));
+    // In this complex structure, Item of Work is a filter for sub-items
+    // and determines the Item No
+    const matchingBoq = activeBoqItems.find(i => 
+      i.itemOfWork === val && 
+      i.itemOfWork === form.getValues(`entries.${index}.descriptionOfWork`)
+    );
+    
+    form.setValue(`entries.${index}.itemOfWork`, val);
     if (matchingBoq) {
-      form.setValue(`entries.${index}.itemOfWork`, val);
       form.setValue(`entries.${index}.itemNo`, matchingBoq.itemNo);
-      
-      // Auto-select the first sub-item if only one exists for this flow
-      const subs = activeBoqItems.filter(i => i.itemOfWork === form.watch(`entries.${index}.descriptionOfWork`));
-      if (subs.length === 1) {
-        form.setValue(`entries.${index}.subItemOfWork`, subs[0].subItemOfWork);
-        form.setValue(`entries.${index}.unit`, subs[0].unit);
-      }
     }
+    // Reset dependent sub-item and unit
+    form.setValue(`entries.${index}.subItemOfWork`, '');
+    form.setValue(`entries.${index}.unit`, '');
   };
 
   const handleSubItemChange = (val: string, index: number) => {
-    const sub = activeBoqItems.find(i => i.subItemOfWork === val && i.itemOfWork === form.watch(`entries.${index}.descriptionOfWork`));
+    const sub = activeBoqItems.find(i => 
+      i.subItemOfWork === val && 
+      i.itemOfWork === form.getValues(`entries.${index}.itemOfWork`)
+    );
     if (sub) {
       form.setValue(`entries.${index}.subItemOfWork`, val);
-      form.setValue(`entries.${index}.unit`, sub.unit);
+      form.setValue(`entries.${index}.unit`, sub.unit); // AUTO-FILL UNIT BASED ON SUB-ITEM
     }
   };
 
@@ -153,7 +158,7 @@ export default function WorkDoneReportPage() {
     const mat = materialsRate.find(m => m.name === val);
     if (mat) {
       form.setValue(`entries.${index}.materialName`, val);
-      form.setValue(`entries.${index}.materialUnit`, mat.unit);
+      form.setValue(`entries.${index}.materialUnit`, mat.unit); // AUTO-FILL UNIT BASED ON MATERIAL
     }
   };
 
@@ -256,7 +261,7 @@ export default function WorkDoneReportPage() {
                       <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[200px]">Sub Item of work</TableHead>
                       <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[100px]">Qty Done</TableHead>
                       <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[80px]">Unit</TableHead>
-                      <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[120px]">Material</TableHead>
+                      <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[150px]">Material Name</TableHead>
                       <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[80px]">Mat Unit</TableHead>
                       <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[80px]">Mat Qty</TableHead>
                       <TableHead className="text-[9px] font-black uppercase px-4 border-r w-[120px]">Equipment</TableHead>
@@ -305,7 +310,7 @@ export default function WorkDoneReportPage() {
                               <SelectValue placeholder="Select Sub-Item" />
                             </SelectTrigger>
                             <SelectContent>
-                              {activeBoqItems.filter(i => i.itemOfWork === form.watch(`entries.${index}.descriptionOfWork`)).map(sub => (
+                              {activeBoqItems.filter(i => i.itemOfWork === form.watch(`entries.${index}.itemOfWork`)).map(sub => (
                                 <SelectItem key={sub.id} value={sub.subItemOfWork}>{sub.subItemOfWork}</SelectItem>
                               ))}
                             </SelectContent>
@@ -396,7 +401,7 @@ export default function WorkDoneReportPage() {
             <TrendingUp className="h-6 w-6 text-primary shrink-0" />
             <div className="space-y-1">
               <h4 className="font-black text-sm uppercase tracking-tighter text-primary-900">BOQ Constraint Enabled</h4>
-              <p className="text-xs text-primary-800/70 leading-relaxed">Selecting a Description filters Item of Work and Sub-Items, preventing cross-mapping errors. Material units auto-fill from the pricing ledger.</p>
+              <p className="text-xs text-primary-800/70 leading-relaxed">Selecting a Description filters Item of Work and Sub-Items, preventing cross-mapping errors. Material and Work units auto-fill from the pricing and BOQ ledgers.</p>
             </div>
           </CardContent>
         </Card>
